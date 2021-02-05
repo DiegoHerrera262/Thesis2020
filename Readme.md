@@ -13,4 +13,4 @@ To reproduce the results of this repository, the system requierments are:
 * Python 3.x (Conda/miniconda Distribution)
 * Qiskit 0.11.0 (Or newer)
 
-I ran the notebooks locally using ```qasm_simulator``` from Qiskit.
+I ran the notebooks locally using ```qasm_simulator``` from Qiskit (IBM).
