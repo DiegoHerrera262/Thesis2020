@@ -9,17 +9,22 @@
 ################################################################################
 ##              IMPORTS NECESSARY TO PERFORM QUANTUM ALGORITHMS               ##
 ################################################################################
-from qiskit import QuantumRegister, ClassicalRegister
-from qiskit import QuantumCircuit, execute, Aer
-from qiskit.circuit import Parameter
 import matplotlib.pyplot as plt
-from QuantumSTsimulator import QSTsimulator
-plt.style.use('FigureStyle.mplstyle')
+import pandas as pd
 
+################################################################################
+##                      I HIGHLIGHT THE SIMULATION MODULE                     ##
+################################################################################
+from QuantumSTsimulator import QSTsimulator
+
+################################################################################
+##              HERE I PERFORM TIME SIMULATION WITH MY ALGORITHM              ##
+################################################################################
 if __name__ == '__main__':
     ## Instantiate a simulator class
     DemoSimulator = QSTsimulator(num_spins=2,\
                                 ExchangeIntegrals=[1.0,1.0,1.0],\
-                                ExternalField=[1.0,1.0,1.0])
+                                ExternalField=[1.0,1.0,1.0],\
+                                local_simul=True)
     ## Capture data of simulation with Qiskit
-    PDF = DemoSimulator.EvolAlgorithm(NUMSTEPS=400,t=5)
+    PDF = DemoSimulator.EvolAlgorithm(NUMSTEPS=20,t=0.45)

@@ -1,0 +1,29 @@
+\ProvidesPackage{Preamble}
+\usepackage{datetime}                 % For managing dates
+\newdateformat{yeardate}{
+  \THEYEAR
+}
+\usepackage{lipsum}                   % Include dummy text
+\usepackage[utf8]{inputenc}           % Use utf8 encoding
+\usepackage{graphicx}                 % Set up graphics management package
+\graphicspath{{Images/}}              % Defined images folder location
+\usepackage[a4paper]{geometry}        % For setting up geometry of page
+\geometry{
+  width = 150mm,
+  top = 25mm,
+  bottom = 25mm,
+  bindingoffset = 6mm
+}
+\usepackage{float}
+\usepackage{fancyhdr}                 % Package for fancy headers
+\pagestyle{fancy}                     % Use default page styling
+\renewcommand{\chaptermark}[1]{%
+\markboth{#1}{}}
+\fancyhf{}
+\fancyhead[CO,CE]{\chaptername~\thechapter\ - \leftmark}
+\fancyfoot[CE,CO]{\thepage}
+\usepackage{amsmath}                  % Included maths package
+\usepackage{fouriernc}
+\usepackage{physics}                  % Inculded package for physics equations
+\usepackage{tikz}                     % Package for graphics drawing
+\usetikzlibrary{quantikz}             % Package for drawing quantum circuits

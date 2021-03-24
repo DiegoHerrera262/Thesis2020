@@ -15,8 +15,13 @@
 ################################################################################
 from qiskit import QuantumRegister, ClassicalRegister
 from qiskit import QuantumCircuit, execute, Aer
+from qiskit import IBMQ, assemble, transpile
+from qiskit.tools.monitor import job_monitor
+from qiskit.providers.ibmq import least_busy
 from qiskit.circuit import Parameter
 import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
 plt.style.use('FigureStyle.mplstyle')
 
 ################################################################################
@@ -32,6 +37,7 @@ def Dec2nbitBin(num,bits):
 alpha1 = Parameter('α_1')                   ## Magnetic field on x axis
 alpha2 = Parameter('α_2')                   ## Magnetic field on y axis
 alpha3 = Parameter('α_3')                   ## Magnetic field on z axis
+alphaH = Parameter('α_H')                   ## Magnetic field magnitude
 ## Spin interaction parameters
 theta1 = Parameter('θ_1')                   ## Exchange Integral x interaction
 theta2 = Parameter('θ_2')                   ## Exchange Integral y interaction
@@ -51,7 +57,8 @@ class QSTsimulator:
     num_spins = 2                           ## Number of spins in the chain
     ExchangeIntegrals = [1.0,1.0,1.0]       ## See chain Hamiltonian
     ExternalField = [0.0,0.0,0.0]           ## See chain Hamiltonian
-    backend = 'qasm_simulator'              ## For simulation with Qiskit
+    backend_name = 'qasm_simulator'              ## For simulation with Qiskit
+    local_simul = True                      ## For determining if local run
 
     ## Init method
     def __init__(self,\
@@ -68,14 +75,86 @@ class QSTsimulator:
                 self.ExternalField = ExternalField
                 ## Allow non local backend in case I want to run a program on
                 ## an IBMQ device
-                if local_simul:
-                    self.backend = Aer.get_backend('qasm_simulator')
+                self.local_simul = local_simul
+                if self.local_simul:
+                    self.backend_name = 'qasm_simulator'
+                    self.backend = Aer.get_backend(self.backend_name)
                 else:
-                    self.backend = Aer.get_backend(input('Enter IBM backend: '))
+                    IBMQ.load_account()
+                    provider = IBMQ.get_provider('ibm-q')
+                    self.backend_name = input('Enter IBMQ device name: ')
+                    self.backend = provider.get_backend(self.backend_name)
+                print('Instantiated QSTsimulator...')
+                print('Backend: ',self.backend)
 
     ## IMPORTANT: The detailed ST scheme is presented on the log of this repo
     ## the programmer is advised to go to the file log/SimulationAlgorithms.pdf
     ## to fully understand this implementation
+
+################################################################################
+##                     EVOLUTION UNDER EXTERNAL FIELD UNITARY                 ##
+################################################################################
+    def MagFieldEvol(self, spinChain):
+        '''
+        Qiskit instruction for defining spin eigenstate under
+        external field Hamiltonian (see log).
+        '''
+        Hx = self.ExternalField[0]
+        Hy = self.ExternalField[1]
+        Hz = self.ExternalField[2]
+        H = np.sqrt(Hx**2 + Hy**2 + Hz**2)
+        ## Parameter values for Qiskit
+        PHI = np.arctan2(Hx,Hy)
+        THETA = np.arccos(Hz/H)
+        LAMBDA = np.pi
+        ## Create demo quantum circuit
+        QC_FieldEvol = QuantumCircuit(spinChain)
+        ## Change from computational to eigenbasis
+        for spin in spinChain:
+            QC_FieldEvol.rz(-LAMBDA,spin)
+            QC_FieldEvol.sxdg(spin)
+            QC_FieldEvol.rz(-THETA - np.pi, spin)
+            QC_FieldEvol.sxdg(spin)
+            QC_FieldEvol.rz(-PHI - np.pi, spin)
+            ## Evolve with z rotation
+            QC_FieldEvol.rz(2*alphaH, spin)
+            ## Change from eigenbasis to computational
+            QC_FieldEvol.rz(PHI + np.pi, spin)
+            QC_FieldEvol.sx(spin)
+            QC_FieldEvol.rz(THETA + np.pi, spin)
+            QC_FieldEvol.sx(spin)
+            QC_FieldEvol.rz(LAMBDA, spin)
+        ## Return quantum instruction
+        return QC_FieldEvol.to_instruction()
+
+################################################################################
+##                    EVOLUTION UNDER TWO SPIN INTERACTION                    ##
+################################################################################
+    def TwoSpinEvolUnit(self):
+        '''
+        Qiskit instruction for evolving under
+        spin-spin interaction (see log).
+        '''
+        ## Initialization of 2 spin quantum register
+        spinPair = QuantumRegister(2,name='s')
+        ## Initialization of quantum circuit
+        qc_Uij = QuantumCircuit(spinPair)
+        ## Convert to computational basis
+        qc_Uij.cx(*spinPair)
+        qc_Uij.h(spinPair[0])
+        ## Compute J3 phase
+        qc_Uij.rz(theta3,spinPair[1])
+        ## Compute J1 phase
+        qc_Uij.rz(theta1,spinPair[0])
+        ## Compute J2 phase
+        qc_Uij.cx(spinPair[1],spinPair[0])
+        qc_Uij.rz(-theta2,spinPair[0])
+        qc_Uij.cx(spinPair[1],spinPair[0])
+        ## Return to computational basis
+        qc_Uij.h(spinPair[0])
+        qc_Uij.cx(*spinPair)
+        ## Return instruction
+        return qc_Uij.to_instruction()
 
 ################################################################################
 ##              EVOLUTION UNDER Z-Y PROJECTION OF MAGNETIC FIELD              ##
@@ -174,31 +253,31 @@ class QSTsimulator:
         ## Append UijRight with field evolution for odd particles
         for idx in range(0,len(spinChain),2):
             try:
-                qc_H.append(self.U_ijRight(),[spinChain[idx],spinChain[idx+1]])
+                qc_H.append(\
+                self.TwoSpinEvolUnit(),[spinChain[idx],spinChain[idx+1]])
             except:
                 continue
         ## Append UijRight with field evolution for even particles
         for idx in range(1,len(spinChain),2):
             try:
-                qc_H.append(self.U_ijRight(),[spinChain[idx],spinChain[idx+1]])
+                qc_H.append(\
+                self.TwoSpinEvolUnit(),[spinChain[idx],spinChain[idx+1]])
             except:
                 continue
-        ## Perform time evolution for x-mag. field on s_0
-        qc_H.rx(alpha1,spinChain[0])
-        ## Perform time evolution of x-y mag. field
-        qc_H.append(self.U_23(spinChain),spinChain)
-        ## Perform time evolution for x-mag. field on s_0
-        qc_H.rx(alpha1,spinChain[0])
+        ## Perform time evolution of mag. field
+        qc_H.append(self.MagFieldEvol(spinChain),spinChain)
         ## Append UijRight with field evolution for even particles
         for idx in range(1,len(spinChain),2):
             try:
-                qc_H.append(self.U_ijRight(),[spinChain[idx],spinChain[idx+1]])
+                qc_H.append(\
+                self.TwoSpinEvolUnit(),[spinChain[idx],spinChain[idx+1]])
             except:
                 continue
         ## Append UijRight with field evolution for odd particles
         for idx in range(0,len(spinChain),2):
             try:
-                qc_H.append(self.U_ijRight(),[spinChain[idx],spinChain[idx+1]])
+                qc_H.append(\
+                self.TwoSpinEvolUnit(),[spinChain[idx],spinChain[idx+1]])
             except:
                 continue
         ## Return instruction
@@ -212,21 +291,17 @@ class QSTsimulator:
         '''
         ## Define parameter values for gates
         ## Values for theta parameters
-        th1 = self.ExchangeIntegrals[0]*dt/2
-        th2 = self.ExchangeIntegrals[1]*dt/2
-        th3 = self.ExchangeIntegrals[2]*dt/2
+        th1 = 2*self.ExchangeIntegrals[0]*dt
+        th2 = 2*self.ExchangeIntegrals[1]*dt
+        th3 = 2*self.ExchangeIntegrals[2]*dt
         ## Values for alpha parameters
-        a1 = self.ExternalField[0]*dt/2
-        a2 = self.ExternalField[1]*dt/2
-        a3 = self.ExternalField[2]*dt
+        aH = 4*np.sqrt(sum(comps**2 for comps in self.ExternalField))*dt
         ## Define dictionary for parameter substitution
         params = {
             theta1:th1,
             theta2:th2,
             theta3:th3,
-            alpha1:a1,
-            alpha2:a2,
-            alpha3:a3,
+            alphaH:aH,
         }
         ## Create spin chain
         spinChain = QuantumRegister(self.num_spins,name='s')
@@ -252,20 +327,36 @@ class QSTsimulator:
         Circuits = [self.PerformManySTsteps(STEPS=idx,dt=t/NUMSTEPS) \
                     for idx in range(1,NUMSTEPS+1)]
         ## Simulate and store counts for each circuit simulation
-        SimResults = \
-        [execute(circuit,self.backend,shots=shots_).result().get_counts() \
-            for circuit in Circuits]
+        if self.local_simul:
+            SimResults = \
+                [execute(\
+                circuit,self.backend,shots=shots_).result().get_counts() \
+                for circuit in Circuits]
+        else:
+            SimResults = []
+            for circuit in Circuits:
+                job = execute(circuit,backend=self.backend,shots=shots_)
+                job_monitor(job)
+                SimResults.append(job.result().get_counts(circuit))
         ## Accomodate simulation results to reflect PDF evolution over time
-        PDF = {num:[res.get(Dec2nbitBin(num,self.num_spins),0)/shots_ \
+        trange = [(idx+1)*t/NUMSTEPS for idx in range(NUMSTEPS)]
+        PDF = {'t':trange}
+        PDF.update({num:[res.get(Dec2nbitBin(num,self.num_spins),0)/shots_ \
             for res in SimResults] \
-            for num in range(2**self.num_spins)}
+            for num in range(2**self.num_spins)})
         if save_PDF:
-            trange = [(idx+1)*t/NUMSTEPS for idx in range(NUMSTEPS)]
             plt.xlabel(r'$t$ (u. a.)')
             plt.ylabel(r'$|\langle \psi_0 | q_n \rangle|^2$')
             for n in range(2**self.num_spins):
                 plt.plot(trange,PDF[n],label=Dec2nbitBin(n,self.num_spins))
             plt.legend()
-            plt.savefig('Simul'+str(self.num_spins)+'spins.pdf')
+            plt.savefig('../images/'+self.backend_name+\
+                        'Simul'+str(self.num_spins)+'spins'+\
+                        'Steps'+str(NUMSTEPS)+'.pdf')
+        ## Store results in csv file
+        SimulData = pd.DataFrame.from_dict(PDF)
+        SimulData.to_csv('../datafiles/'+self.backend_name+\
+                        'SimulData'+str(self.num_spins)+\
+                        'Steps'+str(NUMSTEPS)+'.csv',index=False)
         ## Return simulation results
-        return PDF
+        return SimulData

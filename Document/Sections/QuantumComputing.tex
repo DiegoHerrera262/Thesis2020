@@ -1,0 +1,44 @@
+\section{Section 1}
+  \lipsum[2-4]
+
+\section{Section 2}
+  \lipsum[2-4]
+
+\section{Section 3}
+  \lipsum[2-4]
+  \begin{equation}
+    \hat{Z}\ket{\psi} = \pm \ket{\psi}
+  \end{equation}
+
+\section{Section 4}
+  \lipsum[2-4]
+  \begin{equation}
+    \exp(-\mathrm{i}\hat{Z})\ket{\psi(0)} = \pm \ket{\psi(t)}
+  \end{equation}
+
+\section{Section 5}
+  \lipsum[2-4]
+  \begin{figure}[H]
+    \centering
+    \begin{quantikz}
+      \lstick{$\ket{0}$} & \gate{R_x(\phi_1)} & \gate{R_y(\phi_2)} & \qw  \rstick{$\ket{\psi_f}$}
+    \end{quantikz}
+    \caption{Demo circuit from quantikz}
+    \label{fig:democirc}
+  \end{figure}
+
+\section{Section 6}
+  \lipsum[4-4]
+  \begin{figure}[H]
+    \centering
+    \begin{quantikz}
+    \lstick{$|q_0\rangle$} \qw     & \gate{R(\vec{\theta}_1)} & \ctrl{1} & \qw      & \qw & \qw & \qw      & \qw \\
+    \lstick{$|q_1\rangle$} \qw     & \gate{R(\vec{\theta}_2)} & \targ{}  & \ctrl{1} & \qw & \qw & \qw      & \qw \\
+    \lstick{$|q_2\rangle$} \qw     & \gate{R(\vec{\theta})}   & \qw      & \targ{}  & \qw & \qw & \qw      & \qw \\
+                                   &                          &          & \vdots   &     &     &          &     \\
+    \lstick{$|q_{N-2}\rangle$} \qw & \gate{R(\vec{\theta}_{N-2})} & \qw      & \ldots   &   & \qw & \ctrl{1} & \qw \\
+    \lstick{$|q_{N-1}\rangle$} \qw & \gate{R(\vec{\theta}_{N-1})} & \qw      & \ldots   &   & \qw & \targ{}  & \qw \\
+    \end{quantikz}
+    \caption{Demo larger circuit}
+    \label{fig:Democirc2}
+  \end{figure}
