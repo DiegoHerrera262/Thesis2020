@@ -25,6 +25,6 @@ if __name__ == '__main__':
     DemoSimulator = QSTsimulator(num_spins=2,\
                                 ExchangeIntegrals=[1.0,1.0,1.0],\
                                 ExternalField=[1.0,1.0,1.0],\
-                                local_simul=True)
+                                local_simul=False)
     ## Capture data of simulation with Qiskit
-    PDF = DemoSimulator.EvolAlgorithm(NUMSTEPS=20,t=0.45)
+    PDF = DemoSimulator.EvolAlgorithm(NUMSTEPS=10,t=0.45)
