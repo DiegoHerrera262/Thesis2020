@@ -117,7 +117,7 @@ class QSTsimulator:
             QC_FieldEvol.sxdg(spin)
             QC_FieldEvol.rz(-PHI - np.pi, spin)
             ## Evolve with z rotation
-            QC_FieldEvol.rz(2*alphaH, spin)
+            QC_FieldEvol.rz(alphaH, spin)
             ## Change from eigenbasis to computational
             QC_FieldEvol.rz(PHI + np.pi, spin)
             QC_FieldEvol.sx(spin)
@@ -157,89 +157,6 @@ class QSTsimulator:
         return qc_Uij.to_instruction()
 
 ################################################################################
-##              EVOLUTION UNDER Z-Y PROJECTION OF MAGNETIC FIELD              ##
-################################################################################
-    ## Instruction for evolution under y-z magnetic field interaction
-    def U_23(self,spinChain):
-        '''
-        Qiskit instruction for ST step corresponding to x-y magnetic field
-        interaction. See chain Hamiltonian
-        '''
-        ## Create a placeholder quantum circuit
-        qc_U23 = QuantumCircuit(spinChain)
-        ## Perform y-z rotations
-        for spin in spinChain:
-            ## For left of ST
-            qc_U23.ry(alpha2,spin)
-            ## For middle of ST
-            qc_U23.rz(alpha3,spin)
-            ## For inverted left (right) of ST
-            qc_U23.ry(alpha2,spin)
-        ## Return instruction
-        return qc_U23.to_instruction()
-
-################################################################################
-##  EVOLUTION UNDER SPIN-SPIN INTERACTION AND X PROJECTION OF MAGNETIC FIELD  ##
-################################################################################
-    ## Left unitary evolution: After z-mag. field evolution
-    def U_ijLeft(self):
-        '''
-        Qiskit instruction for evolution under spin-spin interaction on the
-        right of first iteration of ST scheme. See ST scheme.
-        '''
-        ## Initialization of 2 spin quantum register
-        spinPair = QuantumRegister(2,name='s')
-        ## Initialization of quantum circuit
-        qc_Uij = QuantumCircuit(spinPair)
-        ## Convert to computational basis
-        qc_Uij.cx(*spinPair)
-        qc_Uij.h(spinPair[0])
-        ## Include x-magnetic field evolution for s_1
-        qc_Uij.rx(alpha1,spinPair[1])
-        ## Compute J3 phase
-        qc_Uij.rz(theta3,spinPair[1])
-        ## Compute J1 phase
-        qc_Uij.rz(theta1,spinPair[0])
-        ## Compute J2 phase
-        qc_Uij.cx(spinPair[1],spinPair[0])
-        qc_Uij.rz(-theta2,spinPair[0])
-        qc_Uij.cx(spinPair[1],spinPair[0])
-        ## Return to computational basis
-        qc_Uij.h(spinPair[0])
-        qc_Uij.cx(*spinPair)
-        ## Return instruction
-        return qc_Uij.to_instruction()
-
-    ## Right unitary evolution: Before z-mag. field evolution
-    def U_ijRight(self):
-        '''
-        Qiskit instruction for evolution under spin-spin interaction on the
-        left of first iteration of ST scheme. See ST scheme.
-        '''
-        ## Initialization of 2 spin quantum register
-        spinPair = QuantumRegister(2,name='s')
-        ## Initialization of quantum circuit
-        qc_Uij = QuantumCircuit(spinPair)
-        ## Convert to computational basis
-        qc_Uij.cx(*spinPair)
-        qc_Uij.h(spinPair[0])
-        ## Compute J3 phase
-        qc_Uij.rz(theta3,spinPair[1])
-        ## Compute J1 phase
-        qc_Uij.rz(theta1,spinPair[0])
-        ## Compute J2 phase
-        qc_Uij.cx(spinPair[1],spinPair[0])
-        qc_Uij.rz(-theta2,spinPair[0])
-        qc_Uij.cx(spinPair[1],spinPair[0])
-        ## Include x-magnetic field evolution for s_1
-        qc_Uij.rx(alpha1,spinPair[1])
-        ## Return to computational basis
-        qc_Uij.h(spinPair[0])
-        qc_Uij.cx(*spinPair)
-        ## Return instruction
-        return qc_Uij.to_instruction()
-
-################################################################################
 ##                        EVOLUTION STEP USING ST SCHEME                      ##
 ################################################################################
     ## Suzuki - Trotter step for time simulation
@@ -250,14 +167,14 @@ class QSTsimulator:
         '''
         ## Create quantum circuit
         qc_H = QuantumCircuit(spinChain)
-        ## Append UijRight with field evolution for odd particles
+        ## Append TwoSpinEvol with field evolution for odd particles
         for idx in range(0,len(spinChain),2):
             try:
                 qc_H.append(\
                 self.TwoSpinEvolUnit(),[spinChain[idx],spinChain[idx+1]])
             except:
                 continue
-        ## Append UijRight with field evolution for even particles
+        ## Append TwoSpinEvol with field evolution for even particles
         for idx in range(1,len(spinChain),2):
             try:
                 qc_H.append(\
@@ -266,20 +183,6 @@ class QSTsimulator:
                 continue
         ## Perform time evolution of mag. field
         qc_H.append(self.MagFieldEvol(spinChain),spinChain)
-        ## Append UijRight with field evolution for even particles
-        for idx in range(1,len(spinChain),2):
-            try:
-                qc_H.append(\
-                self.TwoSpinEvolUnit(),[spinChain[idx],spinChain[idx+1]])
-            except:
-                continue
-        ## Append UijRight with field evolution for odd particles
-        for idx in range(0,len(spinChain),2):
-            try:
-                qc_H.append(\
-                self.TwoSpinEvolUnit(),[spinChain[idx],spinChain[idx+1]])
-            except:
-                continue
         ## Return instruction
         return qc_H.to_instruction()
 
@@ -295,7 +198,7 @@ class QSTsimulator:
         th2 = 2*self.ExchangeIntegrals[1]*dt
         th3 = 2*self.ExchangeIntegrals[2]*dt
         ## Values for alpha parameters
-        aH = 4*np.sqrt(sum(comps**2 for comps in self.ExternalField))*dt
+        aH = 2*np.sqrt(sum(comps**2 for comps in self.ExternalField))*dt
         ## Define dictionary for parameter substitution
         params = {
             theta1:th1,
@@ -327,17 +230,11 @@ class QSTsimulator:
         Circuits = [self.PerformManySTsteps(STEPS=idx,dt=t/NUMSTEPS) \
                     for idx in range(1,NUMSTEPS+1)]
         ## Simulate and store counts for each circuit simulation
-        if self.local_simul:
-            SimResults = \
-                [execute(\
-                circuit,self.backend,shots=shots_).result().get_counts() \
-                for circuit in Circuits]
-        else:
-            SimResults = []
-            for circuit in Circuits:
-                job = execute(circuit,backend=self.backend,shots=shots_)
-                job_monitor(job)
-                SimResults.append(job.result().get_counts(circuit))
+        Job = execute(Circuits,self.backend,shots=shots_)
+        if not self.local_simul:
+            job_monitor(job)
+        SimResults = [Job.result().get_counts(circuit) \
+                    for circuit in Circuits]
         ## Accomodate simulation results to reflect PDF evolution over time
         trange = [(idx+1)*t/NUMSTEPS for idx in range(NUMSTEPS)]
         PDF = {'t':trange}

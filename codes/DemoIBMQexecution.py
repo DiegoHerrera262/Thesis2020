@@ -14,6 +14,7 @@ from qiskit import QuantumRegister, ClassicalRegister
 from qiskit import QuantumCircuit, execute, Aer
 from qiskit import IBMQ, assemble, transpile
 from qiskit.tools.monitor import job_monitor
+import numpy as np
 import matplotlib.pyplot as plt
 plt.style.use('FigureStyle.mplstyle')
 
@@ -30,20 +31,43 @@ provider = IBMQ.get_provider('ibm-q')
 ################################################################################
 ##                           SET UP IBM Q DEVICE                              ##
 ################################################################################
-qpu = provider.get_backend('ibmq_quito')
+qpu = provider.get_backend('ibmq_armonk')
 
 ################################################################################
 ##                         CREATE QUANTUM ALGORITHM                           ##
 ################################################################################
-QC_ibm = QuantumCircuit(2,2)
-QC_ibm.h(0)
-## QC_ibm.cx(0,1)
-QC_ibm.measure([0,1],[0,1])
+def SpinPrecession(tsimul):
+    '''
+    Funciton for simulating spin
+    precession with Qiskit
+    '''
+    Simul = QuantumCircuit(1,1)
+    Simul.h(0)
+    Simul.ry(-2*np.pi*tsimul,0)
+    Simul.measure(0,0)
+    return Simul
+
+################################################################################
+##                      CREATE LIST OF QUANTUM CIRCUITS                       ##
+################################################################################
+tsimuls = np.linspace(0,1,20)
+DemoCircuits = [SpinPrecession(ti) for ti in tsimuls]
 
 ################################################################################
 ##                        EXECUTE QUANTUM ALGORITHM                           ##
 ################################################################################
-job = execute(QC_ibm,backend=qpu)
+job = execute(DemoCircuits,backend=qpu,shots=2048)
 job_monitor(job)
-results = job.result().get_counts(QC_ibm)
-print(results)
+## Reindex data for plotting
+results = np.array([[job.result().get_counts(circuit).get(val,0) \
+            for val in ['0','1']] \
+            for circuit in DemoCircuits])
+################################################################################
+##                      DISPLAY RESULTS OF EXECUTION                          ##
+################################################################################
+plt.xlabel(r'$t$ (u. a.)')
+plt.ylabel(r'$|\langle \psi | q\rangle|^2$')
+plt.plot(tsimuls, results[:,0] * 1/2048, label=r'$p(0)$')
+plt.plot(tsimuls, results[:,1] * 1/2048, label=r'$p(1)$')
+plt.legend()
+plt.show()
