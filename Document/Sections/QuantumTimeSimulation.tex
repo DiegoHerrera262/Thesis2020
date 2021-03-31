@@ -1,21 +1,22 @@
-\section{Motivation of Quantum Algorithms for Time Simulation of Quantum Systems}
-  The heart of simulation of physical systems is solving Schrödinger's equation of motion:
+\section{Quantum Time Simulation v. Classical Time Simulation}
+
+  At the heart of simulation of quantum physical systems is solving Schrödinger's equation of motion:
 
   \begin{equation}
-    \mathrm{i}
-    \label{eq:SchEqn}\pdv{\ket{\psi}}{t} = \hat{H} \ket{\psi}
+  \mathrm{i}
+  \label{eq:SchEqn}\pdv{\ket{\psi}}{t} = \hat{H} \ket{\psi}
   \end{equation}
 
-  Where $\hat{H}$ is the Hamiltonian that defines the interaction between the system's components. In position representation, A one-dimensional system may be simulated by solving the equation
+  Where $\hat{H}$ is the Hamiltonian that defines the interaction between the system's components, and perhaps its environment. In position representation, A one-dimensional system of spinless particles can be simulated by solving the equation
 
   \begin{equation}
-    \mathrm{i}\pdv{\ket{\psi}}{t} = \Bigg[\sum_{i = 1}^{n} \frac{\hat{P}_i^2}{2m_i} + \hat{V}(x_1, x_2, \ldots, x_n)\Bigg] \ket{\psi}
+  \mathrm{i}\pdv{\ket{\psi}}{t} = \Bigg[\sum_{i = 1}^{n} \frac{\hat{P}_i^2}{2m_i} + \hat{V}(x_1, x_2, \ldots, x_n)\Bigg] \ket{\psi}
   \end{equation}
 
-  Supposed $\ket{\psi}$ represents an $n$-particle system state. Hence, a single particle dynamics may be simulated by solving the equation
+  Supposed $\ket{\psi}$ represents an $n$-particle system state. Hence, a single particle dynamics can be determined by solving the equation
 
   \begin{equation}
-    \mathrm{i}\pdv{\ket{\psi}}{t} = \Bigg[\frac{\hat{P}^2}{2m} + \hat{V}(x)\Bigg] \ket{\psi}
+  \mathrm{i}\pdv{\ket{\psi}}{t} = \Bigg[\frac{\hat{P}^2}{2m} + \hat{V}(x)\Bigg] \ket{\psi}
   \end{equation}
 
   A classical algorithm may use a fine discretization of position basis, in some spatial region $\mathit{S} = [0,L]$, with a basis of $N$ statevectors and a discretization step $\Delta x = L/(N-1)$. Such that
@@ -27,14 +28,81 @@
   This scheme leads to a representation of any single particle position state as a linear combination of discretized statevectors
 
   \begin{equation}
-    \ket{\psi} = \sum_{k = 0}^{N-1} a_k \ket{k \Delta x}
+    \ket{\psi(t)} = \sum_{k = 0}^{N-1} a_k(t) \ket{k \Delta x}
   \end{equation}
 
-\section{Section 2}
+  Momentum operator could be approximated using finite difference formulas, thus leading to a system of coupled differential equation on the expansion coefficients $a_k$
+
+  \begin{equation}
+    \mathrm{i}\pdv{a_k}{t} = \sum_{l = 0}^{N} H_{kl} a_l
+    \label{eq:MatrixSchr}
+  \end{equation}
+
+  Solution of equation \ref{eq:MatrixSchr}, given $a_k(0)$, would yield a complete knowledge of the particle's dynamics at any time. Tipically, this would require diagonalization of the Hamiltonian matrix, $H_{kl}$. There are more efficient apporaches than this, of course. For instance, Numerov integration. However, the goal of this example is to introduce quantum time simulation on a digital quantum computer as smoothly as possible.
+
+  Time simulation on a digital quantum computer could be carried out in a very different way. A schematic is presented on figure \ref{fig:timevolslice}. Pretty much in the same way as in the naïve example discussed before, position basis may be discretized. Nevertheless, this time the coefficients would be encoded directly as the amplitudes of the statevector of an $n$-qbit computer. It is readily seen that to achieve a discretization with $N$ system statevectors, only $\mathcal{O}(\log{N})$ qubits are needed. Although not very significant for a single particle, this illustrates that quantum computers have inherent exponential advantage over classical computers in terms of space resources. Instead of diagonalizing the Hamiltonian, digital quantum time simulation relies on the direct solution
+
+  \begin{equation}
+    \ket{\psi(t)} = \exp(-\mathrm{i}\int_{t_0}^t \hat{H}(t)dt)\ket{\psi(0)}
+    \label{eq:UnitaryEvolution}
+  \end{equation}
+
+  Which for time-independent Hamiltonians reduces to
+
+  \begin{equation}
+    \ket{\psi(t)} = \mathrm{e}^{-\mathrm{i}(t - t_0) \hat{H}}\ket{\psi(0)}
+    \label{eq:UnitaryEvolutionNoTime}
+  \end{equation}
+
+  In the naïve example considered until now, time evolution with a digital quantum computer amounts to computing unitary operator ($t_0 = 0$)
+
+  \begin{equation}
+    \hat{U}(t) = \mathrm{e}^{-\mathrm{i}t \frac{\hat{P}^2}{2m}}\mathrm{e}^{-\mathrm{i}t \hat{V}(x)} + \mathcal{O}(t^2)
+  \end{equation}
+
+  Using Baker-Haussdorf formulae, or a Suzuki-Trotter scheme of higher order, better expressions for the time evolution operator of the system may be obtained. Notice that operator
+
+  \[
+  \hat{U}_P = \mathrm{e}^{-\mathrm{i}t \frac{\hat{P}^2}{2m}}
+  \]
+
+  Is effciently computable, using the Quantum Fourier Transform Algorithm:
+
+  \[
+  \hat{U}_P = QFT\mathrm{e}^{-\mathrm{i}t \frac{\hat{x}^2}{2m}}QFT^{\dagger}
+  \]
+
+  Therefore, if operator
+
+  \[
+  \hat{U}_V = \mathrm{e}^{-\mathrm{i}t \hat{V}(x)}
+  \]
+
+  Is efficiently computable, time simulation on a quantum computer might be more resource-friendly, both in terms of space and time, than common simulation using classical computers. Only theoretical constraints are error bounds for a given simulation time interval. Given simulation time and error bound, a time slice $dt$ is fixed, and thus repeated application of operator $\hat{U}(dt)$ evolves a single particle state from some initial state $\ket{\psi(0)}$, to state $\ket{\psi(t)}$.
+
+  \begin{figure}
+    \centering
+    \begin{quantikz}
+      \lstick[wires=4]{$\ket{\psi(0)}$} & \gate[wires=4]{QFT^{\dagger}} & \gate[wires=4]{\mathrm{e}^{-\mathrm{i}t \frac{\hat{x}^2}{2m}}} & \gate[wires=4]{QFT^{\dagger}} & \gate[wires=4]{\mathrm{e}^{-\mathrm{i}t \frac{\hat{V}(x)}{2m}}} & \qw  \rstick[wires=4]{$\ket{\psi(t)}$} \\
+                                        &                               &                                                              &                               &                                                                 & \qw                                    \\
+                                        &                               &                                                              &                               &                                                                 & \qw                                    \\
+                                        &                               &                                                              &                               &                                                                 & \qw                                    \\
+    \end{quantikz}
+    \caption{Time evolution slice for a single particle state on a digital quantum computer. This step should be repated several times, with a time step $dt$, which depends upon the desired error bound and spatial discretization.}
+    \label{fig:timevolslice}
+  \end{figure}
+
+  In summary, rather than using physical bits to encode the expansion coefficients of a particle's state, like on a classical computer, a quantum algorithm reliles on the nature of qubits to encode directly such a state. This leads to an exponential reduction in the space complexity of the problem. Furthermore, multi-qubit gates can be used to implement unitary evolution, without the explicit need of matrix diagonalization. Thus leading to a potentially faster evolution simulation. For a simple system like this, codification of the information of all expansion coefficients would require at least $2N$ reals parameters. Furthermore, diagonalization of the Hamiltonian matrix, $H_{kl}$, would require $\mathcal{O}(N^2)$ computational steps. As a result, the simulation advantage posed by quantum computation seems unnecessary. Also, there are numerous efficient classical algorithms for solving Schrodinger's time dependent equation, such as Numerov or Runge-Kutta integration. However, this example illustrates the difference between classical simulation and quantum simulation using a digital quantum computer, and some of the possible advanteges of quantum time simulation using the former type of information processors.
+
+  For a one-dimensional system of several particles, equation \ref{eq:MatrixSchr} can be generalized easily. However, the number of coefficients required to describe a statevector in a dicrete basis would grow exponentially with the number of particles. As well as matrix Hamiltonian size. As a result, simulation of time dynamics on a classical computer results impractical. Therefore, quantum time simulation of mult-particle systems is an application to which digital quantum computers may represent a practical advantage. In the following sections, common techniques for quantum time simulation in digital computers are presented. In particular, simple approximation formulas are discussed and compared. Important applications of  digital quantum simulation (DQT) to multi-particle physics are introduced. On one hand, applications to quantum chemistry are introduced in the context of the electronic structure problem. On the other hand, appllications to solid state physics are presented in the context of the Hubbard Model.
+
+  %% Here I would have to talk more about...
+
+\section{Common Approximation Schemes for Unitary Evolution}
   \lipsum[2-4]
 
-\section{Section 3}
+\section{The Electronic Structure Problem}
   \lipsum[2-4]
 
-\section{Section 4}
+\section{Quantum Time Simulation of the Hubbard Model}
   \lipsum[2-4]

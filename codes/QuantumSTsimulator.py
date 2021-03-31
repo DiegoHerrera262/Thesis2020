@@ -232,7 +232,7 @@ class QSTsimulator:
         ## Simulate and store counts for each circuit simulation
         Job = execute(Circuits,self.backend,shots=shots_)
         if not self.local_simul:
-            job_monitor(job)
+            job_monitor(Job)
         SimResults = [Job.result().get_counts(circuit) \
                     for circuit in Circuits]
         ## Accomodate simulation results to reflect PDF evolution over time
