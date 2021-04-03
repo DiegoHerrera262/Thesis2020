@@ -99,8 +99,95 @@
   %% Here I would have to talk more about...
 
 \section{Common Approximation Schemes for Unitary Evolution}
-  \lipsum[2-4]
+  Consider a system of $N$ components, whose Hamiltonian can be expressed as a sum of local Hamiltonians (i. e. that model interaction between at most $C$ components)
 
+  \begin{equation}
+    \hat{H} = \sum_{k = 1}^{L} \hat{H}_k
+    \label{eq:SparseHam}
+  \end{equation}
+
+  Where $L$ is some polinomial on the number of system components. In general, $[\hat{H}_i,\hat{H}_j] \neq 0$, and thus
+
+  \begin{equation}
+    \mathrm{e}^{-\mathrm{i}\hat{H}t} \neq \prod_{k = 1}^{L} \mathrm{e}^{-\mathrm{i}\hat{H}_kt}
+    \label{eq:CommuteUnit}
+  \end{equation}
+
+  Many systems are described by local interactions, for instance, electrons in a solid material or magnetic moments in a lattice. In several cases, local interaction Hamiltonians are non-commuting, and thus approximation methods are necessary for performing time evolution. In this section, schemes for approximating unitary evolution of a quantum system are discussed. 
+
+  \subsection{Trotter Formulas}
+
+  Consider operators $\hat{H}_1$, $\hat{H}_2$, with $[\hat{H}_1,\hat{H}_2] \neq 0$. By definition
+
+  \begin{align}
+    \mathrm{e}^{-\mathrm{i}\hat{H}_1 t} & = \sum_{m = 0}^{\infty} \frac{(-\mathrm{i}t)^m}{m!}\hat{H}_1^m \\
+    \mathrm{e}^{-\mathrm{i}\hat{H}_2 t} & = \sum_{l = 0}^{\infty} \frac{(-\mathrm{i}t)^l}{l!}\hat{H}_2^l
+    \label{eq:ExpSeries}
+  \end{align}
+
+  It is readily shown that
+
+  \begin{equation}
+    \mathrm{e}^{-\mathrm{i}\hat{H}_1 t}\mathrm{e}^{-\mathrm{i}\hat{H}_2 t} = \sum_{k = 0}^{\infty} \frac{(-\mathrm{i}t)^k}{k!} \Bigg[\sum_{m = 0}^k \binom{k}{m} \hat{H}_1^m \hat{H}_2^{k-m}\Bigg]
+    \label{eq:ExpProdExact}
+  \end{equation}
+
+  Fon non-commuting operators, it is so that
+
+  \begin{equation}
+    \sum_{m = 0}^k \binom{k}{m} \hat{H}_1^m \hat{H}_2^{k-m} = (\hat{H}_1 + \hat{H}_2)^k + f_k(\hat{H}_1,\hat{H}_2)
+    \label{eq:BinomialTheorem}
+  \end{equation}
+
+  Where $f_k(\hat{H}_1,\hat{H}_2)$ is a function of the commutator of the operators. Since $f_1(\hat{H}_1,\hat{H}_2) = 0$, it is so that
+
+  \begin{equation}
+    \mathrm{e}^{-\mathrm{i}\hat{H}_1 t}\mathrm{e}^{-\mathrm{i}\hat{H}_2 t} = \mathrm{e}^{-\mathrm{i}(\hat{H}_1 + \hat{H}_2) t} + \mathcal{O}(t^2)
+    \label{eq:O2Approx}
+  \end{equation}
+
+  If $|t| \ll 1$, the product of the exponentials estimate the evolution operator with an error $\mathcal{O}(t^2)$. In the general case, it must be noted that
+
+  \begin{equation}
+    \mathrm{e}^{-\mathrm{i}\sum_{k = 0}^L \hat{H}_k t} \approx \hat{1} + (-\mathrm{i}t)\sum_{k = 0}^L \hat{H}_k + \frac{(-\mathrm{i}t)^2}{2} \Bigg[\sum_{k = 0}^L \hat{H}_k^2 + 2 \sum_{j > k}\hat{H}_k \hat{H}_j\Bigg] + \mathcal{O}(t^3)
+    \label{eq:TrotterFormula}
+  \end{equation}
+
+  In consequence, a unitary evolution operator with local interactions may be approximated, to quadratic order, by the exponential product
+
+  \begin{equation}
+    \mathrm{e}^{-\mathrm{i}\sum_{k = 0}^L \hat{H}_k t} = \prod_{k = 1}^{L} \mathrm{e}^{-\mathrm{i}\hat{H}_kt} + \mathcal{O}(t^2)
+    \label{eq:2ndOrderTrotter}
+  \end{equation}
+
+  In some instances, quadratic approximations may be enough. However, in following sections, higher-order approximation schemes are discussed, based upon equation \ref{eq:TrotterFormula}.
+
+  \subsection{Some Qubic Order Schemes}
+
+  The first qubic order approximation discussed is the so called Baker-Hausdorf formulae. By series expansion, it can be shown that
+
+  \begin{align*}
+    \mathrm{e}^{-\mathrm{i}\hat{H}_1t}\mathrm{e}^{-\mathrm{i}\hat{H}_2t}\mathrm{e}^{-\mathrm{i}[\hat{H}_1,\hat{H}_2]t^2} = & \hat{1} + (-\mathrm{i}t) (\hat{H}_1 + \hat{H}_2) \\
+    & + \frac{(-\mathrm{i}t)^2}{2}(\hat{H}_1^2 + \hat{H}_2^2 + \hat{H}_1\hat{H}_2 + \hat{H}_2\hat{H}_1) + \mathcal{O}(t^3) \\
+    = & \mathrm{e}^{-\mathrm{i}(\hat{H}_1 + \hat{H}_1)t} + \mathcal{O}(t^3)
+    \label{eq:Hausdorf1}
+  \end{align*}
+
+  Although useful in case of operators that constitute a Lie algebra, the formulae above may not be enough in other instances. A more general approximation formulae is
+
+  \begin{equation}
+    \mathrm{e}^{-\mathrm{i}(\hat{H}_1 + \hat{H}_2)t} = \mathrm{e}^{-\mathrm{i}\hat{H}_1\frac{t}{2}}\mathrm{e}^{-\mathrm{i}\hat{H}_2t}\mathrm{e}^{-\mathrm{i}\hat{H}_1\frac{t}{2}} + \mathcal{O}(t^3) 
+    \label{eq:qubicorder}
+  \end{equation}
+
+  This can be deduced directly from equation \ref{eq:TrotterFormula}. This expresion can be further generalized:
+
+  \begin{equation}
+    \mathrm{e}^{-\mathrm{i}t\sum_{k = 0}^{L}\hat{H}_k} = \Bigg(\prod_{k = 0}^{L-1}\mathrm{e}^{-\mathrm{i}\hat{H}_k\frac{t}{2}}\Bigg)\mathrm{e}^{-\mathrm{i}\hat{H}_Lt}\Bigg(\prod_{k = 0}^{L-1}\mathrm{e}^{-\mathrm{i}\hat{H}_k\frac{t}{2}}\Bigg) + \mathcal{O}(t^3)
+    \label{eq:Suzuki0}
+  \end{equation}
+
+  
 \section{The Electronic Structure Problem}
   \lipsum[2-4]
 
