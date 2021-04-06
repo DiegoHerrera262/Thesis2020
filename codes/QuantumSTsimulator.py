@@ -314,7 +314,7 @@ class QSTsimulator:
         return Uev.dot(initstate)
 
     ## Plot exact probability density
-    def ExacEvolAlgorithm(self,NUMSTEPS=200,t=1.7,shots_=2048,save_PDF=True):
+    def ExacEvolAlgorithm(self,NUMSTEPS=200,t=1.7,save_PDF=True):
         '''
         Perform exact time evolution by
         diagonalization and store data
@@ -342,8 +342,8 @@ class QSTsimulator:
                         'Steps'+str(NUMSTEPS)+'.pdf')
         ## Store results in csv file
         EvolData = pd.DataFrame.from_dict(PDF)
-        EvolData.to_csv('../datafiles/'+self.backend_name+\
-                        'ExactEvollData'+str(self.num_spins)+\
+        EvolData.to_csv('../datafiles/'+\
+                        'ExactEvolData'+str(self.num_spins)+\
                         'Steps'+str(NUMSTEPS)+'.csv',index=False)
         ## Return simulation results
         return EvolData
