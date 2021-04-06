@@ -1,6 +1,6 @@
 \section{Quantum Time Simulation v. Classical Time Simulation}
 
-  At the heart of simulation of quantum physical systems is solving Schrödinger's equation of motion:
+  At the heart of simulation of quantum physical systems is solving Schrödinger's equation of motion \cite{Beck, Nielsen}:
 
   \begin{equation}
   \mathrm{i}
@@ -40,7 +40,7 @@
 
   Solution of equation \ref{eq:MatrixSchr}, given $a_k(0)$, would yield a complete knowledge of the particle's dynamics at any time. Tipically, this would require diagonalization of the Hamiltonian matrix, $H_{kl}$. There are more efficient apporaches than this, of course. For instance, Numerov integration. However, the goal of this example is to introduce quantum time simulation on a digital quantum computer as smoothly as possible.
 
-  Time simulation on a digital quantum computer could be carried out in a very different way. A schematic is presented on figure \ref{fig:timevolslice}. Pretty much in the same way as in the naïve example discussed before, position basis may be discretized. Nevertheless, this time the coefficients would be encoded directly as the amplitudes of the statevector of an $n$-qbit computer. It is readily seen that to achieve a discretization with $N$ system statevectors, only $\mathcal{O}(\log{N})$ qubits are needed. Although not very significant for a single particle, this illustrates that quantum computers have inherent exponential advantage over classical computers in terms of space resources. Instead of diagonalizing the Hamiltonian, digital quantum time simulation relies on the direct solution
+  Time simulation on a digital quantum computer could be carried out in a very different way \cite{Strini, Nielsen}. A schematic is presented on figure \ref{fig:timevolslice}. Pretty much in the same way as in the naïve example discussed before, position basis may be discretized. Nevertheless, this time the coefficients would be encoded directly as the amplitudes of the statevector of an $n$-qbit computer. It is readily seen that to achieve a discretization with $N$ system statevectors, only $\mathcal{O}(\log{N})$ qubits are needed. Although not very significant for a single particle, this illustrates that quantum computers have inherent exponential advantage over classical computers in terms of space resources. Instead of diagonalizing the Hamiltonian, digital quantum time simulation relies on the direct solution
 
   \begin{equation}
     \ket{\psi(t)} = \exp(-\mathrm{i}\int_{t_0}^t \hat{H}(t)dt)\ket{\psi(0)}
@@ -99,7 +99,7 @@
   %% Here I would have to talk more about...
 
 \section{Common Approximation Schemes for Unitary Evolution}
-  Consider a system of $N$ components, whose Hamiltonian can be expressed as a sum of local Hamiltonians (i. e. that model interaction between at most $C$ components)
+  Consider a system of $N$ components, whose Hamiltonian can be expressed as a sum of local Hamiltonians (i. e. that model interaction between at most $C$ components) \cite{Nielsen,LloydNature}
 
   \begin{equation}
     \hat{H} = \sum_{k = 1}^{L} \hat{H}_k
@@ -113,7 +113,7 @@
     \label{eq:CommuteUnit}
   \end{equation}
 
-  Many systems are described by local interactions, for instance, electrons in a solid material or magnetic moments in a lattice. In several cases, local interaction Hamiltonians are non-commuting, and thus approximation methods are necessary for performing time evolution. In this section, schemes for approximating unitary evolution of a quantum system are discussed. 
+  Many systems are described by local interactions, for instance, electrons in a solid material or magnetic moments in a lattice. In several cases, local interaction Hamiltonians are non-commuting, and thus approximation methods are necessary for performing time evolution. In this section, schemes for approximating unitary evolution of a quantum system are discussed.
 
   \subsection{Trotter Formulas}
 
@@ -160,11 +160,11 @@
     \label{eq:2ndOrderTrotter}
   \end{equation}
 
-  In some instances, quadratic approximations may be enough. However, in following sections, higher-order approximation schemes are discussed, based upon equation \ref{eq:TrotterFormula}.
+  In some instances, quadratic approximations may be enough. In his seminal paper, Lloyd presents this quadratic approximation for simulation of quantum systems with local interaction \cite{LloydNature}. Also, Las Heras et. al. simulate a Hubbard Hamiltonian with up to 4 fermionic modes using second order approximations to unitary evolution \cite{HubbardSimul, HubbardSimulLasHeras}. However, in following sections, higher-order approximation schemes are discussed, based upon equation \ref{eq:TrotterFormula}.
 
   \subsection{Some Qubic Order Schemes}
 
-  The first qubic order approximation discussed is the so called Baker-Hausdorf formulae. By series expansion, it can be shown that
+  The first qubic order approximation discussed is the so called Baker-Hausdorf formulae \cite{Nielsen}. By series expansion, it can be shown that
 
   \begin{align*}
     \mathrm{e}^{-\mathrm{i}\hat{H}_1t}\mathrm{e}^{-\mathrm{i}\hat{H}_2t}\mathrm{e}^{-\mathrm{i}[\hat{H}_1,\hat{H}_2]t^2} = & \hat{1} + (-\mathrm{i}t) (\hat{H}_1 + \hat{H}_2) \\
@@ -176,18 +176,21 @@
   Although useful in case of operators that constitute a Lie algebra, the formulae above may not be enough in other instances. A more general approximation formulae is
 
   \begin{equation}
-    \mathrm{e}^{-\mathrm{i}(\hat{H}_1 + \hat{H}_2)t} = \mathrm{e}^{-\mathrm{i}\hat{H}_1\frac{t}{2}}\mathrm{e}^{-\mathrm{i}\hat{H}_2t}\mathrm{e}^{-\mathrm{i}\hat{H}_1\frac{t}{2}} + \mathcal{O}(t^3) 
+    \mathrm{e}^{-\mathrm{i}(\hat{H}_1 + \hat{H}_2)t} = \mathrm{e}^{-\mathrm{i}\hat{H}_1\frac{t}{2}}\mathrm{e}^{-\mathrm{i}\hat{H}_2t}\mathrm{e}^{-\mathrm{i}\hat{H}_1\frac{t}{2}} + \mathcal{O}(t^3)
     \label{eq:qubicorder}
   \end{equation}
 
-  This can be deduced directly from equation \ref{eq:TrotterFormula}. This expresion can be further generalized:
+  This can be deduced directly from equation \ref{eq:TrotterFormula}. And can be further generalized:
 
   \begin{equation}
     \mathrm{e}^{-\mathrm{i}t\sum_{k = 0}^{L}\hat{H}_k} = \Bigg(\prod_{k = 0}^{L-1}\mathrm{e}^{-\mathrm{i}\hat{H}_k\frac{t}{2}}\Bigg)\mathrm{e}^{-\mathrm{i}\hat{H}_Lt}\Bigg(\prod_{k = 0}^{L-1}\mathrm{e}^{-\mathrm{i}\hat{H}_k\frac{t}{2}}\Bigg) + \mathcal{O}(t^3)
     \label{eq:Suzuki0}
   \end{equation}
 
-  
+  \subsection{Suzuki - Trotter Schemes}
+  \lipsum[2-4]
+
+
 \section{The Electronic Structure Problem}
   \lipsum[2-4]
 

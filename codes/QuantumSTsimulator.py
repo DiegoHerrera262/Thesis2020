@@ -57,8 +57,10 @@ class QSTsimulator:
     num_spins = 2                           ## Number of spins in the chain
     ExchangeIntegrals = [1.0,1.0,1.0]       ## See chain Hamiltonian
     ExternalField = [0.0,0.0,0.0]           ## See chain Hamiltonian
-    backend_name = 'qasm_simulator'              ## For simulation with Qiskit
+    backend_name = 'qasm_simulator'         ## For simulation with Qiskit
     local_simul = True                      ## For determining if local run
+    HamMatEstates = None                    ## For storing Hamiltonian
+    HamMatEnergies = None                    ## For storing Energy spectrum
 
     ## Init method
     def __init__(self,\
@@ -77,7 +79,7 @@ class QSTsimulator:
                 ## an IBMQ device
                 self.local_simul = local_simul
                 if self.local_simul:
-                    self.backend_name = 'qasm_simulator'
+                    self.backend_name = input('Enter local simulator name: ')
                     self.backend = Aer.get_backend(self.backend_name)
                 else:
                     IBMQ.load_account()
@@ -257,3 +259,91 @@ class QSTsimulator:
                         'Steps'+str(NUMSTEPS)+'.csv',index=False)
         ## Return simulation results
         return SimulData
+
+################################################################################
+##                         STATE FIDELITY COMPUTATION                         ##
+################################################################################
+    ## Diagonalize Hamiltonian
+    def DiagHamilt(self):
+        '''
+        Diagonalize matrix Hamiltonian for
+        future time evolution
+        '''
+        ## Define Pauli operators
+        PauliX = np.array([
+                    [0,1],
+                    [1,0]
+                ])
+        PauliY = np.array([
+                    [0,-1j],
+                    [1j,0]
+                ])
+        PauliZ = np.array([
+                    [1,0],
+                    [0,-1]
+                ])
+        PauliOps = [PauliX, PauliY, PauliZ]
+        ## Definition of two-qubit Hamiltonian
+        Hij = np.sum(Jint * np.kron(Pauli,Pauli) \
+                    for Jint,Pauli in zip(self.ExchangeIntegrals,PauliOps))
+        ## Definition of one-qubit Hamiltonian
+        Hi = np.sum(hcomp * Pauli \
+                    for hcomp,Pauli in zip(self.ExternalField,PauliOps))
+        ## Definition of Chain Hamiltonian
+        Hchain = np.sum(\
+                    np.kron(np.identity(2**idx), \
+                    np.kron(Hij, np.identity(2**(self.num_spins-(idx + 2)))))+\
+                    np.kron(np.identity(2**idx), \
+                    np.kron(Hi, np.identity(2**(self.num_spins-(idx + 1))))) \
+                    for idx in range(self.num_spins-1)
+                ) + np.kron(np.identity(2**(self.num_spins -1)),Hi)
+        ## Diagonalization of Hamiltonian
+        self.HamMatEnergies, self.HamMatEstates = np.linalg.eig(Hchain)
+
+    ## Perform exact time evolution
+    def ExactTimeEvol(self,initstate,t=1.7):
+        '''
+        Compute evolution operator and
+        perform matrix multiplication
+        '''
+        ## Compute unitary evolution operator
+        Udiag = np.diag(np.exp(-1j*t*self.HamMatEnergies))
+        Uev = np.matmul(np.matmul(self.HamMatEstates,Udiag),\
+                        self.HamMatEstates.transpose().conjugate())
+        ## Return application to initial state
+        return Uev.dot(initstate)
+
+    ## Plot exact probability density
+    def ExacEvolAlgorithm(self,NUMSTEPS=200,t=1.7,shots_=2048,save_PDF=True):
+        '''
+        Perform exact time evolution by
+        diagonalization and store data
+        for future comparison
+        '''
+        initstate = np.zeros(2**(self.num_spins))
+        initstate[0] = 1
+        trange = [(idx+1)*t/NUMSTEPS for idx in range(NUMSTEPS)]
+        ## Create array of evolved states
+        sts = np.array([self.ExactTimeEvol(initstate,ts) \
+                        for ts in trange])
+        ## Transpose and compute norm for PDF
+        PDFvals = sts * sts.conjugate()
+        ## Create dictionary for DataFrame
+        PDF = {'t':trange}
+        PDF.update({n:PDFvals[:,n] for n in range(2**self.num_spins)})
+        if save_PDF:
+            plt.xlabel(r'$t$ (u. a.)')
+            plt.ylabel(r'$|\langle \psi_0 | q_n \rangle|^2$')
+            for n in range(2**self.num_spins):
+                plt.plot(trange,PDF[n],label=Dec2nbitBin(n,self.num_spins))
+            plt.legend()
+            plt.savefig('../images/'+self.backend_name+\
+                        'ExactEvol'+str(self.num_spins)+'spins'+\
+                        'Steps'+str(NUMSTEPS)+'.pdf')
+        ## Store results in csv file
+        EvolData = pd.DataFrame.from_dict(PDF)
+        EvolData.to_csv('../datafiles/'+self.backend_name+\
+                        'ExactEvollData'+str(self.num_spins)+\
+                        'Steps'+str(NUMSTEPS)+'.csv',index=False)
+        ## Return simulation results
+        return EvolData
