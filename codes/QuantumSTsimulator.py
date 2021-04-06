@@ -235,14 +235,24 @@ class QSTsimulator:
         Job = execute(Circuits,self.backend,shots=shots_)
         if not self.local_simul:
             job_monitor(Job)
-        SimResults = [Job.result().get_counts(circuit) \
-                    for circuit in Circuits]
+        if self.backend_name == 'statevector_simulator':
+            StateVecs = np.array([Job.result().get_statevector(circuit)\
+                                  for circuit in Circuits])
+        else:
+            SimResults = [Job.result().get_counts(circuit) \
+                            for circuit in Circuits]
         ## Accomodate simulation results to reflect PDF evolution over time
         trange = [(idx+1)*t/NUMSTEPS for idx in range(NUMSTEPS)]
         PDF = {'t':trange}
-        PDF.update({num:[res.get(Dec2nbitBin(num,self.num_spins),0)/shots_ \
-            for res in SimResults] \
-            for num in range(2**self.num_spins)})
+        if self.backend_name == 'statevector_simulator':
+            PDFvals = StateVecs * StateVecs.conjugate()
+            PDF.update({\
+                num:PDFvals[:,num] for num in range(2**self.num_spins)
+            })
+        else:
+            PDF.update({num:[res.get(Dec2nbitBin(num,self.num_spins),0)/shots_ \
+                for res in SimResults] \
+                for num in range(2**self.num_spins)})
         if save_PDF:
             plt.xlabel(r'$t$ (u. a.)')
             plt.ylabel(r'$|\langle \psi_0 | q_n \rangle|^2$')
@@ -308,8 +318,12 @@ class QSTsimulator:
         '''
         ## Compute unitary evolution operator
         Udiag = np.diag(np.exp(-1j*t*self.HamMatEnergies))
-        Uev = np.matmul(np.matmul(self.HamMatEstates,Udiag),\
+        try:
+            Uev = np.matmul(np.matmul(self.HamMatEstates,Udiag),\
                         self.HamMatEstates.transpose().conjugate())
+        except Exception as e:
+            print('Error: ',e.__class__)
+            print('Forgot to diagonalize Hamiltonian')
         ## Return application to initial state
         return Uev.dot(initstate)
 
@@ -347,3 +361,61 @@ class QSTsimulator:
                         'Steps'+str(NUMSTEPS)+'.csv',index=False)
         ## Return simulation results
         return EvolData
+
+    ## Compute statevector evolution of |00...0>
+    def StatevecSuzukiTrotter(self,STEPS=200,dt=1.7/200):
+        '''
+        Function for computing
+        evolution statevector
+        for fidelity
+        '''
+        ## Create circuit that performs evolution
+        qc_SimulStv = self.PerformManySTsteps(STEPS,dt)
+        ## Execute circuit
+        local_backend = Aer.get_backend('statevector_simulator')
+        ## Get statevector
+        return execute(qc_SimulStv,local_backend).result().get_statevector()
+
+    ## Compute fidelity
+    def TeorFidelity(self,STEPS=200,ts=1.7):
+        '''
+        Function for computing
+        state fidelity from
+        qiskit simulation
+        '''
+        ## Define parameters for simulation
+        dt = ts/STEPS
+        initstate = np.zeros(2**(self.num_spins))
+        initstate[0] = 1
+        ## Compute simulated final state
+        finstate_sim = self.StatevecSuzukiTrotter(STEPS=STEPS,dt=dt)
+        ## Compute exact final state
+        finstate_exa = self.ExactTimeEvol(initstate,t=ts)
+        ## Compute dot product
+        fidelity = finstate_exa.conjugate().dot(np.array(finstate_sim))
+        ## return absolute value squared
+        return np.abs(fidelity)**2
+
+    def ExpFidelity(self,shots=4096,STEPS=200,ts=1.7):
+        '''
+        Function for computing
+        pdf fidelity from simulation
+        both local and on IBMQ
+        '''
+        ## Define parameters for simulation
+        dt = ts/STEPS
+        initstate = np.zeros(2**(self.num_spins))
+        initstate[0] = 1
+        ## Compute simulated PDF
+        qc_Sim = self.PerformManySTsteps(STEPS=STEPS,dt=dt)
+        simul_pdf = \
+                execute(qc_Sim,self.backend,shots=shots).result().get_counts()
+        spdf = np.array([\
+            simul_pdf.get(Dec2nbitBin(num,self.num_spins),0)/shots \
+            for num in range(2**self.num_spins)
+        ])
+        ## Compute exact PDF
+        ex_vec = self.ExactTimeEvol(initstate,t=ts)
+        epdf = ex_vec.conjugate() * ex_vec
+        ## Compute statistical fidelity
+        return sum(np.sqrt(epdf * spdf))**2

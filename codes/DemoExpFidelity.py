@@ -11,6 +11,7 @@
 ################################################################################
 import matplotlib.pyplot as plt
 import pandas as pd
+plt.style.use('FigureStyle.mplstyle')
 
 ################################################################################
 ##                      I HIGHLIGHT THE SIMULATION MODULE                     ##
@@ -29,4 +30,17 @@ if __name__ == '__main__':
     ## Diagonalize Hamiltonian
     DemoSimulator.DiagHamilt()
     ## Capture data of simulation with Qiskit
-    PDF = DemoSimulator.ExacEvolAlgorithm(NUMSTEPS=100,t=1.8)
+    TOTSTEPS = 10
+    fidelities = [DemoSimulator.ExpFidelity(STEPS=numsteps,ts=0.875) \
+                    for numsteps in range(1,TOTSTEPS+1)]
+
+################################################################################
+##                          HERE I PLOT THE FIDELITIES                        ##
+################################################################################
+    plt.xlabel(r'Number of iterations')
+    plt.ylabel(r'$\langle \psi_{exc} | \psi_{sim} \rangle$')
+    plt.scatter([i for i in range(1,TOTSTEPS+1)],fidelities)
+    plt.savefig('../images/'+DemoSimulator.backend_name+\
+                'Fidelity'+\
+                str(DemoSimulator.num_spins)+\
+                'Steps'+str(TOTSTEPS)+'.pdf')

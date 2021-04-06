@@ -62,6 +62,7 @@ job_monitor(job)
 results = np.array([[job.result().get_counts(circuit).get(val,0) \
             for val in ['0','1']] \
             for circuit in DemoCircuits])
+
 ################################################################################
 ##                      DISPLAY RESULTS OF EXECUTION                          ##
 ################################################################################
