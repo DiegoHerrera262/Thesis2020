@@ -16,6 +16,7 @@
 from qiskit import QuantumRegister, ClassicalRegister
 from qiskit import QuantumCircuit, execute, Aer
 from qiskit import IBMQ, assemble, transpile
+from qiskit.circuit import exceptions
 from qiskit.tools.monitor import job_monitor
 from qiskit.providers.ibmq import least_busy
 from qiskit.circuit import Parameter
@@ -106,26 +107,18 @@ class QSTsimulator:
         Hz = self.ExternalField[2]
         H = np.sqrt(Hx**2 + Hy**2 + Hz**2)
         ## Parameter values for Qiskit
-        PHI = np.arctan2(Hx,Hy)
+        PHI = np.arctan2(Hy,Hx) + 2*np.pi
         THETA = np.arccos(Hz/H)
         LAMBDA = np.pi
         ## Create demo quantum circuit
         QC_FieldEvol = QuantumCircuit(spinChain)
         ## Change from computational to eigenbasis
         for spin in spinChain:
-            QC_FieldEvol.rz(-LAMBDA,spin)
-            QC_FieldEvol.sxdg(spin)
-            QC_FieldEvol.rz(-THETA - np.pi, spin)
-            QC_FieldEvol.sxdg(spin)
-            QC_FieldEvol.rz(-PHI - np.pi, spin)
+            QC_FieldEvol.u(-THETA,-LAMBDA,-PHI, spin)
             ## Evolve with z rotation
             QC_FieldEvol.rz(alphaH, spin)
             ## Change from eigenbasis to computational
-            QC_FieldEvol.rz(PHI + np.pi, spin)
-            QC_FieldEvol.sx(spin)
-            QC_FieldEvol.rz(THETA + np.pi, spin)
-            QC_FieldEvol.sx(spin)
-            QC_FieldEvol.rz(LAMBDA, spin)
+            QC_FieldEvol.u(THETA,PHI,LAMBDA, spin)
         ## Return quantum instruction
         return QC_FieldEvol.to_instruction()
 
@@ -220,7 +213,39 @@ class QSTsimulator:
         ## Perform measurement for further simulation
         qc_MST.measure(spinChain,measureReg)
         ## Return circuit with binded parameters
-        return qc_MST.bind_parameters(params)
+        try:
+            return qc_MST.bind_parameters(params)
+        except exceptions.CircuitError:
+            return qc_MST
+
+    ## Return only PDF after time simulation
+    def SimulTimeEvol(self,shots=2048,STEPS=200,t=1.7):
+        '''
+        Function for computing final
+        PDF after time simulation
+        '''
+        if STEPS > 0:
+            ## Define parameter dt for ST step
+            dt = t/STEPS
+            ## Create quantum circuit with many steps
+            qc_Evol = self.PerformManySTsteps(STEPS=STEPS,dt=dt)
+            ## Execute circuit
+            Job = execute(qc_Evol,self.backend,shots=shots)
+            if not self.local_simul:
+                job_monitor(Job)
+            if self.backend_name == 'statevector_simulator':
+                StateVecs = np.array(Job.result().get_statevector(qc_Evol))
+                return np.abs(StateVecs)**2
+            else:
+                SimResults = Job.result().get_counts(qc_Evol)
+                return np.array([\
+                        SimResults.get(Dec2nbitBin(num,self.num_spins),0)/shots\
+                        for num in range(2**self.num_spins)\
+                       ])
+        else:
+            initstate = np.zeros(2**self.num_spins)
+            initstate[0] = 1
+            return initstate
 
     ## Consolidating time evolution results using ST scheme
     def EvolAlgorithm(self,NUMSTEPS=200,t=1.7,shots_=2048,save_PDF=True):
@@ -311,7 +336,7 @@ class QSTsimulator:
         self.HamMatEnergies, self.HamMatEstates = np.linalg.eig(Hchain)
 
     ## Perform exact time evolution
-    def ExactTimeEvol(self,initstate,t=1.7):
+    def ExactStateVecTimeEvol(self,initstate,t=1.7):
         '''
         Compute evolution operator and
         perform matrix multiplication
@@ -327,6 +352,17 @@ class QSTsimulator:
         ## Return application to initial state
         return Uev.dot(initstate)
 
+    ## Compute exact PDF
+    def ExactTimeEvol(self,initstate,t=1.7):
+        '''
+        Function for computing exact PDF
+        after time evolution
+        '''
+        ## Perform time evolution
+        psi = self.ExactStateVecTimeEvol(initstate,t=t)
+        ## Return norm squared profile
+        return  np.abs(psi)**2
+
     ## Plot exact probability density
     def ExacEvolAlgorithm(self,NUMSTEPS=200,t=1.7,save_PDF=True):
         '''
@@ -338,7 +374,7 @@ class QSTsimulator:
         initstate[0] = 1
         trange = [(idx+1)*t/NUMSTEPS for idx in range(NUMSTEPS)]
         ## Create array of evolved states
-        sts = np.array([self.ExactTimeEvol(initstate,ts) \
+        sts = np.array([self.ExactStateVecTimeEvol(initstate,ts) \
                         for ts in trange])
         ## Transpose and compute norm for PDF
         PDFvals = sts * sts.conjugate()
@@ -416,6 +452,6 @@ class QSTsimulator:
         ])
         ## Compute exact PDF
         ex_vec = self.ExactTimeEvol(initstate,t=ts)
-        epdf = ex_vec.conjugate() * ex_vec
+        epdf = np.abs(ex_vec)**2
         ## Compute statistical fidelity
         return sum(np.sqrt(epdf * spdf))**2
