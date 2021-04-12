@@ -95,7 +95,27 @@ class QSTsimulator:
     ## to fully understand this implementation
 
 ################################################################################
-##                     EVOLUTION UNDER EXTERNAL FIELD UNITARY                 ##
+##                 AUXILIARY FUNCTIONS FOR PROCESSING RESULTS                 ##
+################################################################################
+    def Counts2PDF(self,Job,Circuits):
+        '''
+        Routine for extracting the
+        PDF produced after execution
+        of a list of circuits on a
+        NumPy Array
+        '''
+        ## Get Counts
+        simul_pdf = [Job.result().get_counts(circuit) for circuit in Circuits]
+        ## Convert to array of data
+        spdf = np.array([
+            [res.get(Dec2nbitBin(num,self.num_spins),0) \
+            for num in range(2**self.num_spins)] \
+            for res in simul_pdf
+        ])
+        return spdf
+
+################################################################################
+##                    EVOLUTION UNDER EXTERNAL FIELD UNITARY                  ##
 ################################################################################
     def MagFieldEvol(self, spinChain):
         '''
@@ -444,8 +464,9 @@ class QSTsimulator:
         initstate[0] = 1
         ## Compute simulated PDF
         qc_Sim = self.PerformManySTsteps(STEPS=STEPS,dt=dt)
-        simul_pdf = \
-                execute(qc_Sim,self.backend,shots=shots).result().get_counts()
+        Job = execute(qc_Sim,self.backend,shots=shots)
+        job_monitor(Job)
+        simul_pdf = Job.result().get_counts()
         spdf = np.array([\
             simul_pdf.get(Dec2nbitBin(num,self.num_spins),0)/shots \
             for num in range(2**self.num_spins)

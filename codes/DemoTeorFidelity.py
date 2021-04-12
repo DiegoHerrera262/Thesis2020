@@ -24,8 +24,8 @@ from QuantumSTsimulator import QSTsimulator
 if __name__ == '__main__':
     ## Instantiate a simulator class
     DemoSimulator = QSTsimulator(num_spins=2,\
-                                ExchangeIntegrals=[1.0,1.0,1.0],\
-                                ExternalField=[1.0,1.0,1.0],\
+                                ExchangeIntegrals=[2,3,5],\
+                                ExternalField=[1,3,5],\
                                 local_simul=True)
     ## Diagonalize Hamiltonian
     DemoSimulator.DiagHamilt()
