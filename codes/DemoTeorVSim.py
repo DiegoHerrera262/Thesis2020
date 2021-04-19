@@ -25,9 +25,9 @@ from QuantumSTsimulator import QSTsimulator
 ################################################################################
 if __name__ == '__main__':
     ## Instantiate a simulator class
-    DemoSimulator = QSTsimulator(num_spins=2,\
-                                ExchangeIntegrals=[1,1,1],\
-                                ExternalField=[1,1,1],\
+    DemoSimulator = QSTsimulator(num_spins=3,\
+                                ExchangeIntegrals=[2.0,3.0,5.0],\
+                                ExternalField=[1.0,3.0,5.0],\
                                 local_simul=True)
     ## Diagonalize Hamiltonian
     DemoSimulator.DiagHamilt()
@@ -44,7 +44,7 @@ if __name__ == '__main__':
     TOTSTEPS = int(input('Enter number of ST steps: '))
     tsim = np.linspace(0,1.75,TOTSTEPS)
     PDFsim = np.array([\
-        DemoSimulator.SimulTimeEvol(STEPS=idx,t=tsim[idx]) \
+        DemoSimulator.SimulTimeEvol(shots=1<<15,STEPS=idx,t=tsim[idx]) \
         for idx in range(len(tsim))
     ])
 

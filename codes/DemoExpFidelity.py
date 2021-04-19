@@ -29,7 +29,7 @@ from QuantumSTsimulator import QSTsimulator
 ################################################################################
 if __name__ == '__main__':
     ## Instantiate a simulator class
-    DemoSimulator = QSTsimulator(num_spins=2,\
+    DemoSimulator = QSTsimulator(num_spins=3,\
                                 ExchangeIntegrals=[2,3,5],\
                                 ExternalField=[1,3,5],\
                                 local_simul=False)
@@ -38,7 +38,7 @@ if __name__ == '__main__':
     ## Parameters for fidelity evaluation
     TOTSTEPS = int(input('Enter total steps: '))
     ts       = 0.875
-    shots    = 2048
+    shots    = 8192
     ## Create Job for execution
     Circuits = [DemoSimulator.PerformManySTsteps(\
                     STEPS=numsteps,dt=ts/numsteps) \
