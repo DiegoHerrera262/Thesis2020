@@ -29,3 +29,4 @@ if __name__ == '__main__':
     ## Capture data of simulation with Qiskit
     for n in range(1,16):
         PDF = DemoSimulator.EvolAlgorithm(NUMSTEPS=n,t=1.8)
+        plt.clf()
