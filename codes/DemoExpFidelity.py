@@ -33,23 +33,23 @@ from QuantumSTsimulator import QSTsimulator
 ################################################################################
 if __name__ == '__main__':
     ## Instantiate a simulator class
-    DemoSimulator = QSTsimulator(num_spins=3,\
+    DemoSimulator = QSTsimulator(num_spins=2,\
                                 ExchangeIntegrals=[2,3,5],\
                                 ExternalField=[1,3,5],\
-                                local_simul=True)
+                                local_simul=False)
     ## Diagonalize Hamiltonian
     DemoSimulator.DiagHamilt()
     ## Parameters for fidelity evaluation
     TOTSTEPS = int(input('Enter total steps: '))
-    ts       = 2.875
-    shots    = 1<<15
+    ts       = 1.8
+    shots    = 1<<13
     ## Create Job for execution
     Circuits = [DemoSimulator.PerformManySTsteps(\
                     STEPS=numsteps,dt=ts/numsteps) \
                     for numsteps in range(1,TOTSTEPS+1)]
     Job = execute(Circuits,DemoSimulator.backend,shots=shots)
     ## Monitor Job
-    if DemoSimulator.local_simul == False:
+    if not DemoSimulator.local_simul:
         job_monitor(Job)
     ## Get counts
     simul_pdf = [Job.result().get_counts(circuit) for circuit in Circuits]

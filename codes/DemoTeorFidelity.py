@@ -24,15 +24,15 @@ from QuantumSTsimulator import QSTsimulator
 ################################################################################
 if __name__ == '__main__':
     ## Instantiate a simulator class
-    DemoSimulator = QSTsimulator(num_spins=3,\
+    DemoSimulator = QSTsimulator(num_spins=2,\
                                 ExchangeIntegrals=[2,3,5],\
-                                ExternalField=[1,3,5],\
+                                ExternalField=[1,3,2],\
                                 local_simul=True)
     ## Diagonalize Hamiltonian
     DemoSimulator.DiagHamilt()
     ## Capture data of simulation with Qiskit
     TOTSTEPS = 20
-    fidelities = [DemoSimulator.TeorFidelity(STEPS=numsteps,ts=0.5) \
+    fidelities = [DemoSimulator.TeorFidelity(STEPS=numsteps,ts=1.8) \
                     for numsteps in range(1,TOTSTEPS+1)]
 
 ################################################################################

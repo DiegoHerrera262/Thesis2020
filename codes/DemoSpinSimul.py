@@ -23,8 +23,9 @@ from QuantumSTsimulator import QSTsimulator
 if __name__ == '__main__':
     ## Instantiate a simulator class
     DemoSimulator = QSTsimulator(num_spins=2,\
-                                ExchangeIntegrals=[1.0,1.0,1.0],\
-                                ExternalField=[1.0,1.0,1.0],\
-                                local_simul=True)
+                                ExchangeIntegrals=[2,3,5],\
+                                ExternalField=[1,3,2],\
+                                local_simul=False)
     ## Capture data of simulation with Qiskit
-    PDF = DemoSimulator.EvolAlgorithm(NUMSTEPS=15,t=1.8)
+    for n in range(1,16):
+        PDF = DemoSimulator.EvolAlgorithm(NUMSTEPS=n,t=1.8)

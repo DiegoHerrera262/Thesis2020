@@ -27,14 +27,16 @@ from QuantumSTsimulator import QSTsimulator
 ################################################################################
 if __name__ == '__main__':
     ## Instantiate a simulator class
-    DemoSimulator = QSTsimulator(num_spins=3,\
-                                ExchangeIntegrals=[2.0,3.0,5.0],\
-                                ExternalField=[1.0,3.0,5.0],\
+    DemoSimulator = QSTsimulator(num_spins=2,\
+                                ExchangeIntegrals=[2,3,5],\
+                                ExternalField=[1,3,2],\
                                 local_simul=True)
     ## Diagonalize Hamiltonian
     DemoSimulator.DiagHamilt()
+    ## Simulation time
+    tsimul = 1.8
     ## Define time discretization
-    tx = np.linspace(0,1.75,200)
+    tx = np.linspace(0,tsimul,200)
     ## Produce exact curves for time evolution
     initstate = np.zeros(2**DemoSimulator.num_spins)
     initstate[0] = 1
@@ -44,7 +46,7 @@ if __name__ == '__main__':
     ])
     ## Produce simulated curves for time evolution
     TOTSTEPS = int(input('Enter number of ST steps: '))
-    tsim = np.linspace(0,1.75,TOTSTEPS)
+    tsim = np.linspace(0,tsimul,TOTSTEPS)
     PDFsim = np.array([\
         DemoSimulator.SimulTimeEvol(shots=1<<15,STEPS=idx,t=tsim[idx]) \
         for idx in range(len(tsim))
@@ -61,5 +63,7 @@ if __name__ == '__main__':
         plt.scatter(tsim,PDFsim[:,num],color=colors[num])
         ## Continous line plot for exact data
         plt.plot(tx,PDFex[:,num],color=colors[num])
-    ## Show plot
-    plt.show()
+    ## save plot
+    plt.savefig('../images/'+DemoSimulator.backend_name+\
+                'ComparisonTeorVSim'+str(DemoSimulator.num_spins)+\
+                'spins'+'Steps'+str(TOTSTEPS)+'.pdf')
