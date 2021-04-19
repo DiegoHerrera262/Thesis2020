@@ -4,7 +4,9 @@
 ## AUTHOR: Diego Alejandro Herrera Rojas
 ## DATE: 06/08/21
 ## DESCRIPTION: In this program, I test the routines implemented in the class
-##              QSTsimulator by considering the example of a 2 spin system.
+##              QSTsimulator by comparing exact diagonalitawion with numpy,
+##              and ST integration with a quantum algorithm. This is intended
+##              for usage with qasm_simulator rather than IBM Q devices.
 
 ################################################################################
 ##              IMPORTS NECESSARY TO PERFORM QUANTUM ALGORITHMS               ##

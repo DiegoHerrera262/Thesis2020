@@ -3,8 +3,9 @@
 ################################################################################
 ## AUTHOR: Diego Alejandro Herrera Rojas
 ## DATE: 06/04/21
-## DESCRIPTION: In this program, I test the routines implemented in the class
-##              QSTsimulator by considering the example of a 2 spin system.
+## DESCRIPTION: In this program, I compute exact fidelity using statevector
+##              simulator with qiskit. This is buggy since time evolution
+##              may be constrained by floating point errors.
 
 ################################################################################
 ##              IMPORTS NECESSARY TO PERFORM QUANTUM ALGORITHMS               ##

@@ -3,8 +3,12 @@
 ################################################################################
 ## AUTHOR: Diego Alejandro Herrera Rojas
 ## DATE: 06/04/21
-## DESCRIPTION: In this program, I test the routines implemented in the class
-##              QSTsimulator by considering the example of a 2 spin system.
+## DESCRIPTION: This program is designed for computing experimental fidelity
+##              of my simulation algorithm both locally and on IBM Q devices.
+##              The measured fidelity is with respect to probability densities
+##              of measurement in computational basis.
+##
+##              This is an upper bound on the actual fidelity.
 
 ################################################################################
 ##              IMPORTS NECESSARY TO PERFORM QUANTUM ALGORITHMS               ##
