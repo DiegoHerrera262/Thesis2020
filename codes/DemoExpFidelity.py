@@ -32,13 +32,13 @@ if __name__ == '__main__':
     DemoSimulator = QSTsimulator(num_spins=3,\
                                 ExchangeIntegrals=[2,3,5],\
                                 ExternalField=[1,3,5],\
-                                local_simul=False)
+                                local_simul=True)
     ## Diagonalize Hamiltonian
     DemoSimulator.DiagHamilt()
     ## Parameters for fidelity evaluation
     TOTSTEPS = int(input('Enter total steps: '))
-    ts       = 0.875
-    shots    = 8192
+    ts       = 2.875
+    shots    = 1<<15
     ## Create Job for execution
     Circuits = [DemoSimulator.PerformManySTsteps(\
                     STEPS=numsteps,dt=ts/numsteps) \
@@ -55,11 +55,10 @@ if __name__ == '__main__':
     ## Compute exact PDF
     initstate = np.zeros(2**DemoSimulator.num_spins)
     initstate[0] = 1
-    ex_vec = DemoSimulator.ExactTimeEvol(initstate,t=ts)
-    epdf = np.abs(ex_vec)**2
+    epdf = DemoSimulator.ExactTimeEvol(initstate,t=ts)
     ## Compute fidelities
     fidelities = np.array([
-        sum(np.sqrt(spdf[i] * epdf))**2 for i in range(len(spdf))
+        sum(np.sqrt(epdf * spdf[i]))**2 for i in range(len(spdf))
     ])
 
 ################################################################################
