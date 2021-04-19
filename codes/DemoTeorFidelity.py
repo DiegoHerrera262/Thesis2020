@@ -5,7 +5,7 @@
 ## DATE: 06/04/21
 ## DESCRIPTION: In this program, I compute exact fidelity using statevector
 ##              simulator with qiskit. This is buggy since time evolution
-##              may be constrained by floating point errors :).
+##              may be constrained by floating point errors.
 
 ################################################################################
 ##              IMPORTS NECESSARY TO PERFORM QUANTUM ALGORITHMS               ##
