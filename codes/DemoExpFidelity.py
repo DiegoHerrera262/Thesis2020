@@ -29,25 +29,58 @@ plt.style.use('FigureStyle.mplstyle')
 from QuantumSTsimulator import QSTsimulator
 
 ################################################################################
+##             FUNCTION FOR CREATING ARBITRARY PRODUCT STATE                  ##
+################################################################################
+def InitSpinProdState(angs,num_spins=2):
+    '''
+    Function for creating an
+    arbitrary product state of
+    a spin chain
+    '''
+    ## Initialize quantum circuit
+    qc_prod = QuantumCircuit(num_spins,num_spins)
+    ## Append U gate to each spin
+    for idx in range(num_spins):
+        qc_prod.u(*angs[idx],idx)
+    ## Compute statevector
+    mybackend = Aer.get_backend('statevector_simulator')
+    stvec = execute(qc_prod,mybackend).result().get_statevector()
+    ## Return quantum circuit
+    ## and the initial statevec
+    return stvec, qc_prod
+
+
+################################################################################
 ##              HERE I PERFORM TIME SIMULATION WITH MY ALGORITHM              ##
 ################################################################################
 if __name__ == '__main__':
+    ## Total number of spins
+    tot_spins = 2
     ## Instantiate a simulator class
-    DemoSimulator = QSTsimulator(num_spins=2,\
+    DemoSimulator = QSTsimulator(num_spins=tot_spins,\
                                 ExchangeIntegrals=[2,3,5],\
                                 ExternalField=[1,3,5],\
-                                local_simul=False)
+                                local_simul=True)
     ## Diagonalize Hamiltonian
     DemoSimulator.DiagHamilt()
     ## Parameters for fidelity evaluation
     TOTSTEPS = int(input('Enter total steps: '))
     ts       = 1.8
     shots    = 1<<13
+    ## Create random initial step
+    ## angs = 2*np.pi * np.random.rand(tot_spins,3)
+    angs = np.zeros((tot_spins,3))
+    initstate, qc_init = InitSpinProdState(angs,num_spins=tot_spins)
+    print(initstate)
     ## Create Job for execution
     Circuits = [DemoSimulator.PerformManySTsteps(\
                     STEPS=numsteps,dt=ts/numsteps) \
                     for numsteps in range(1,TOTSTEPS+1)]
-    Job = execute(Circuits,DemoSimulator.backend,shots=shots)
+    InitCircuits = []
+    for circuit in Circuits:
+        qc = qc_init.compose(circuit)
+        InitCircuits.append(qc)
+    Job = execute(InitCircuits,DemoSimulator.backend,shots=shots)
     ## Monitor Job
     if not DemoSimulator.local_simul:
         job_monitor(Job)
@@ -57,9 +90,8 @@ if __name__ == '__main__':
     spdf = DemoSimulator.Counts2PDF(Job,Circuits)
     spdf = 1/shots * spdf
     ## Compute exact PDF
-    initstate = np.zeros(2**DemoSimulator.num_spins)
-    initstate[0] = 1
     epdf = DemoSimulator.ExactTimeEvol(initstate,t=ts)
+    print(epdf)
     ## Compute fidelities
     fidelities = np.array([
         sum(np.sqrt(epdf * spdf[i]))**2 for i in range(len(spdf))
@@ -71,7 +103,8 @@ if __name__ == '__main__':
     plt.xlabel(r'Number of iterations')
     plt.ylabel(r'$\langle \psi_{exc} | \psi_{sim} \rangle$')
     plt.scatter([i for i in range(1,TOTSTEPS+1)],fidelities)
-    plt.savefig('../images/'+DemoSimulator.backend_name+\
-                'Fidelity'+\
-                str(DemoSimulator.num_spins)+\
-                'Steps'+str(TOTSTEPS)+'.pdf')
+    plt.show()
+    ##plt.savefig('../images/'+DemoSimulator.backend_name+\
+    ##            'Fidelity'+\
+    ##            str(DemoSimulator.num_spins)+\
+    ##            'Steps'+str(TOTSTEPS)+'.pdf')
