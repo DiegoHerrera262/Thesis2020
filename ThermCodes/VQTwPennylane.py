@@ -29,6 +29,10 @@ def sigmoid(x):
     return np.exp(x)/(np.exp(x) + 1)
 
 
+def TraceDistance(A, B):
+    return 0.5 * np.trace(np.absolute(np.add(A, -1*B)))
+
+
 class VQThermalizer:
 
     '''
@@ -258,6 +262,14 @@ class VQThermalizer:
 ################################################################################
 ##                   OPTIMIZATION OF VARIATIONAL PARAMETERS                   ##
 ################################################################################
+    def InitOptimizer(self):
+        '''
+        Initialize Hamiltonian
+        and Qnode
+        '''
+        self.GenHamiltonian()
+        self.SetThermalQNode()
+
     def GetOptimalParams(self, layers=3, optimizer='COBYLA', maxiter=1600):
         '''
         Use layers QNNLayer constructs
@@ -272,3 +284,45 @@ class VQThermalizer:
                        method=optimizer,
                        options={'maxiter': maxiter})
         return out['x']
+
+################################################################################
+##                          BUILD DENSITY MATRIX                              ##
+################################################################################
+    def BuildDensityBasisState(self, params, num=0):
+        '''
+        Build density matrix associated
+        to params and initial basis state
+        '''
+        # Get device state
+        self.ThermalQNode(params, i=Dec2nbitBin(num, self.num_spins))
+        state = self.device.state
+        # Return density matrix
+        return np.outer(state, np.conj(state))
+
+    def ThermalDensityMatrix(self, params):
+        '''
+        Build thermal density matrix
+        '''
+        dist_params, qnn_params = self.MapParams(params)
+        # Compute prob distribution
+        dist = self.GenProbDist(dist_params)
+        # Add succesive density mats with weights
+        density = np.zeros((2**self.num_spins, 2**self.num_spins))
+        for num in range(2**self.num_spins):
+            density = np.add(
+                density,
+                self.BasisStateProb(dist, i=num) *
+                self.BuildDensityBasisState(qnn_params, num=num)
+            )
+        return density
+
+    def TeorThermDensity(self):
+        '''
+        Build theoretical thermal density
+        '''
+        # Exponentiate with eigenvectors
+        d = np.exp(-self.beta * self.HamMatEnergies)
+        return np.matmul(
+            np.matmul(self.HamMatEstates, d),
+            self.HamMatEstates.conj().T
+        )

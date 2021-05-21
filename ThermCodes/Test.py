@@ -6,12 +6,13 @@
 # DESCRIPTION: The aim is to test the VQT class defined on VQTwPennyLane
 
 import pennylane as qml
-from pennylane import numpy as np
-from VQTwPennylane import VQThermalizer, Dec2nbitBin
+import numpy as np
+from VQTwPennylane import VQThermalizer, Dec2nbitBin, TraceDistance
+import matplotlib.pyplot as plt
 
 if __name__ == '__main__':
     np.random.seed(42)
-    # initialize a thermalizer
+    # initialize a thermalizer
     DemoTherm = VQThermalizer(
         num_spins=2,
         ExchangeIntegrals=[1.0, 7.0, 5.0],
@@ -34,6 +35,7 @@ if __name__ == '__main__':
     params = 2*np.pi * np.random.rand(DemoTherm.num_spins + 6*layers)
     # a, b = DemoTherm.MapParams(params)
     print(DemoTherm.CostFunc(params))
-    #  Test Optimizer
+    #  Test Optimizer
     params = DemoTherm.GetOptimalParams()
     print(params)
+    # Get ex
