@@ -120,7 +120,7 @@ class QSTsimulator:
 
     # IMPORTANT: The detailed ST scheme is presented on the log of this repo
     # the programmer is advised to go to the file log/SimulationAlgorithms.pdf
-    #  to fully understand this implementation
+    # to fully understand this implementation
 
 ################################################################################
 ##                 AUXILIARY FUNCTIONS FOR PROCESSING RESULTS                 ##

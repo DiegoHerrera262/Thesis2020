@@ -24,13 +24,18 @@ plt.style.use('FigureStyle.mplstyle')
 if __name__ == '__main__':
     # Total number of spins
     tot_spins = 2
-    #  Create random initial state
-    angs = 2*np.pi * np.random.rand(tot_spins, 2)
-    ## angs = np.zeros((tot_spins, 2))
+    # Create random initial state
+    # exchange integrals and
+    # external field
+    angs, exc_ints, ext_field =\
+        2*np.pi * np.random.rand(tot_spins, 2),\
+        5 * np.random.rand(3),\
+        5 * np.random.rand(3)
+    # angs = np.zeros((tot_spins, 2))
     # Instantiate a simulator class
     DemoSimulator = QSTsimulator(num_spins=tot_spins,
-                                 ExchangeIntegrals=[2, 3, 5],
-                                 ExternalField=[1, 3, 2],
+                                 ExchangeIntegrals=exc_ints,
+                                 ExternalField=ext_field,
                                  local_simul=True,
                                  init_state=InitSpinProdState(
                                      angs=angs, num_spins=tot_spins))
