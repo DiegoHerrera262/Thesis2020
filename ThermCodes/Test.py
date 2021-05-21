@@ -15,13 +15,25 @@ if __name__ == '__main__':
     DemoTherm = VQThermalizer(
         num_spins=2,
         ExchangeIntegrals=[1.0, 7.0, 5.0],
-        ExternalField=[4.0, 3.0, 9.0]
+        ExternalField=[4.0, 3.0, 9.0],
+        Beta=3.56
     )
     # Initialize Hamiltonian
     DemoTherm.GenHamiltonian()
     # Test QNode
     testnum = 2
     DemoTherm.SetThermalQNode()
-    params = 2 * np.pi * np.random.rand(6)
+    params = 2 * np.pi * np.random.rand(8*6)
     x = DemoTherm.ThermalQNode(params, i=Dec2nbitBin(testnum, 2))
     print(x)
+    # Test entropy
+    dist = DemoTherm.GenProbDist(10*np.random.rand(DemoTherm.num_spins))
+    print(DemoTherm.EnsembleEntropy(dist))
+    # Test cost functions
+    layers = 5
+    params = 2*np.pi * np.random.rand(DemoTherm.num_spins + 6*layers)
+    # a, b = DemoTherm.MapParams(params)
+    print(DemoTherm.CostFunc(params))
+    #  Test Optimizer
+    params = DemoTherm.GetOptimalParams()
+    print(params)

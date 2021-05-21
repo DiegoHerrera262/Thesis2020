@@ -14,6 +14,7 @@
 ################################################################################
 import pennylane as qml
 from pennylane import numpy as np
+from scipy.optimize import minimize
 
 ################################################################################
 ##                     AUXILIAR FUNCTIONS FOR THE PROJECT                     ##
@@ -22,6 +23,10 @@ from pennylane import numpy as np
 
 def Dec2nbitBin(num, bits):
     return [int(d) for d in "{0:b}".format(num).zfill(bits)]
+
+
+def sigmoid(x):
+    return np.exp(x)/(np.exp(x) + 1)
 
 
 class VQThermalizer:
@@ -46,7 +51,8 @@ class VQThermalizer:
     def __init__(self,
                  num_spins=2,
                  ExchangeIntegrals=[1.0, 1.0, 1.0],
-                 ExternalField=[0.0, 0.0, 0.0],):
+                 ExternalField=[0.0, 0.0, 0.0],
+                 Beta=1):
         '''
         Initialize thermalizer ina similar fashion as
         QSTSimulator
@@ -56,6 +62,7 @@ class VQThermalizer:
         self.ExternalField = ExternalField
         self.backend_name = input('Enter local simulator name: ')
         self.device = qml.device(self.backend_name, wires=self.num_spins)
+        self.beta = Beta
         # Communicate initialization details
         print('Instantiated VQThermalizer...')
         print('Backend: ', self.backend_name)
@@ -181,3 +188,87 @@ class VQThermalizer:
         of cost function
         '''
         self.ThermalQNode = qml.QNode(self.BasisQNN, self.device)
+
+################################################################################
+##                    COMPUTATION IF TRIAL ENSEMBLE ENTROPY                   ##
+################################################################################
+    def GenProbDist(self, params):
+        '''
+        For generating a prob dits corres-
+        ponding to product mized state.
+        Dist of ith is accessed by Dits[i]
+        '''
+        return np.vstack([sigmoid(params), 1-sigmoid(params)]).T
+
+    def EnsembleEntropy(self, ProbDist):
+        '''
+        Compute ensemble entropy
+        from prob dist. 
+        '''
+        ent = 0.0
+        # E = sum of entropies since
+        # ansatz is prod state
+        for dist in ProbDist:
+            ent += -1 * np.sum(dist * np.log(dist))
+        return ent
+
+################################################################################
+##                         DEFINITION OF COST FUNCTION                        ##
+################################################################################
+    def MapParams(self, params):
+        # Set ensemble params
+        dist_params = params[0:self.num_spins]
+        # Set QNN params
+        qnn_params = params[self.num_spins:]
+        return dist_params, qnn_params
+
+    def BasisStateProb(self, probDist, i=0):
+        '''
+        Probability of basis state
+        in ensemble
+        '''
+        # Convert number to array
+        state = Dec2nbitBin(i, self.num_spins)
+        # Iterate to find probs
+        prob = 1.0
+        for idx, ent in enumerate(state):
+            prob = prob * probDist[idx, int(ent)]
+        return prob
+
+    def CostFunc(self, params):
+        '''
+        Cost function is ensemble
+        free energy
+        '''
+        dist_params, qnn_params = self.MapParams(params)
+        # Compute prob distribution
+        dist = self.GenProbDist(dist_params)
+        # Compute Hamiltonian exp val
+        HamExpval = 0
+        for num in range(2 ** self.num_spins):
+            HamExpval += self.BasisStateProb(dist, i=num) * \
+                self.ThermalQNode(
+                    qnn_params, i=Dec2nbitBin(num, self.num_spins
+                                              ))
+        # Return free energy
+        e = HamExpval * self.beta - self.EnsembleEntropy(dist)
+        print('Cost Func: {}'.format(e))
+        return e
+
+################################################################################
+##                   OPTIMIZATION OF VARIATIONAL PARAMETERS                   ##
+################################################################################
+    def GetOptimalParams(self, layers=3, optimizer='COBYLA', maxiter=1600):
+        '''
+        Use layers QNNLayer constructs
+        for optimizationl algorithms
+        '''
+        # Create random seed for algorithm
+        params = 300 * np.random.rand(self.num_spins + layers * 6) - 150
+        # Default COBYLA is thought to be
+        # more effcient
+        out = minimize(self.CostFunc,
+                       x0=params,
+                       method=optimizer,
+                       options={'maxiter': maxiter})
+        return out['x']
