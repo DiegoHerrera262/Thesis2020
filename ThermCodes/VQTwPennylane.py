@@ -15,6 +15,14 @@
 import pennylane as qml
 from pennylane import numpy as np
 
+################################################################################
+##                     AUXILIAR FUNCTIONS FOR THE PROJECT                     ##
+################################################################################
+
+
+def Dec2nbitBin(num, bits):
+    return [int(d) for d in "{0:b}".format(num).zfill(bits)]
+
 
 class VQThermalizer:
 
@@ -50,7 +58,7 @@ class VQThermalizer:
         self.device = qml.device(self.backend_name, wires=self.num_spins)
         # Communicate initialization details
         print('Instantiated VQThermalizer...')
-        print('Backend: ', self.backend)
+        print('Backend: ', self.backend_name)
 
         # IMPORTANT: The detailed ST scheme is presented on the log of this repo
         # the programmer is advised to go to the file log/SimulationAlgorithms.pdf
@@ -134,13 +142,13 @@ class VQThermalizer:
             qml.Hadamard(wires=idx)
             qml.CNOT(wires=[idx, idx+1])
             # Include external field
-            qml.u3(-THETA, -LAMBDA, -PHI, wires=idx)
+            qml.U3(-THETA, -LAMBDA, -PHI, wires=idx)
             qml.RZ(H, wires=idx)
-            qml.u3(THETA, PHI, LAMBDA, wires=idx)
+            qml.U3(THETA, PHI, LAMBDA, wires=idx)
         #  Include external field for last spin
-        qml.u3(-THETA, -LAMBDA, -PHI, wires=self.num_spins-1)
+        qml.U3(-THETA, -LAMBDA, -PHI, wires=self.num_spins-1)
         qml.RZ(H, wires=self.num_spins-1)
-        qml.u3(THETA, PHI, LAMBDA, wires=self.num_spins-1)
+        qml.U3(THETA, PHI, LAMBDA, wires=self.num_spins-1)
 
 ################################################################################
 ##                    DEFINITION OF QNN FOR THERMALIZATION                    ##
@@ -165,11 +173,7 @@ class VQThermalizer:
         # Include QNN
         self.QNN(params)
         # Return expected value of Hmailtonian
-        return qml.expval(
-            qml.Hermitean(
-                self.SysHamiltonian, wires=range(self.num_spins)
-            )
-        )
+        return qml.expval(self.SysHamiltonian)
 
     def SetThermalQNode(self):
         '''
