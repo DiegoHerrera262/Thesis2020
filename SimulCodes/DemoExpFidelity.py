@@ -13,6 +13,7 @@
 ################################################################################
 ##              IMPORTS NECESSARY TO PERFORM QUANTUM ALGORITHMS               ##
 ################################################################################
+import qiskit
 from qiskit import QuantumRegister, ClassicalRegister
 from qiskit import QuantumCircuit, execute, Aer
 from qiskit import IBMQ
@@ -71,15 +72,17 @@ if __name__ == '__main__':
     ## angs = 2*np.pi * np.random.rand(tot_spins,3)
     angs = np.zeros((tot_spins,3))
     initstate, qc_init = InitSpinProdState(angs,num_spins=tot_spins)
-    print(initstate)
     ## Create Job for execution
     Circuits = [DemoSimulator.PerformManySTsteps(\
                     STEPS=numsteps,dt=ts/numsteps) \
                     for numsteps in range(1,TOTSTEPS+1)]
     InitCircuits = []
+    simul_pdf = []
+    ## Hardcoded initilization
     for circuit in Circuits:
         qc = qc_init.compose(circuit)
         InitCircuits.append(qc)
+
     Job = execute(InitCircuits,DemoSimulator.backend,shots=shots)
     ## Monitor Job
     if not DemoSimulator.local_simul:

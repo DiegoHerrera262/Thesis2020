@@ -18,7 +18,6 @@ from qiskit import QuantumCircuit, execute, Aer
 from qiskit import IBMQ, assemble, transpile
 from qiskit.circuit import exceptions
 from qiskit.tools.monitor import job_monitor
-from qiskit.providers.ibmq import least_busy
 from qiskit.circuit import Parameter
 import matplotlib.pyplot as plt
 import numpy as np
@@ -205,7 +204,7 @@ class QSTsimulator:
     def PerformManySTsteps(self,STEPS=200,dt=1.7/200):
         '''
         Quantum circuit that performs time evolution from t=0 to t=simul_time
-        using STEPS
+        using STEPS.
         '''
         ## Define parameter values for gates
         ## Values for theta parameters

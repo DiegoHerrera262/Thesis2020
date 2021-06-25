@@ -1,5 +1,6 @@
 {
     "cSpell.words": [
         "qiskit"
-    ]
+    ],
+    "python.pythonPath": "/Users/diegoherrerarojas/anaconda3/envs/QML/bin/python"
 }
