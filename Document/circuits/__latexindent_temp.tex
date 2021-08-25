@@ -1,0 +1,11 @@
+\begin{figure}
+    \centering
+    \begin{quantikz}
+      \lstick[wires=4]{$\ket{\psi(0)}$} & \gate[wires=4]{QFT^{\dagger}} & \gate[wires=4]{\mathrm{e}^{-\mathrm{i}t \frac{\hat{x}^2}{2m}}} & \gate[wires=4]{QFT^{\dagger}} & \gate[wires=4]{\mathrm{e}^{-\mathrm{i}t \frac{\hat{V}(x)}{2m}}} & \qw  \rstick[wires=4]{$\ket{\psi(t)}$} \\
+                                        &                               &                                                              &                               &                                                                 & \qw                                    \\
+                                        &                               &                                                              &                               &                                                                 & \qw                                    \\
+                                        &                               &                                                              &                               &                                                                 & \qw                                    \\
+    \end{quantikz}
+    \caption{Time evolution slice for a single particle state on a digital quantum computer. This step should be repeated several times, with a time step $dt$, which depends upon the desired error bound and spatial discretization.}
+    \label{fig:timevolslice}
+  \end{figure}
