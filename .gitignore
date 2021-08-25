@@ -5,4 +5,10 @@
 *.toc
 *.bcf
 *.bbl
+*.blg
+*_temp.*
+*.out
+*.run.xml
+*.blg
+*.fdb_latexmk
 .vscode
