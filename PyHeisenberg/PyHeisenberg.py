@@ -9,6 +9,7 @@
 import graphRoutines as gr
 import numpy as np
 from scipy.linalg import expm
+from scipy.stats import linregress
 import matplotlib.pyplot as plt
 import auxiliaryRoutines as aux
 from qiskit.circuit import exceptions
@@ -78,8 +79,10 @@ class HeisenbergGraph:
                     self.backendName = 'ibmq_santiago'
                 self.backend = provider.get_backend(self.backendName)
             if self.localSimulation:
-                self.localSimulation = True
-                self.backendName = 'qasm_simulator'
+                try:
+                    self.backendName = kwargs['backendName']
+                except KeyError:
+                    self.backendName = 'qasm_simulator'
                 self.backend = Aer.get_backend(self.backendName)
         except KeyError:
             self.localSimulation = True
@@ -254,6 +257,20 @@ class HeisenbergGraph:
             print('An error occurred')
             return qcEvolution.decompose().to_instruction()
 
+    def rawEvolutionCircuit(self, STEPS=200, t=1.7):
+        ''''
+        Function for retrieving evolution
+        circuit without measurement
+        '''
+        dt = t/STEPS
+        spinChain = QuantumRegister(len(self.graph.vs), name='s')
+        measureReg = ClassicalRegister(len(self.graph.vs), name='r')
+        qcEvolution = QuantumCircuit(spinChain, measureReg)
+        qcStep = self.evolutionStep(dt, spinChain)
+        for _ in range(STEPS):
+            qcEvolution.append(qcStep, spinChain)
+        return qcEvolution.decompose()
+
     def evolutionCircuit(self, STEPS=200, t=1.7):
         '''
         Function for retrieving a simulation 
@@ -281,7 +298,7 @@ class HeisenbergGraph:
     def quantumTimeEvolution(self, STEPS=200, t=1.7, shots=2048):
         '''
         Function for QTE. Produces probability
-        density ad time t
+        density at time t
         '''
         timeEvolution = [self.evolutionCircuit(STEPS=STEPS, t=t)]
         job = execute(timeEvolution, self.backend, shots=shots)
@@ -292,6 +309,16 @@ class HeisenbergGraph:
             job,
             timeEvolution
         )[0]
+
+    def quantumEvolutionUnitary(self, STEPS=200, t=1.7, shots=2048):
+        '''
+        Function for QTE. Produces evolution
+        unitary at time t
+        '''
+        timeEvolution = self.rawEvolutionCircuit(STEPS=STEPS, t=t)
+        unitarySimulator = Aer.get_backend('unitary_simulator')
+        job = execute(timeEvolution, unitarySimulator, shots=shots)
+        return job.result().get_unitary()
 
     # IMPORTANT: Do not use quantumTimeEvolution as a subroutine on
     # evolutionSeries, since this would cause poor performance when executing
@@ -402,13 +429,27 @@ class DataAnalyzer:
     Class for data processing
     '''
 
-    def __init__(self):
-        pass
+    def __init__(self, spinGraph=HeisenbergGraph()):
+        self.spinGraph = spinGraph
 
-    def comparativeEvolution(self, exactData, simulatedData):
+################################################################################
+##                      COMPARATIVE EVOLUTION PLOTS                           ##
+################################################################################
+
+    def comparativeEvolution(self, STEPS=200, t=3.4, saveToFiles=False):
         '''
         Function for comparative plotting
         '''
+        simulatedData = self.spinGraph.evolutionSeries(
+            STEPS=STEPS,
+            t=t,
+            saveToFile=saveToFiles
+        )
+        exactData = self.spinGraph.exactEvolutionSeries(
+            STEPS=STEPS,
+            t=t,
+            saveToFile=saveToFiles
+        )
         plt.xlabel(r'$t$ (u. a.)')
         plt.ylabel(r'$|\langle \psi_0 | k \rangle|^2$')
         shape = simulatedData.shape
@@ -422,45 +463,69 @@ class DataAnalyzer:
             plt.scatter(
                 simulatedData[:, 0],
                 simulatedData[:, idx],
-                label=str(idx)
+                label=str(idx-1)
             )
         plt.legend()
         plt.show()
 
 
-# testGraph = HeisenbergGraph(
-#     spinInteractions={
-#         (0, 1): [0.5, 0.9, 0.7],
-#         # (1, 2): [1, 1, 1],
-#         # (0, 2): [1, 1, 1],
-#         # (1, 2): [1, 1, 1],
-#         # (2, 3): [1, 1, 1],
-#         # (3, 0): [1, 1, 1],
-#     },
-#     externalField={
-#         0: [0.0, 0.0, 0.0],
-#         1: [0.0, 0.0, 0.0],
-#         # 2: [0, 0, 0],
-#         # 3: [0, 0, 0],
-#     },
-#     localSimulation=True,
-#     # initialState=np.array([1, 0, 0, 0])
-# )
+################################################################################
+##                           EVOLUTION ERROR PLOTS                            ##
+################################################################################
 
-# exactFinalState = testGraph.exactTimeEvolution()
-# print(exactFinalState, sum(exactFinalState))
 
-# simulatedFinalState = testGraph.quantumTimeEvolution()
-# print(simulatedFinalState, sum(simulatedFinalState))
+    def unitaryEvolutionError(self, STEPS=200, t=3.4):
+        '''
+        Function for computing trace distance between 
+        exact and quantum evolution operators 
+        '''
+        quantumUnitary = self.spinGraph.quantumEvolutionUnitary(
+            STEPS=STEPS, t=t
+        )
+        exactUnitary = self.spinGraph.exactEvolutionUnitary(t=t)
+        return np.linalg.norm(quantumUnitary-exactUnitary, ord='fro')
 
-# print(len(testGraph.graph.vs))
+    def unitaryErrorStepsPlot(self, MAX_STEPS=200, t=3.4):
+        '''
+        Function for plotting unitary
+        error as a function of steps
+        for given time
+        '''
+        steps = np.array([
+            step for step in range(1, MAX_STEPS+1)
+        ])
+        errors = np.array([
+            self.unitaryEvolutionError(STEPS=step, t=t)
+            for step in steps
+        ])
+        logErrors = np.log(errors)
+        logSteps = np.log(steps)
+        # Plot logarithmic scale data
+        plt.xlabel(r'$\ln(N)$')
+        plt.ylabel(r'$\ln(E)$')
+        plt.scatter(logSteps, logErrors)
+        plt.show()
+        # return linear regression data
+        # slope, intercept, r-value, p-value, stderr
+        return linregress(logSteps, logErrors)
 
-# for edge in testGraph.graph.es:
-#     print(edge.index, edge.tuple, edge['color'], edge['exchangeIntegrals'])
-
-# for color in testGraph.graphColors:
-#     print(color, [edge.tuple for edge in testGraph.matching[color]])
-
-# print(testGraph.HamiltonianMatrix())
-
-# print(testGraph.evolutionCircuit(STEPS=1, t=1).decompose().decompose().decompose())
+    def unitaryErrorTimePlot(self, STEPS=200, times=np.array([3.4])):
+        '''
+        Function for plotting unitary
+        error as a function of time
+        for given number of steps
+        '''
+        errors = np.array([
+            self.unitaryEvolutionError(STEPS=STEPS, t=time)
+            for time in times
+        ])
+        logErrors = np.log(errors)
+        logTimes = np.log(times)
+        # Plot logarithmic scale data
+        plt.xlabel(r'$\ln(t)$')
+        plt.ylabel(r'$\ln(E)$')
+        plt.scatter(logErrors, logErrors)
+        plt.show()
+        # return linear regression data
+        # slope, intercept, r-value, p-value, stderr
+        return linregress(logTimes, logErrors)

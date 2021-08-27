@@ -31,9 +31,10 @@ def pauliMatrix(numSpins, vertexId, pauliId):
     Function for computing pauli
     operator in graph
     '''
-    return np.kron(np.identity(2**vertexId),
+    realIdx = numSpins-1-vertexId
+    return np.kron(np.identity(2**realIdx),
                    np.kron(PauliMatrices[pauliId],
-                           np.identity(2**(numSpins-1-vertexId))
+                           np.identity(2**(numSpins-1-realIdx))
                            )
                    )
 
@@ -44,12 +45,14 @@ def pauliProductMatrix(numSpins, edgeTuple, pauliTuple):
     on spin graph
     '''
     first, last = edgeTuple
+    realFirst, realLast = numSpins-1-last, numSpins-1-first
     firstPauli, lastPauli = pauliTuple
-    return np.kron(np.identity(2**first),
-                   np.kron(PauliMatrices[firstPauli],
-                           np.kron(np.identity(2**(last-first-1)),
-                                   np.kron(PauliMatrices[lastPauli],
-                                           np.identity(2**(numSpins-1-last))
+    return np.kron(np.identity(2**realFirst),
+                   np.kron(PauliMatrices[lastPauli],
+                           np.kron(np.identity(2**(realLast-realFirst-1)),
+                                   np.kron(PauliMatrices[firstPauli],
+                                           np.identity(
+                                               2**(numSpins-1-realLast))
                                            )
                                    )
                            )
