@@ -11,6 +11,7 @@ import numpy as np
 from scipy.linalg import expm
 from scipy.stats import linregress
 import matplotlib.pyplot as plt
+from matplotlib import cm
 import auxiliaryRoutines as aux
 from qiskit.circuit import exceptions
 from qiskit import IBMQ, execute, Aer
@@ -102,7 +103,6 @@ class HeisenbergGraph:
 ################################################################################
 ##                ANALYTIC ROUTINES FOR COMPUTING HAMILTONIAN                 ##
 ################################################################################
-
 
     def edgeHamiltonian(self, edge):
         '''
@@ -485,6 +485,24 @@ class DataAnalyzer:
         exactUnitary = self.spinGraph.exactEvolutionUnitary(t=t)
         return np.linalg.norm(quantumUnitary-exactUnitary, ord='fro')
 
+    def unitaryEvolutionErrorVectorized(self,
+                                        STEPS=np.array([200]),
+                                        times=np.array([3.4])
+                                        ):
+        '''
+        Numpy wrapper for direct vectorization of
+        error computation
+        '''
+        return np.array([
+            [
+                self.unitaryEvolutionError(
+                    STEPS=step,
+                    t=time
+                )
+                for step in STEPS
+            ] for time in times
+        ])
+
     def unitaryErrorStepsPlot(self, MAX_STEPS=200, t=3.4):
         '''
         Function for plotting unitary
@@ -529,3 +547,72 @@ class DataAnalyzer:
         # return linear regression data
         # slope, intercept, r-value, p-value, stderr
         return linregress(logTimes, logErrors)
+
+    def unitaryErrorMixedPlot(self,
+                              STEPS=np.array([200]),
+                              times=np.array([3.4])
+                              ):
+        '''
+        Function for plotting error as function of
+        number of steps for given times and viceversa
+        '''
+        errors = self.unitaryEvolutionErrorVectorized(
+            STEPS=STEPS,
+            times=times
+        )
+        numSteps = len(STEPS)
+        numTimes = len(times)
+        fig, (axSteps, axTimes) = plt.subplots(1, 2)
+        # Plot of error vs steps
+        axSteps.set_title(r'Log Plot of Error v. No. Steps')
+        axSteps.set_ylabel(r'$\ln(E)$')
+        axSteps.set_xlabel(r'$\ln(N)$')
+        for idx in range(numTimes):
+            axSteps.scatter(
+                np.log(STEPS),
+                np.log(errors[idx, :]),
+                label='$t={0:.2f}$'.format(times[idx])
+            )
+        # axSteps.legend(loc='lower left')
+        # Plot of time vs steps
+        axTimes.set_title(r'Log Plot of Error v. Time')
+        axTimes.set_ylabel(r'$\ln(E)$')
+        axTimes.set_xlabel(r'$\ln(t)$')
+        for idx in range(numSteps):
+            axTimes.scatter(
+                np.log(times),
+                np.log(errors[:, idx]),
+                label='$N={}$'.format(STEPS[idx])
+            )
+        # axTimes.legend(loc='lower left')
+        plt.show()
+        return errors
+
+    def unitaryErrorExponents(self,
+                              STEPS=np.array([200]),
+                              times=np.array([3.4])
+                              ):
+        '''
+        Function for plotting error power law exponents
+        '''
+        errors = self.unitaryEvolutionErrorVectorized(
+            STEPS=STEPS,
+            times=times
+        )
+        numSteps = len(STEPS)
+        numTimes = len(times)
+        avStepsExponent = []
+        for idx in range(numTimes):
+            exponent, _, _, _, _ = linregress(
+                np.log(STEPS),
+                np.log(np.transpose(errors[idx, :]))
+            )
+            avStepsExponent.append(exponent)
+        avTimesExponent = []
+        for idx in range(numSteps):
+            exponent, _, _, _, _ = linregress(
+                np.log(times),
+                np.log(errors[:, idx])
+            )
+            avTimesExponent.append(exponent)
+        return avStepsExponent, avTimesExponent
