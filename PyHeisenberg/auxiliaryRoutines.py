@@ -68,7 +68,7 @@ def dec2nBitBinaryChain(num, bits):
     return "{0:b}".format(num).zfill(bits)
 
 
-def Counts2Pdf(numSpins, Job, Circuits):
+def Counts2Pdf(numSpins, Job, Circuits, **kwargs):
     '''
     Routine for extracting the
     PDF produced after execution
@@ -76,7 +76,19 @@ def Counts2Pdf(numSpins, Job, Circuits):
     NumPy Array
     '''
     # Get Counts
-    simulationPdf = [Job.result().get_counts(circuit) for circuit in Circuits]
+    try:
+        measurementFilter = kwargs['measurementFilter']
+        filteredJob = measurementFilter.apply(Job.result())
+        print('Using measurement error mitigation...')
+        simulationPdf = [
+            filteredJob.get_counts(circuit)
+            for circuit in Circuits
+        ]
+        print('Implemented measurement error mitigation.')
+    except KeyError:
+        print('In Counts2Pdf: Not using measurement error mitigation...')
+        simulationPdf = [Job.result().get_counts(circuit)
+                         for circuit in Circuits]
     # Convert to array of data
     data = np.array([
         [res.get(dec2nBitBinaryChain(num, numSpins), 0)

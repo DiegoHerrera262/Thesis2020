@@ -10,6 +10,7 @@ import graphRoutines as gr
 import numpy as np
 from scipy.linalg import expm
 from scipy.stats import linregress
+from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
 from matplotlib import cm
 import auxiliaryRoutines as aux
@@ -17,6 +18,8 @@ from qiskit.circuit import exceptions
 from qiskit import IBMQ, execute, Aer
 from qiskit.tools.monitor import job_monitor
 from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
+from qiskit.ignis.mitigation.measurement import complete_meas_cal
+from qiskit.ignis.mitigation.measurement import CompleteMeasFitter
 
 plt.style.use('FigureStyle.mplstyle')
 
@@ -104,6 +107,7 @@ class HeisenbergGraph:
 ##                ANALYTIC ROUTINES FOR COMPUTING HAMILTONIAN                 ##
 ################################################################################
 
+
     def edgeHamiltonian(self, edge):
         '''
         Function for computing spin
@@ -171,9 +175,9 @@ class HeisenbergGraph:
         Hz = vertex['externalField'][2]
         H = np.sqrt(Hx**2 + Hy**2 + Hz**2)
         # Parameter values for Qiskit
-        PHI = np.arctan2(Hy, Hx) + 2*np.pi
-        THETA = np.arccos(Hz/H)
-        LAMBDA = np.pi
+        PHI = np.arctan2(Hy, Hx) + 2*np.pi if H > 0 else 0
+        THETA = np.arccos(Hz/H) if H > 0 else 0
+        LAMBDA = np.pi if H > 0 else 0
         # Align to field main axis
         qcVertex = QuantumCircuit(spinChain)
         qcVertex.u(-THETA, -LAMBDA, -PHI, spinChain[vertex.index])
@@ -293,9 +297,41 @@ class HeisenbergGraph:
 ##                          GRAPH EVOLUTION ROUTINES                          ##
 ################################################################################
 
+    # MEASUREMENT ERROR MITIGATION ROUTINES
+
+    def getCalibrationFitter(self):
+        '''
+        Function for computing error mitigation
+        calibration filter for runs on IBM Q
+        '''
+        print('Generating calibration circuit...')
+        spinRegister = QuantumRegister(len(self.graph.vs))
+        calibrationCircuits, stateLabels = complete_meas_cal(
+            qr=spinRegister,
+            circlabel='meas_cal'
+        )
+        calibrationJob = execute(
+            calibrationCircuits,
+            backend=self.backend,
+            shots=2048
+        )
+        print('Calibrating measurement with ignis...')
+        job_monitor(calibrationJob)
+        calibrationResults = calibrationJob.result()
+        return CompleteMeasFitter(
+            calibrationResults,
+            stateLabels,
+            circlabel='meas_cal'
+        )
+
     # QUANTUM EVOLUTION ROUTINES
 
-    def quantumTimeEvolution(self, STEPS=200, t=1.7, shots=2048):
+    def quantumTimeEvolution(
+            self,
+            STEPS=200,
+            t=1.7,
+            shots=2048,
+            **kwargs):
         '''
         Function for QTE. Produces probability
         density at time t
@@ -304,11 +340,21 @@ class HeisenbergGraph:
         job = execute(timeEvolution, self.backend, shots=shots)
         if not self.localSimulation:
             job_monitor(job)
-        return 1/shots * aux.Counts2Pdf(
-            len(self.graph.vs),
-            job,
-            timeEvolution
-        )[0]
+        try:
+            measurementFilter = kwargs['measurementFitter'].filter
+            return 1/shots * aux.Counts2Pdf(
+                len(self.graph.vs),
+                job,
+                timeEvolution,
+                measurementFilter=measurementFilter
+            )[0]
+        except KeyError:
+            job = execute(timeEvolution, self.backend, shots=shots)
+            return 1/shots * aux.Counts2Pdf(
+                len(self.graph.vs),
+                job,
+                timeEvolution
+            )[0]
 
     def quantumEvolutionUnitary(self, STEPS=200, t=1.7, shots=2048):
         '''
@@ -324,7 +370,12 @@ class HeisenbergGraph:
     # evolutionSeries, since this would cause poor performance when executing
     # jobs on IBM Q devices.
 
-    def evolutionSeries(self, STEPS=200, t=1.7, shots=2048, saveToFile=False):
+    def evolutionSeries(self,
+                        STEPS=200,
+                        t=1.7,
+                        shots=2048,
+                        saveToFile=False,
+                        **kwargs):
         '''
         Function for evaluation PDF evolution
         under graph Hamiltonian
@@ -336,11 +387,22 @@ class HeisenbergGraph:
         if not self.localSimulation:
             job_monitor(job)
         numSpins = len(self.graph.vs)
-        simulationResults = 1/shots * aux.Counts2Pdf(
-            numSpins,
-            job,
-            evolutionSteps
-        )
+        simulationResults = None
+        try:
+            measurementFilter = kwargs['measurementFitter'].filter
+            simulationResults = 1/shots * aux.Counts2Pdf(
+                numSpins,
+                job,
+                evolutionSteps,
+                measurementFilter=measurementFilter
+            )
+        except KeyError:
+            print('In evolutionSeries: Not using measurement error mitigation...')
+            simulationResults = 1/shots * aux.Counts2Pdf(
+                numSpins,
+                job,
+                evolutionSteps
+            )
         simulationData = np.append(
             np.array(
                 [[
@@ -352,6 +414,64 @@ class HeisenbergGraph:
         )
         if saveToFile:
             filename = 'evolutionSeries_{}_{}spins.csv'.format(
+                self.backendName,
+                numSpins
+            )
+            np.savetxt(
+                filename,
+                simulationData,
+                delimiter=',',
+                header='t ' +
+                ' '.join([str(idx) for idx in range(2**numSpins)]),
+                encoding='utf8'
+            )
+        return simulationData
+
+    # IMPORTANT: This routine is included here and not in the analyzer for
+    # simplicity. It might not be needed on applications.
+
+    def stepsSeries(self,
+                    MAX_STEPS=200,
+                    t=1.7,
+                    shots=2048,
+                    saveToFile=False,
+                    **kwargs):
+        '''
+        Function for evaluation PDF v Steps
+        under graph Hamiltonian evolution
+        '''
+        evolutionSteps = [self.evolutionCircuit(STEPS=idx, t=t)
+                          for idx in range(1, MAX_STEPS+1)]
+        job = execute(evolutionSteps, self.backend, shots=shots)
+        if not self.localSimulation:
+            job_monitor(job)
+        numSpins = len(self.graph.vs)
+        simulationResults = None
+        try:
+            measurementFilter = kwargs['measurementFitter'].filter
+            simulationResults = 1/shots * aux.Counts2Pdf(
+                numSpins,
+                job,
+                evolutionSteps,
+                measurementFilter=measurementFilter
+            )
+        except KeyError:
+            simulationResults = 1/shots * aux.Counts2Pdf(
+                numSpins,
+                job,
+                evolutionSteps
+            )
+        simulationData = np.append(
+            np.array(
+                [[
+                    idx for idx in range(1, MAX_STEPS+1)
+                ]]
+            ).T,
+            simulationResults,
+            axis=1
+        )
+        if saveToFile:
+            filename = 'stepsSeries_{}_{}spins.csv'.format(
                 self.backendName,
                 numSpins
             )
@@ -412,7 +532,7 @@ class HeisenbergGraph:
             filename = 'exactEvolutionSeries_{}spins.csv'.format(
                 numSpins
             )
-            np.savetext(
+            np.savetxt(
                 filename,
                 simulationData,
                 delimiter=',',
@@ -436,17 +556,65 @@ class DataAnalyzer:
 ##                      COMPARATIVE EVOLUTION PLOTS                           ##
 ################################################################################
 
-    def comparativeEvolution(self, STEPS=200, t=3.4, saveToFiles=False):
+    def circuitDepthVSteps(self, MIN_STEPS=1, MAX_STEPS=200):
+        '''
+        Function for plotting circuit depth
+        as function of number of integration
+        steps in ST scheme
+        '''
+        evolutionSteps = [self.spinGraph.evolutionCircuit(STEPS=idx, t=5.456)
+                          for idx in range(MIN_STEPS, MAX_STEPS+1)]
+        circuitsDepth = np.array(
+            [circuit.depth() for circuit in evolutionSteps]
+        )
+        stepsArray = np.array(
+            [idx for idx in range(MIN_STEPS, MAX_STEPS+1)]
+        )
+        logSteps = np.log(stepsArray)
+        logDepth = np.log(circuitsDepth)
+        plt.xlabel(r'$ln(N)$')
+        plt.ylabel(r'$ln(C_D)$')
+        plt.scatter(
+            logSteps,
+            logDepth
+        )
+        plt.show()
+        # return linear regression data
+        # slope, intercept, r-value, p-value, stderr
+        return linregress(logSteps, logDepth)
+
+
+################################################################################
+##                      COMPARATIVE EVOLUTION PLOTS                           ##
+################################################################################
+
+
+    def comparativeEvolution(
+            self,
+            STEPS=200,
+            t=3.4,
+            saveToFiles=False,
+            **kwargs):
         '''
         Function for comparative plotting
         '''
-        simulatedData = self.spinGraph.evolutionSeries(
-            STEPS=STEPS,
-            t=t,
-            saveToFile=saveToFiles
-        )
+        simulatedData = None
+        try:
+            simulatedData = self.spinGraph.evolutionSeries(
+                STEPS=STEPS,
+                t=t,
+                saveToFile=saveToFiles,
+                measurementFitter=kwargs['measurementFitter']
+            )
+        except KeyError:
+            print('In comparativeEvolution: Not using measurement error mitigation...')
+            simulatedData = self.spinGraph.evolutionSeries(
+                STEPS=STEPS,
+                t=t,
+                saveToFile=saveToFiles
+            )
         exactData = self.spinGraph.exactEvolutionSeries(
-            STEPS=STEPS,
+            STEPS=120,
             t=t,
             saveToFile=saveToFiles
         )
@@ -458,7 +626,8 @@ class DataAnalyzer:
         for idx in range(1, shape[1]):
             plt.plot(
                 exactData[:, 0],
-                exactData[:, idx]
+                exactData[:, idx],
+                '--'
             )
             plt.scatter(
                 simulatedData[:, 0],
@@ -470,7 +639,7 @@ class DataAnalyzer:
 
 
 ################################################################################
-##                           EVOLUTION ERROR PLOTS                            ##
+##                     EVOLUTION OPERATOR ERROR PLOTS                         ##
 ################################################################################
 
 
@@ -616,3 +785,110 @@ class DataAnalyzer:
             )
             avTimesExponent.append(exponent)
         return avStepsExponent, avTimesExponent
+
+################################################################################
+##                     EVOLUTION FIDELITY ERROR PLOTS                         ##
+################################################################################
+
+    def pdfFidelities(self, pdf1, pdf2):
+        '''
+        Function for computing pdf
+        fidelities
+        '''
+        return sum(np.sqrt(pdf1 * pdf2))**2
+
+    def pdfErrorStepsPlot(
+            self,
+            MAX_STEPS=200,
+            t=3.4,
+            saveToFile=False,
+            **kwargs):
+        '''
+        Function for plotting pdf error
+        as function of steps for given time
+        '''
+        evolutionSteps = None
+        try:
+            evolutionSteps = self.spinGraph.stepsSeries(
+                MAX_STEPS=MAX_STEPS,
+                t=t,
+                saveToFile=saveToFile,
+                measurementFitter=kwargs['measurementFitter']
+            )
+        except KeyError:
+            evolutionSteps = self.spinGraph.stepsSeries(
+                MAX_STEPS=MAX_STEPS,
+                t=t,
+                saveToFile=saveToFile
+            )
+        exactPdf = self.spinGraph.exactTimeEvolution(t=t)
+        errorArray = np.array([
+            1-self.pdfFidelities(evolutionSteps[idx, 1:], exactPdf)
+            for idx in range(MAX_STEPS)
+        ])
+        logSteps = np.log(evolutionSteps[:, 0])
+        logErrors = np.log(errorArray)
+        plt.xlabel(r'$\ln(N)$')
+        plt.ylabel(r'$\ln(1-F_N)$')
+        plt.scatter(
+            logSteps,
+            logErrors
+        )
+        plt.show()
+        return linregress(logSteps, logErrors)
+
+    def pdfErrorStepsPlotFit(
+            self,
+            trialFunction,
+            MAX_STEPS=200,
+            t=3.4,
+            saveToFile=False,
+            **kwargs):
+        '''
+        Function for plotting pdf error
+        as function of steps for given time
+        and fit to trial function
+        '''
+        evolutionSteps = None
+        try:
+            evolutionSteps = self.spinGraph.stepsSeries(
+                MAX_STEPS=MAX_STEPS,
+                t=t,
+                saveToFile=saveToFile,
+                measurementFitter=kwargs['measurementFitter']
+            )
+        except KeyError:
+            evolutionSteps = self.spinGraph.stepsSeries(
+                MAX_STEPS=MAX_STEPS,
+                t=t,
+                saveToFile=saveToFile
+            )
+        exactPdf = self.spinGraph.exactTimeEvolution(t=t)
+        errorArray = np.array([
+            1-self.pdfFidelities(evolutionSteps[idx, 1:], exactPdf)
+            for idx in range(MAX_STEPS)
+        ])
+        steps = evolutionSteps[:, 0]
+        errors = errorArray
+        plt.xlabel(r'$N$')
+        plt.ylabel(r'$1-F_N$')
+        plt.scatter(
+            steps,
+            errors
+        )
+        # Fit to trial funcition with scipy
+        optParams, cov = curve_fit(
+            trialFunction,
+            steps,
+            errors,
+            bounds=(0, 1e5)
+        )
+        contSteps = np.linspace(1, MAX_STEPS, 1000)
+        contErrors = trialFunction(contSteps, *optParams)
+        plt.plot(
+            contSteps,
+            contErrors,
+            '--'
+        )
+        plt.show()
+        return optParams, cov

@@ -1,4 +1,4 @@
-An introduction to quantum time simulation, as compared to \textit{classical} time simulation of quantum systems is presented on \autoref{sec:qtsVcts}. After that, a generic framework for approximate quantum time evolution is presented on \autoref{sec:trotter} Finally, on \autoref{sec:hubbard}, quantum digital simulations of one-dimensional Hubbard models, carried out by Las Heras et. al. \cite{HubbardSimulLasHeras} and Barends et. al. \cite{HubbardSimul}, are discussed as immediate predecessors.
+An introduction to quantum time simulation, as opposed to \textit{classical} time simulation of quantum systems is presented on \autoref{sec:qtsVcts}. After that, a generic framework for approximate quantum time evolution is presented on \autoref{sec:trotter} Finally, on \autoref{sec:hubbard}, quantum digital simulations of one-dimensional Hubbard models, carried out by Las Heras et. al. \cite{HubbardSimulLasHeras} and Barends et. al. \cite{HubbardSimul}, are discussed as immediate predecessors of this works.
 
 \section{Quantum Time Simulation v. Classical Time Simulation}
 \label{sec:qtsVcts}
@@ -226,8 +226,20 @@ An introduction to quantum time simulation, as compared to \textit{classical} ti
   \begin{equation}
     \mathrm{e}^{-\mathrm{i}t \sum_{l = 0}^{L-1} \hat{H}_l} = \hat{S}_{2k}(-\mathrm{i}t) + \mathcal{O}(t^{2k+1})
   \end{equation}
-  
 
-\section{Quantum Time Simulation of the Hubbard Model}
+  On \cite{BerryErrorBounds}, Barry et. al. show that Suzuki-Trotter shcemes can efficiently simulate sparse Hamiltonians, shuch as the ones considered in this work. As a matter of fact, they have shown that the number of exponentials ($N_{\text{exp}}$) required to simulate time evolution of a system during a time interval $t > 0$, with error bounded by $\epsilon > 0$, is such that
+
+  \begin{equation}
+    N_{\text{exp}} \leq 2L5^{2k}(L\tau)^{1+1/2k}/\epsilon^{1/2k}
+  \end{equation}
+
+  Where $\tau = \left\Vert \hat{H} \right\Vert t$, $2k$ is the order of a Suzuki-Trotter iteration, and $\epsilon \leq 1 \leq 2L5^{2k}$. Notice that by choosing a sufficiently high order, a Suzuki-Trotter scheme can emulate time evolution with almost linear complexity in time.
+
+  In most cases, simulation of a quantum system by a digital quantum computer requires mapping its Hibert space to a $2^M$-dimensional Hilbert space. In that case, the number of qubits required for siulation would be $M$. Clearly, all quantum operators in the simulated system's space should be mapped to operators on an $M$-qubit space, which would then be approximated by a universal set of gates. In the follong section, demonstrations of this approach to the study of the Hubbard Model and the Electronic structure problem are introdeced.
+
+\section{Examples of Quantum Time Simulation}
 \label{sec:hubbard}
-  \lipsum[2-4]
+  
+  On section \ref{sec:qtsVcts}, a comparison between classical time simulation and quantum time simulation was introduced. In partiular, a scheme for integrating Schrödinger's equation for a $n$-particle system was proposed. The quantum evolution algorithm there introduced corresponds to standard first quantization techniques applied to the solution of many body problems \cite{sabreKais, QuantumChem1, QuantumChem2}. Albeit useful in some instances, first quantization techniques are not the most effciently implemented in quantum processors. 
+  
+  A shortcomming of first quantization methods is that physical symmetrization properties are not taken into account. In this section, second quantization techniques for simulating many body dynamics are introduced. Systems such as magnetic solids with periodic structure, or chemical molecules have clear symmetries that can be profitted by using this formalism \cite{HubbardOriginal, sabreKais, QuantumChem2}. After introducing second quantization techniques in the context of such systems, their relationship to Ising-like Hamiltonians is introduced by presenting qubit mappings such as the Jordan-Wigner transform (JWT) and Bravyi-Kitaev mapping (BKM).
