@@ -122,3 +122,43 @@ def BindParameters(heisenbergGraph, t):
             ]
         ))
     }
+
+
+def numberOperatorEigenvalue(bits, state, PauliString):
+    '''
+    Function for determining eigenvalue
+    associated to ZZ operator with respect
+    to a given computational basis state
+    '''
+    value = 1
+    stateBinary = dec2nBitBinaryChain(state, bits)
+    for (bit, PauliOp) in zip(stateBinary, PauliString):
+        if bit == '1' and PauliOp in ['X', 'Y', 'Z']:
+            value = value * (-1)
+    return value
+
+
+def twoSpinPauliProductString(bits, edge, subsystemString):
+    '''
+    Function for determining the Pauli string
+    that corresponds to a particular two
+    qubit Pauli product operator
+    '''
+    pauliString = '1' * bits
+    i = edge.tuple[0]
+    j - edge.tuple[1]
+    pauliString[i] = subsystemString[0]
+    pauliString[j] = subsystemString[1]
+    return pauliString
+
+
+def spinPauliString(bits, vertex, PauliOpString):
+    '''
+    Function for determining the Pauli string
+    that corresponds to a particular two
+    qubit Pauli operator
+    '''
+    pauliString = '1' * bits
+    i = vertex.index
+    pauliString[i] = PauliOpString
+    return pauliString

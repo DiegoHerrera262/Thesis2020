@@ -107,7 +107,6 @@ class HeisenbergGraph:
 ##                ANALYTIC ROUTINES FOR COMPUTING HAMILTONIAN                 ##
 ################################################################################
 
-
     def edgeHamiltonian(self, edge):
         '''
         Function for computing spin
@@ -542,6 +541,127 @@ class HeisenbergGraph:
             )
         return simulationData
 
+################################################################################
+##                  HAMILTONIAN EXPECTED VALUE ROUTINES                       ##
+################################################################################
+
+    def computePauliProductExpval(self, QNN, PauliString):
+        '''
+        Function for computing expected value
+        of XX operator on state produced by QNN
+        '''
+        # create a spinchain
+        numSpins = len(self.graph.vs)
+        spinChain = QuantumRegister(numSpins)
+        # extend QNN
+        extendedQNN = QuantumCircuit(spinChain)
+        extendedQNN.append(QNN.to_instruction(), spinChain)
+        # set up 0th operator
+        for idx in range(len(PauliString)):
+            if PauliString[idx] == 'X':
+                extendedQNN.h(spinChain[idx])
+            if PauliString[idx] == 'Y':
+                extendedQNN.sdg(spinChain[idx])
+                extendedQNN.h(spinChain[idx])
+        extendedQNN.draw(output='text')
+        try:
+            # execute quantum circuit
+            totCounts = 2048
+            numSpins = len(self.graph.vs)
+            stateCircuit = QuantumCircuit(numSpins)
+            stateCircuit.append(extendedQNN.to_instruction(), range(numSpins))
+            stateCircuit.measure_all()
+            job = execute(
+                stateCircuit,
+                backend=self.backend,
+                shots=totCounts
+            )
+            if not self.localSimulation:
+                job_monitor(job)
+            # get counts from job
+            counts = job.result().get_counts(stateCircuit)
+            # compute expected value
+            return sum(
+                aux.numberOperatorEigenvalue(numSpins, state, PauliString) *
+                counts.get(aux.dec2nBitBinaryChain(state, numSpins), 0)
+                * 1/totCounts
+                for state in range(2**numSpins)
+            )
+        except exceptions.CircuitError:
+            print('Circuit exception ocurred. Check your QNN.')
+            return float('NaN')
+
+    def edgeHamiltonianExpVal(self, QNN, edge):
+        '''
+        Function that computes the expected value
+        of the graph Hamiltonian upon application
+        of a QNN
+        '''
+        numSpins = len(self.graph.vs)
+        return sum(
+            J * self.computePauliProductExpVal(
+                QNN,
+                aux.twoSpinPauliProductString(
+                    numSpins, edge, PauliDouble
+                )
+            )
+            for J, PauliDouble in zip(
+                edge['exchangeIntegrals'],
+                ['XX', 'YY', 'ZZ']
+            )
+        )
+
+    def spinSpinHamiltonianExpVal(self, QNN):
+        '''
+        Function that computes the expected value
+        of the graph Hamiltonian upon application
+        of a QNN
+        '''
+        return sum(
+            self.edgeHamiltonianExpVal(QNN, edge)
+            for edge in self.graph.es
+        )
+
+    def vertexHamiltonianExpVal(self, QNN, vertex):
+        '''
+        Function for computing the expected value
+        of the graph Hamiltonian upon application
+        of a QNN
+        '''
+        numSpins = len(self.graph.vs)
+        return sum(
+            H * self.computePauliProductExpVal(
+                QNN,
+                aux.twoSpinPauliProductString(
+                    numSpins, vertex, PauliChar
+                )
+            )
+            for H, PauliChar in zip(
+                vertex['externalField'],
+                ['X', 'Y', 'Z']
+            )
+        )
+
+    def spinHamiltonianExpVal(self, QNN):
+        '''
+        Function that computes the expected value
+        of the graph Hamiltonian upon application
+        of a QNN
+        '''
+        return sum(
+            self.vertexHamiltonianExpVal(QNN, vertex)
+            for vertex in self.graph.vs
+        )
+
+    def quantumHamiltonianExpVal(self, QNN):
+        '''
+        Function that computes the expected value
+        of the graph Hamiltonian upon application
+        of a QNN
+        '''
+        return self.spinHamiltonianExpVal(QNN) + \
+            self.spinSpinHamiltonianExpVal(QNN)
+
 
 class DataAnalyzer:
 
@@ -587,7 +707,6 @@ class DataAnalyzer:
 ################################################################################
 ##                      COMPARATIVE EVOLUTION PLOTS                           ##
 ################################################################################
-
 
     def comparativeEvolution(
             self,
@@ -641,7 +760,6 @@ class DataAnalyzer:
 ################################################################################
 ##                     EVOLUTION OPERATOR ERROR PLOTS                         ##
 ################################################################################
-
 
     def unitaryEvolutionError(self, STEPS=200, t=3.4):
         '''
