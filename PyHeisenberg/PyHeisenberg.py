@@ -542,10 +542,21 @@ class HeisenbergGraph:
         return simulationData
 
 ################################################################################
-##                  HAMILTONIAN EXPECTED VALUE ROUTINES                       ##
+##                     HAMILTONIAN EXPECTED VALUE ROUTINES                    ##
 ################################################################################
 
-    def computePauliProductExpval(self, QNN, PauliString):
+    def exactHamiltonianExpVal(self):
+        '''
+        Function for computing the exact expected
+        value of the graph Hamiltonian.
+        '''
+        H = self.HamiltonianMatrix()
+        return np.abs(np.inner(
+            np.conj(self.initialState).T,
+            np.matmul(H, self.initialState)
+        ))
+
+    def computePauliProductExpVal(self, QNN, PauliString):
         '''
         Function for computing expected value
         of XX operator on state produced by QNN
@@ -632,7 +643,7 @@ class HeisenbergGraph:
         return sum(
             H * self.computePauliProductExpVal(
                 QNN,
-                aux.twoSpinPauliProductString(
+                aux.spinPauliString(
                     numSpins, vertex, PauliChar
                 )
             )

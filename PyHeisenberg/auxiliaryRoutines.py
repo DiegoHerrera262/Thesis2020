@@ -132,7 +132,7 @@ def numberOperatorEigenvalue(bits, state, PauliString):
     '''
     value = 1
     stateBinary = dec2nBitBinaryChain(state, bits)
-    for (bit, PauliOp) in zip(stateBinary, PauliString):
+    for (bit, PauliOp) in zip(stateBinary[::-1], PauliString):
         if bit == '1' and PauliOp in ['X', 'Y', 'Z']:
             value = value * (-1)
     return value
@@ -144,12 +144,12 @@ def twoSpinPauliProductString(bits, edge, subsystemString):
     that corresponds to a particular two
     qubit Pauli product operator
     '''
-    pauliString = '1' * bits
+    pauliString = list('1' * bits)
     i = edge.tuple[0]
-    j - edge.tuple[1]
     pauliString[i] = subsystemString[0]
+    j = edge.tuple[1]
     pauliString[j] = subsystemString[1]
-    return pauliString
+    return ''.join(pauliString)
 
 
 def spinPauliString(bits, vertex, PauliOpString):
@@ -158,7 +158,7 @@ def spinPauliString(bits, vertex, PauliOpString):
     that corresponds to a particular two
     qubit Pauli operator
     '''
-    pauliString = '1' * bits
+    pauliString = list('1' * bits)
     i = vertex.index
     pauliString[i] = PauliOpString
-    return pauliString
+    return ''.join(pauliString)
