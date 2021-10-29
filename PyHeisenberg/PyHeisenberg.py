@@ -17,6 +17,8 @@ import auxiliaryRoutines as aux
 from qiskit.circuit import exceptions
 from qiskit import IBMQ, execute, Aer
 from qiskit.tools.monitor import job_monitor
+from qiskit.utils import QuantumInstance
+from qiskit.test.mock import FakeSantiago
 from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
 from qiskit.ignis.mitigation.measurement import complete_meas_cal
 from qiskit.ignis.mitigation.measurement import CompleteMeasFitter
@@ -88,6 +90,14 @@ class HeisenbergGraph:
                 except KeyError:
                     self.backendName = 'qasm_simulator'
                 self.backend = Aer.get_backend(self.backendName)
+                # Include error model
+                try:
+                    self.noisySimulation = kwargs['noisySimulation']
+                    if self.noisySimulation:
+                        self.backend = self.backend.from_backend(
+                            FakeSantiago())
+                except KeyError:
+                    pass
         except KeyError:
             self.localSimulation = True
             self.backendName = 'qasm_simulator'
@@ -101,7 +111,6 @@ class HeisenbergGraph:
             initState[0] = 1
             self.initialState = initState
             self.withInitialState = False
-
 
 ################################################################################
 ##                ANALYTIC ROUTINES FOR COMPUTING HAMILTONIAN                 ##
@@ -317,11 +326,13 @@ class HeisenbergGraph:
         print('Calibrating measurement with ignis...')
         job_monitor(calibrationJob)
         calibrationResults = calibrationJob.result()
-        return CompleteMeasFitter(
+        fitter = CompleteMeasFitter(
             calibrationResults,
             stateLabels,
             circlabel='meas_cal'
         )
+        print('Computed measurement correction matrix:\n', fitter.cal_matrix)
+        return fitter
 
     # QUANTUM EVOLUTION ROUTINES
 
@@ -674,6 +685,52 @@ class HeisenbergGraph:
             self.spinSpinHamiltonianExpVal(QNN)
 
 
+class NaiveSpinGraph(HeisenbergGraph):
+
+    '''
+    Class for simulating a generic Heisenberg hamiltonian
+    defined on a graph, with Las Heras algorithm
+    '''
+
+################################################################################
+#           OVERLOAD OF SPIN SPIN CIRCUIT TO MATCH LAS HERAS ET. AL.           #
+################################################################################
+
+    def edgeCircuit(self, edge, spinChain):
+        '''
+        Function for building circuit that
+        performs edge Hamiltonian evolution
+        '''
+        start, end = edge.tuple
+        J = edge['paramExchangeIntegrals']
+        qcEdge = QuantumCircuit(spinChain)
+        # Compute J0 phase
+        qcEdge.h(spinChain[start])
+        qcEdge.h(spinChain[end])
+        qcEdge.cx(spinChain[start], spinChain[end])
+        qcEdge.rz(J[0], spinChain[end])
+        qcEdge.cx(spinChain[start], spinChain[end])
+        qcEdge.h(spinChain[start])
+        qcEdge.h(spinChain[end])
+        # Compute J1 phase
+        qcEdge.sdg(spinChain[start])
+        qcEdge.h(spinChain[start])
+        qcEdge.sdg(spinChain[end])
+        qcEdge.h(spinChain[end])
+        qcEdge.cx(spinChain[start], spinChain[end])
+        qcEdge.rz(J[1], spinChain[end])
+        qcEdge.cx(spinChain[start], spinChain[end])
+        qcEdge.h(spinChain[start])
+        qcEdge.s(spinChain[start])
+        qcEdge.h(spinChain[end])
+        qcEdge.s(spinChain[end])
+        # Compute J2 phase
+        qcEdge.cx(spinChain[start], spinChain[end])
+        qcEdge.rz(J[2], spinChain[end])
+        qcEdge.cx(spinChain[start], spinChain[end])
+        return qcEdge.to_instruction()
+
+
 class DataAnalyzer:
 
     '''
@@ -965,6 +1022,37 @@ class DataAnalyzer:
         )
         plt.show()
         return linregress(logSteps, logErrors)
+
+    def pdfErrorStepsData(
+            self,
+            MAX_STEPS=200,
+            t=3.4,
+            saveToFile=False,
+            **kwargs):
+        '''
+        Function for plotting pdf error
+        as function of steps for given time
+        '''
+        evolutionSteps = None
+        try:
+            evolutionSteps = self.spinGraph.stepsSeries(
+                MAX_STEPS=MAX_STEPS,
+                t=t,
+                saveToFile=saveToFile,
+                measurementFitter=kwargs['measurementFitter']
+            )
+        except KeyError:
+            evolutionSteps = self.spinGraph.stepsSeries(
+                MAX_STEPS=MAX_STEPS,
+                t=t,
+                saveToFile=saveToFile
+            )
+        exactPdf = self.spinGraph.exactTimeEvolution(t=t)
+        errorArray = np.array([
+            1-self.pdfFidelities(evolutionSteps[idx, 1:], exactPdf)
+            for idx in range(MAX_STEPS)
+        ])
+        return evolutionSteps[:, 0], errorArray
 
     def pdfErrorStepsPlotFit(
             self,
