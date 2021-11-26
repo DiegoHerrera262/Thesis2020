@@ -414,6 +414,62 @@ class HeisenbergGraph:
             pauliSchedule.extend(pauliDict[pauliString])
         return pauliDict, pauliSchedule
 
+################################################################################
+##                         FLOQUET EVOLUTION ROUTINES                         ##
+################################################################################
+
+    def floquetUnitary(self, dt):
+        '''
+        Function for retrieving Floquet
+        unitary under Trotterization scheme
+        '''
+        spinChain = QuantumRegister(len(self.graph.vs))
+        qcFloquet = QuantumCircuit(spinChain)
+        qcFloquet.append(
+            self.evolutionStep(dt, spinChain),
+            spinChain
+        )
+        job = execute(
+            qcFloquet,
+            Aer.get_backend('unitary_simulator'),
+            optimization_level=0
+        )
+        return job.result().get_unitary()
+
+    def floquetEigenbasis(self, dt):
+        '''
+        Function for diagonalizing Floquet
+        operator for analysis
+        '''
+        F = self.floquetUnitary(dt)
+        return np.linalg.eig(F)
+
+    def floquetEvolution(self, dt, t):
+        '''
+        Function for computing time evolution
+        with Floquet operator exponentiation
+        '''
+        F = self.floquetUnitary(dt)
+        steps = int(t/dt)
+        evOp = np.linalg.matrix_power(F, steps)
+        return np.matmul(evOp, self.initialState)
+
+    def floquetTimeAverageFidelity(self, dt, reps=100, offset=20):
+        '''
+        Function for computing time average
+        of fidelity for numTimes til tmax
+        for Floquet evolution under dt
+        '''
+        F = self.floquetUnitary(dt)
+        average = []
+        for steps in range(offset, reps+1):
+            evOp = np.linalg.matrix_power(F, steps)
+            exactUnitary = self.exactEvolutionUnitary(t=steps*dt)
+            targetState = np.matmul(exactUnitary, self.initialState)
+            floquetState = np.matmul(evOp, self.initialState)
+            average.append(
+                np.abs(np.matmul(targetState.conj().T, floquetState))**2)
+        return 1/len(average) * sum(term for term in average)
 
 ################################################################################
 ##                          GRAPH EVOLUTION ROUTINES                          ##
@@ -1198,11 +1254,6 @@ class VariationalSpinGraph(HeisenbergGraph):
         bindingDict = aux.BindVarParameters(self.graph, dt)
         qcEvolution.append(self.HamiltonianQNN(spinChain), spinChain)
         return qcEvolution.bind_parameters(bindingDict).to_instruction()
-        # try:
-        #     return qcEvolution.bind_parameters(bindingDict).to_instruction()
-        # except exceptions.CircuitError:
-        #     print('An error occurred')
-        #     return qcEvolution.decompose().to_instruction()
 
 
 class DataAnalyzer:
