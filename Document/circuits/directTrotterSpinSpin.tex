@@ -1,0 +1,32 @@
+\begin{figure}
+    \centering
+    \begin{subfigure}[b]{1.0\textwidth}
+        \centering
+        \caption{}
+        \begin{quantikz}
+            & \ctrl{1} & \qw & \ctrl{1} & \qw \\
+            & \targ{}  & \gate{\hat{R}_{\hat{z}, \phi}} & \targ{} & \qw\\
+        \end{quantikz}
+        \label{fig:directTrotterSpinZZ}
+    \end{subfigure}
+    \begin{subfigure}[b]{1.0\textwidth}
+        \centering
+        \caption{}
+        \begin{quantikz}
+            & \gate{H} & \ctrl{1} & \qw & \ctrl{1} & \gate{H} & \qw \\
+            & \gate{H} & \targ{}  & \gate{\hat{R}_{\hat{z}, \phi}} & \targ{} & \gate{H}& \qw\\
+        \end{quantikz}
+        \label{fig:directTrotterSpinXX}
+    \end{subfigure}
+    \begin{subfigure}[b]{1.0\textwidth}
+        \centering
+        \caption{}
+        \begin{quantikz}
+            & \gate{\hat{R}_{\hat{z}, \pi/2}^{\dagger}} & \gate{H} & \ctrl{1} & \qw & \ctrl{1} & \gate{H} & \gate{\hat{R}_{\hat{z}, \pi/2}} & \qw \\
+            & \gate{\hat{R}_{\hat{z}, \pi/2}^{\dagger}} & \gate{H} & \targ{}  & \gate{\hat{R}_{\hat{z}, \phi}} & \targ{} & \gate{H} & \gate{\hat{R}_{\hat{z}, \pi/2}} & \qw\\
+        \end{quantikz}
+        \label{fig:directTrotterSpinYY}
+    \end{subfigure}
+    \caption{(a) Implementation of two-spin $ZZ$ interaction using IBM Quantum's universal set. (b) Implementation of $XX$ interaction using basis rotation. (c) Implementation of $YY$ interaction using the same technique as in (b).}
+    \label{fig:directTrotterSpinSpin}
+\end{figure}

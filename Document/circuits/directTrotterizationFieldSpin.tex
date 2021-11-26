@@ -1,0 +1,21 @@
+\begin{figure}
+    \centering
+    \begin{subfigure}[b]{1.0\textwidth}
+        \centering
+        \caption{}
+        \begin{quantikz}
+            & \gate{\hat{R}_{\hat{x},2h_i^{(X)}\Delta t}} & \gate{\hat{R}_{\hat{y},2h_i^{(Y)}\Delta t}} & \gate{\hat{R}_{\hat{z},2h_i^{(Z)}\Delta t}} & \qw
+        \end{quantikz}
+        \label{fig:directSimulationFieldSpin}
+    \end{subfigure}
+    \begin{subfigure}[b]{1.0\textwidth}
+        \centering
+        \caption{}
+        \begin{quantikz}
+            & \gate{\hat{U}_{\theta,\phi}^{\dagger}} & \gate{\hat{R}_{\hat{z},2h \Delta t}} & \gate{\hat{U}_{\theta,\phi}} & \qw
+        \end{quantikz}
+        \label{fig:rotatedSimulationFieldSpin}
+    \end{subfigure}
+    \caption{(a) Direct trotterization of field-spin interaction for small time interval $\Delta t$. (b) Exact simulation by rotating the Bloch sphere reference frame to the external field direction.}
+    \label{fig:directTrotterizationFieldSpin}
+\end{figure}

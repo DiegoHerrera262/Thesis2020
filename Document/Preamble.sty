@@ -7,6 +7,8 @@
 \usepackage{lipsum}                   % Include dummy text
 \usepackage[utf8]{inputenc}           % Use utf8 encoding
 \usepackage{graphicx}                 % Set up graphics management package
+\usepackage{caption}
+\usepackage{subcaption}               % for subfigures
 \graphicspath{{Images/}}              % Defined images folder location
 \usepackage[a4paper]{geometry}        % For setting up geometry of page
 \geometry{
@@ -27,6 +29,6 @@
 \usepackage{fouriernc}
 \usepackage{physics}                  % Inculded package for physics equations
 \usepackage{tikz}                     % Package for graphics drawing
-\usetikzlibrary{quantikz}             % Package for drawing quantum circuits
-\usepackage{biblatex} % Pacakge for managing bibliography
-\addbibresource{Sections/Bibliography.bib}
+\usepackage[backend=bibtex]{biblatex}                 % Pacakge for managing bibliography
+\addbibresource{Bibliography.bib}
+\captionsetup[subfigure]{position=top,singlelinecheck=off,justification=raggedright}

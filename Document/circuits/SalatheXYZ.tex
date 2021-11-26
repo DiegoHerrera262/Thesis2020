@@ -1,0 +1,33 @@
+\begin{figure}
+    \centering
+    \begin{subfigure}[b]{1.0\textwidth}
+        \centering
+        \caption{}
+        \begin{quantikz}
+            \lstick[wires=2]{$\ket{\psi(0)}$} & \gate[wires=2]{\mathrm{e}^{-\mathrm{i}\hat{H}_{1,2}^{x,y}t}} & \gate{R_{\hat{x}, -\pi/2}} & \gate[wires=2]{\mathrm{e}^{-\mathrm{i}\hat{H}_{1,2}^{x,y}t}} & \gate{R_{\hat{x}, \pi/2}} & \gate{R_{\hat{y}, -\pi/2}} & \gate[wires=2]{\mathrm{e}^{-\mathrm{i}\hat{H}_{1,2}^{x,y}t}} &  \gate{R_{\hat{y}, \pi/2}} & \qw \rstick[wires=2]{$\ket{\psi(t)}$}\\
+             & & \gate{R_{\hat{x}, -\pi/2}} & & \gate{R_{\hat{x}, \pi/2}} & \gate{R_{\hat{y}, -\pi/2}} & & \gate{R_{\hat{y}, \pi/2}} & \qw
+        \end{quantikz}
+        \label{fig:salathe-xyz}
+    \end{subfigure}
+    \vfill
+    \begin{subfigure}[b]{1.0\textwidth}
+        \centering
+        \caption{}
+        \begin{quantikz}
+            \gate{R_{\hat{x}, \pi}} & \gate[wires=2]{\mathrm{e}^{-\mathrm{i}\hat{H}_{1,2}^{x,y}\frac{t}{N}}} & \gate{R_{\hat{x}, -\pi}} & \gate[wires=2]{\mathrm{e}^{-\mathrm{i}\hat{H}_{1,2}^{x,y}\frac{t}{N}}} &  \gate{R_{\hat{z}, \frac{t}{N}}} \\
+            \qw & & \qw & & \gate{R_{\hat{z}, \frac{t}{N}}}
+        \end{quantikz}
+        \label{fig:salathe-ising}
+    \end{subfigure}
+    \begin{subfigure}[b]{1.0\textwidth}
+        \centering
+        \caption{}
+        \begin{quantikz}
+            \gate{R_{\hat{y}, \pi/2}} & \gate[wires=2]{\mathrm{e}^{-i\frac{\phi_{xx}}{2}\hat{Z}\otimes\hat{Z}}} & \gate{R_{\hat{y}, -\pi/2}} & \gate{R_{\hat{x}, -\pi/2}} & \gate[wires=2]{\mathrm{e}^{-i\frac{\phi_{yy}}{2}\hat{Z}\otimes\hat{Z}}} & \gate{R_{\hat{x}, \pi/2}} & \gate[wires=2]{\mathrm{e}^{-i\frac{\phi_{zz}}{2}\hat{Z}\otimes\hat{Z}}} & \gate{R_{\hat{z}, \phi_z}} \\
+            \gate{R_{\hat{y}, \pi/2}} & & \gate{R_{\hat{y}, -\pi/2}} & \gate{R_{\hat{x}, -\pi/2}} & & \gate{R_{\hat{x}, \pi/2}} & & \gate{R_{\hat{z}, \phi_z}}
+        \end{quantikz}
+        \label{fig:heras-hubbard}
+    \end{subfigure}
+    \caption{(a) Digital quantum algorithm for simulating time dynamics of isotropic XYZ model according to \cite{HeisenbergSimulLasHeras}. Notice that commutation of $\hat{X}_1\hat{X}_2$, $\hat{Y}_1\hat{Y}_2$, and $\hat{Z}_1\hat{Z}_2$ implies that the resulting dynamics is exact up to hardware errors. (b) Trotter step for simulating of the Ising model with a transverse magnetic field. This step is repeated $N$ times to evolve over a time interval $t$ \cite{HeisenbergSimulLasHeras}. (c) Trotter step for simulating a two-mode Hubbard model. Here $\phi_{zz} = \phi_z = Ut/2N$ and $\phi_{xx} = \phi_{yy} = Ut/2N$ \cite{HubbardSimulLasHeras}.}
+    \label{fig:salathe-circuits}
+\end{figure}

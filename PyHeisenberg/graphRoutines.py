@@ -10,6 +10,7 @@
 # graph.
 
 import igraph
+import numpy as np
 from qiskit.circuit import Parameter
 
 
@@ -29,6 +30,35 @@ def generateGraph(spinInteraction, externalField):
             Parameter('J_{}1'.format(edge.index)),
             Parameter('J_{}2'.format(edge.index))
         ] for edge in g.es
+    ]
+    g.vs['externalField'] = externalFields
+    g.vs['paramExternalField'] = [
+        Parameter('H_{}'.format(vertex.index))
+        for vertex in g.vs
+    ]
+    return g
+
+
+def generateVariationalGraph(spinInteraction, externalField):
+    '''
+    Function for generating
+    graph for variational
+    evolution
+    '''
+    connections = spinInteraction.keys()
+    exchangeIntegrals = list(spinInteraction.values())
+    externalFields = list(externalField.values())
+    g = igraph.Graph(connections)
+    g.es['exchangeIntegrals'] = exchangeIntegrals
+    g.es['variationalParams'] = [
+        [
+            Parameter(f"gamma_{edge.index}{idx}") for idx in range(18)
+        ]
+        for edge in g.es
+    ]
+    g.es['optimalParams'] = [
+        np.array([0.5 for _ in range(18)])
+        for _ in g.es
     ]
     g.vs['externalField'] = externalFields
     g.vs['paramExternalField'] = [

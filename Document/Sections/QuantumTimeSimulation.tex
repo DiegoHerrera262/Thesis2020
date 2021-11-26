@@ -28,7 +28,7 @@ An introduction to quantum time simulation, as opposed to \textit{classical} tim
     \ket{x} \text{ for } x \in S \rightarrow \ket{k \Delta x} \text{ for } k = 0,1,\ldots,N-1
   \end{equation}
 
-  This scheme leads to a representation of any single particle position state as a linear combination of discretized statevectors
+  This scheme leads to a representation of any single particle position state as a linear combination of discrete statevectors
 
   \begin{equation}
     \ket{\psi(t)} = \sum_{k = 0}^{N-1} a_k(t) \ket{k \Delta x}
@@ -227,7 +227,7 @@ An introduction to quantum time simulation, as opposed to \textit{classical} tim
     \mathrm{e}^{-\mathrm{i}t \sum_{l = 0}^{L-1} \hat{H}_l} = \hat{S}_{2k}(-\mathrm{i}t) + \mathcal{O}(t^{2k+1})
   \end{equation}
 
-  On \cite{BerryErrorBounds}, Barry et. al. show that Suzuki-Trotter shcemes can efficiently simulate sparse Hamiltonians, shuch as the ones considered in this work. As a matter of fact, they have shown that the number of exponentials ($N_{\text{exp}}$) required to simulate time evolution of a system during a time interval $t > 0$, with error bounded by $\epsilon > 0$, is such that
+  On \cite{BerryErrorBounds}, Barry et. al. show that Suzuki-Trotter schemes can efficiently simulate sparse Hamiltonians, such as the ones considered in this work. As a matter of fact, they have shown that the number of exponentials ($N_{\text{exp}}$) required to simulate time evolution of a system during a time interval $t > 0$, with error bounded by $\epsilon > 0$, is such that
 
   \begin{equation}
     N_{\text{exp}} \leq 2L5^{2k}(L\tau)^{1+1/2k}/\epsilon^{1/2k}
@@ -235,11 +235,80 @@ An introduction to quantum time simulation, as opposed to \textit{classical} tim
 
   Where $\tau = \left\Vert \hat{H} \right\Vert t$, $2k$ is the order of a Suzuki-Trotter iteration, and $\epsilon \leq 1 \leq 2L5^{2k}$. Notice that by choosing a sufficiently high order, a Suzuki-Trotter scheme can emulate time evolution with almost linear complexity in time.
 
-  In most cases, simulation of a quantum system by a digital quantum computer requires mapping its Hibert space to a $2^M$-dimensional Hilbert space. In that case, the number of qubits required for siulation would be $M$. Clearly, all quantum operators in the simulated system's space should be mapped to operators on an $M$-qubit space, which would then be approximated by a universal set of gates. In the follong section, demonstrations of this approach to the study of the Hubbard Model and the Electronic structure problem are introdeced.
+  In most cases, simulation of a quantum system by a digital quantum computer requires mapping its Hilbert space to a $2^M$-dimensional Hilbert space. In that case, the number of qubits required for simulation would be $M$. Clearly, all quantum operators in the simulated system's space should be mapped to operators on an $M$-qubit space, which would then be approximated by a universal set of gates. In the following section, demonstrations of this approach to the study of the Hubbard Model and the Electronic structure problem are introduced.
 
-\section{Examples of Quantum Time Simulation}
+\section{Time Simulation of Spin 1/2 Models}
 \label{sec:hubbard}
   
-  On section \ref{sec:qtsVcts}, a comparison between classical time simulation and quantum time simulation was introduced. In partiular, a scheme for integrating Schrödinger's equation for a $n$-particle system was proposed. The quantum evolution algorithm there introduced corresponds to standard first quantization techniques applied to the solution of many body problems \cite{sabreKais, QuantumChem1, QuantumChem2}. Albeit useful in some instances, first quantization techniques are not the most effciently implemented in quantum processors. 
+  On section \ref{sec:qtsVcts}, a comparison between classical time simulation and quantum time simulation was introduced. In particular, a scheme for integrating Schrödinger's equation for a $n$-particle system was proposed. This section introduces examples of simulation of Hamiltonians such as
+
+  \begin{equation}
+    \hat{H} = \sum_{\langle i,j \rangle} J_{ij}^{(x)} \hat{X}_i \hat{X}_j + J_{ij}^{(Y)} \hat{Y}_i \hat{Y}_j + J_{ij}^{(Z)} \hat{Z}_i \hat{Z}_j + \sum_i h_i^{(X)} \hat{X}_i + h_i^{(Y)} \hat{Y}_i + h_i^{(Z)} \hat{Z}_i
+    \label{eq:HeisenbergHamiltonian}
+  \end{equation}
+
+  Defined over an arbitrary spin graph, and considering nearest neighbor interaction. Most of them are related to work from Las Heras et. al. \cite{HubbardSimul,HubbardSimulLasHeras} and Y. Salathé \cite{HeisenbergSimulLasHeras}. In this section, the importance of simulating such systems is discussed. Furthermore, the examples considered here are further generalized in following chapters to simulate any system whose Hamiltonian is of the shape of eq. \ref{eq:HeisenbergHamiltonian}, and its limitations are exemplified.
+
+  \subsection{Digital simulation of two-spin models}
+
+  As a first example, simulation of two-spin models carried out by Y. Salathé et. al. \cite{HeisenbergSimulLasHeras} are presented. In their work, a superconducting chip with two trasmon qubits is used to simulate two-spin interaction described by the Hamiltonian
+
+  \begin{equation}
+    \hat{H}_{1,2}^{x,y} = \frac{J}{2} \bigg( \hat{X}_1 \hat{X}_2 + \hat{Y}_1 \hat{Y}_2 \bigg)
+    \label{eq:fundamentalSlatheGate}
+  \end{equation}
+
+  This means that they where able to evolve the qubits' state during time $t$, using microwave pulses on the chip, with unitary dynamics governed by Hamiltonian \ref{eq:fundamentalSlatheGate}. It is easy to see that by performing single qubit rotations, it is possible to emulate more complicated dynamics, for instance, an isotropic XYZ interaction
+
+  \begin{equation}
+    \hat{H}_{1,2}^{x,y,z} = J \bigg( \hat{X}_1 \hat{X}_2 + \hat{Y}_1 \hat{Y}_2 + \hat{Z}_1 \hat{Z}_2 \bigg)
+    \label{eq:XYZSalathe}
+  \end{equation}
+
+  An algorithm for simulating time dynamics under Hamiltonian \ref{eq:XYZSalathe} is presented on fig. \ref{fig:salathe-xyz}. The reported state fidelities of the evolution process are above $82\%$. It must be noted that, since all terms of the Hamiltonian commute, the evolution of the two qubit state is exact, and only limited by hardware. In addition to that, an algorithm for simulating the Ising model with transverse homogeneous magnetic field was proposed (see fig. \ref{fig:salathe-ising}).
   
-  A shortcomming of first quantization methods is that physical symmetrization properties are not taken into account. In this section, second quantization techniques for simulating many body dynamics are introduced. Systems such as magnetic solids with periodic structure, or chemical molecules have clear symmetries that can be profitted by using this formalism \cite{HubbardOriginal, sabreKais, QuantumChem2}. After introducing second quantization techniques in the context of such systems, their relationship to Ising-like Hamiltonians is introduced by presenting qubit mappings such as the Jordan-Wigner transform (JWT) and Bravyi-Kitaev mapping (BKM).
+  \begin{equation}
+    \hat{H}_I = J \hat{X}_1 \hat{X}_2 + \frac{B}{2}\bigg(\hat{Z}_1 + \hat{Z}_2 \bigg)
+    \label{eq:IsingSlathe}
+  \end{equation}
+
+  Notice that this Hamiltonian is composed of local parts that do not commute with one another (spin interaction and field interaction), thus an approximate evolution scheme is needed to simulate time evolution. In their work, Salathé et. al. \cite{HeisenbergSimulLasHeras} used a second order trotterization (see eq. \ref{eq:2ndOrderTrotter}). Furthermore, a noise model was proposed to take into account the fact that decoherence and gate errors limit the expected precision of a trotterization scheme. The results show that the main source of error is the infidelity of the two-qubit gate implementation of the XY interaction (eq. \ref{eq:fundamentalSlatheGate}).
+
+  \subsection{Digital simulation of Hubbard models}
+
+  As a second example, the work of las Heras et. al. is considered\cite{HubbardSimulLasHeras}. The authors simulated instances of the quintessential Hubbard Hamiltonian
+
+  \begin{equation}
+    \hat{H}_H = -V \sum_{\langle i,j\rangle} (\hat{b}_i^{\dagger}\hat{b}_j + \hat{b}_j^{\dagger}\hat{b}_i) + U \sum_i \hat{n}_{i\uparrow}\hat{n}_{i\downarrow}
+    \label{eq:HubbardHamiltonian}
+  \end{equation}
+
+  Where $\hat{b}_i$ represent fermionic-mode annihilation operators (for spin-up or spin-down particles), and $\hat{n}_{i\uparrow},\hat{n}_{i\uparrow}$, fermionic-mode occupation number operators. This was done using the Jordan-Wigner mapping, which transforms fermionic operators to qubit operators. The rule is that each occupation mode is mapped directly to the state of a qubit, so that its state encodes the occupation number of the mode in the computational basis. Fermionic annihilation operators are mapped directly following the rule \cite{Mastersthesis}
+
+  \begin{equation}
+    \hat{b}_i = \hat{\sigma}_i^{+} \otimes \Bigg(\bigotimes_{k=0}^{N} \hat{Z}_k \Bigg)
+    \label{eq:JWT}
+  \end{equation}
+
+  Where it is assumed that a linear indexing of the modes is used, even for different spin values. The authors considered models with up to four modes. In particular, they showed that the mapping of a two-mode Hubbard Hamiltonian like eq. \ref{eq:HubbardHamiltonian} leads to a qubit Hamiltonian
+
+  \begin{equation}
+    \hat{H}_H = \frac{V}{2}\big(\hat{X}_1 \hat{X}_2 + \hat{Y}_1 \hat{Y}_2\big) + \frac{U}{4} \big(\hat{Z}_1 \hat{Z}_2 + \hat{Z}_1 + \hat{Z}_2\big)
+    \label{eq:TwoModeHubbard}
+  \end{equation}
+
+  The authors used a superconducting chip for simulating time dynamics governed by Hamiltonian \ref{eq:TwoModeHubbard}. The quantum algorithm is represented on figure \ref{fig:heras-hubbard}. It was used to simulate time evolution with an initial state
+  
+  $$
+  \ket{\psi_0} = \frac{1}{\sqrt{2}}(\ket{0} + \ket{1}) \otimes \ket{0}
+  $$
+
+  With $V=U=1$, for a time $t=5$. The results showed that process errors in the implementation of a Trotter step leads to a linear decrease in state fidelity with the number of steps. This is an important factor to consider when implementing Suzuki-Trotter schemes for simulating time evolution. However, their simulations were able to capture the overall dynamics, obtaining fidelities near $90\%$ with a small number of Trotter steps. Three and four mode anisotropic models were simulated as well, obtaining similar results \cite{HubbardSimulLasHeras}.
+
+  It has been shown by Reiner \cite{Mastersthesis} that a one dimensional Hubbard model (eq. \ref{eq:HubbardHamiltonian}) can be mapped to a qubit Hamiltonian of the type \ref{eq:HeisenbergHamiltonian}, by means of the Jordan Wigner mapping. Thus, by generalizing the quantum algorithms presented on these examples, it is possible to study correlation phenomena on metallic solids efficiently, in contrast to current classical simulation methods \cite{Mastersthesis,HubbardOriginal}. In following chapters,  general routines for simulating evolution under Hamiltonian \ref{eq:HeisenbergHamiltonian} are presented, and quantum time evolution is showcased as a tool for studying magnetic properties of solids. Moreover, a discussion of the influence of decoherence and errors in the implementation is carried out, thus presenting the limitations of Suzuki-Trotter schemes for simulating many-body systems.
+
+  \include{circuits/SalatheXYZ}
+
+  
+
+  

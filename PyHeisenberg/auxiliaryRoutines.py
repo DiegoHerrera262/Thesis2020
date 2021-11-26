@@ -79,14 +79,14 @@ def Counts2Pdf(numSpins, Job, Circuits, **kwargs):
     try:
         measurementFilter = kwargs['measurementFilter']
         filteredJob = measurementFilter.apply(Job.result())
-        print('Using measurement error mitigation...')
+        # print('Using measurement error mitigation...')
         simulationPdf = [
             filteredJob.get_counts(circuit)
             for circuit in Circuits
         ]
-        print('Implemented measurement error mitigation.')
+        # print('Implemented measurement error mitigation.')
     except KeyError:
-        print('In Counts2Pdf: Not using measurement error mitigation...')
+        # print('In Counts2Pdf: Not using measurement error mitigation...')
         simulationPdf = [Job.result().get_counts(circuit)
                          for circuit in Circuits]
     # Convert to array of data
@@ -112,6 +112,30 @@ def BindParameters(heisenbergGraph, t):
             list(chain.from_iterable(
                 [[2*t*Ji for Ji in J]
                  for J in heisenbergGraph.es['exchangeIntegrals']]
+            ))
+        )),
+        **dict(zip_longest(
+            heisenbergGraph.vs['paramExternalField'],
+            [
+                2*t*np.sqrt(sum(Hi**2 for Hi in H))
+                for H in heisenbergGraph.vs['externalField']
+            ]
+        ))
+    }
+
+
+def BindVarParameters(heisenbergGraph, t):
+    '''
+    Function for binding variational
+    parameters for evolution
+    '''
+    return {
+        **dict(zip_longest(
+            list(chain.from_iterable(
+                heisenbergGraph.es['variationalParams']
+            )),
+            list(chain.from_iterable(
+                heisenbergGraph.es['optimalParams']
             ))
         )),
         **dict(zip_longest(
@@ -162,3 +186,42 @@ def spinPauliString(bits, vertex, PauliOpString):
     i = vertex.index
     pauliString[i] = PauliOpString
     return ''.join(pauliString)
+
+
+def multiSpinPauliOpMatrix(PauliOpString):
+    '''
+    Function for converting a pauli string
+    to a matrix with qiskit numeration
+    convention
+    '''
+    P = np.array([1])
+    I = np.array([
+        [1, 0],
+        [0, 1]
+    ])
+    for op in PauliOpString[::-1]:
+        if op == 'X':
+            P = np.kron(P, PauliMatrices[0])
+            continue
+        elif op == 'Y':
+            P = np.kron(P, PauliMatrices[1])
+            continue
+        elif op == 'Z':
+            P = np.kron(P, PauliMatrices[2])
+            continue
+        else:
+            P = np.kron(P, I)
+    return P
+
+
+def pauliExpValFromCounts(numSpins, PauliString, counts, shots=2048):
+    '''
+    Function for computing expected value from
+    counts result
+    '''
+    return sum(
+        numberOperatorEigenvalue(numSpins, state, PauliString) *
+        counts.get(dec2nBitBinaryChain(state, numSpins), 0)
+        * 1/shots
+        for state in range(2**numSpins)
+    )

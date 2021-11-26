@@ -1,0 +1,9 @@
+\begin{figure}
+    \centering
+    \begin{quantikz}
+        & \ctrl{1} & \gate{H} & \gate{\hat{R}_{\hat{z}, \phi_{xx}}} & \ctrl{1}  & \qw                                 & \ctrl{1} & \gate{H} & \ctrl{1} & \qw \\
+        & \targ{}  & \qw      & \gate{\hat{R}_{\hat{z}, \phi_{zz}}} & \targ{}  & \gate{\hat{R}_{\hat{z}, \phi_{yy}}} & \targ{}  & \qw      & \targ{}  & \qw \\
+    \end{quantikz}
+    \caption{Implementation of spin-spin interaction using abelian groups. The first and last two stages perform a change of basis to Bell basis from computational basis. Interaction phases are appended according to the energy values (see eq. \ref{eq:SpinSpinPhases}).}
+    \label{fig:abelianTrotterSpinSpin}
+\end{figure}
