@@ -32,5 +32,5 @@ data = np.array([
     dts, timeAverageFidelities
 ])
 data.T
-np.savetxt("dampleData_8spins.csv", data, delimiter=',')
+np.savetxt("sampleData_8spins.csv", data, delimiter=',')
 print('Saved data to csv file')
