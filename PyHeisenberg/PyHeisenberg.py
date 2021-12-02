@@ -1579,11 +1579,11 @@ class DataAnalyzer:
             )
         # axTimes.legend(loc='lower left')
         fig.savefig(
-            f"../images/unitaryErrorPlot_{numSteps}N{numTimes}ts.pdf"
+            f"../images/TrotterErrorPlots/unitaryErrorPlot_{numSteps}N{numTimes}ts.pdf"
         )
         if saveToFile:
             np.savetxt(
-                f"../datafiles/unitaryErrorData_{numSteps}N{numTimes}ts.csv",
+                f"../datafiles/TrotterData/unitaryErrorData_{numSteps}N{numTimes}ts.csv",
                 errors,
                 delimiter=','
             )

@@ -6,9 +6,9 @@ import warnings
 warnings.filterwarnings('ignore')
 
 if __name__ == '__main__':
-    STEPS = np.array([idx for idx in range(200, 232)])
+    STEPS = np.array([idx for idx in range(10, 15)])
     times = [1, 2, 4, 8, 16, 32]
-    for numSpins in [2, 4, 6, 8]:
+    for numSpins in [2]:
         print(f'Using {numSpins} spins...')
         benchmarkGraph = HeisenbergGraph(
             spinInteractions={
@@ -72,8 +72,8 @@ if __name__ == '__main__':
         )
         # saving to csv
         stepDf.to_csv(
-            f"../datafiles/unitaryStepsErrorRegression_{numSpins}spins{len(STEPS)}N{len(times)}ts.csv"
+            f"../datafiles/TrotterData/unitaryStepsErrorRegression_{numSpins}spins{len(STEPS)}N{len(times)}ts.csv"
         )
         timesDf.to_csv(
-            f"../datafiles/unitaryTimesErrorRegression_{numSpins}spins{len(STEPS)}N{len(times)}ts.csv"
+            f"../datafiles/TrotterData/unitaryTimesErrorRegression_{numSpins}spins{len(STEPS)}N{len(times)}ts.csv"
         )

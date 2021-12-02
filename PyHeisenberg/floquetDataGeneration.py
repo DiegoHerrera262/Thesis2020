@@ -36,6 +36,7 @@ if __name__ == '__main__':
             dts, timeFloquetQuantites[:, 0], timeFloquetQuantites[:, 1]
         ])
         data = data.T
-        np.savetxt(f"../datafiles/sampleData_{numSpins}spins.csv", data, delimiter=',')
+        np.savetxt(
+            f"../datafiles/FloquetData/sampleData_{numSpins}spins.csv", data, delimiter=',')
         print('Saved data to csv file')
         print('=============================')
