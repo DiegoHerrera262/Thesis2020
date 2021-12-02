@@ -461,15 +461,22 @@ class HeisenbergGraph:
         for Floquet evolution under dt
         '''
         F = self.floquetUnitary(dt)
-        average = []
-        for steps in range(offset, reps+1):
-            evOp = np.linalg.matrix_power(F, steps)
-            exactUnitary = self.exactEvolutionUnitary(t=steps*dt)
-            targetState = np.matmul(exactUnitary, self.initialState)
-            floquetState = np.matmul(evOp, self.initialState)
-            average.append(
-                np.abs(np.matmul(targetState.conj().T, floquetState))**2)
-        return 1/len(average) * sum(term for term in average)
+        average = sum(
+            np.abs(
+                np.matmul(
+                    np.matmul(
+                        self.exactEvolutionUnitary(t=steps*dt),
+                        self.initialState
+                    ).conj().T,
+                    np.matmul(
+                        np.linalg.matrix_power(F, steps),
+                        self.initialState
+                    )
+                )
+            )**2
+            for steps in range(offset, reps+1)
+        )
+        return 1/(reps + 1 - offset) * average
 
     def floquetInterestingQuantities(self, dt, reps=100, offset=20):
         '''
@@ -479,6 +486,34 @@ class HeisenbergGraph:
         - Long time average fidelity
         '''
         F = self.floquetUnitary(dt)
+        F = self.floquetUnitary(dt)
+        average = sum(
+            np.array([
+                np.abs(
+                    np.matmul(
+                        np.matmul(
+                            self.exactEvolutionUnitary(t=steps*dt),
+                            self.initialState
+                        ).conj().T,
+                        np.matmul(
+                            np.linalg.matrix_power(F, steps),
+                            self.initialState
+                        )
+                    )
+                )**2,
+                np.abs(
+                    np.matmul(
+                        self.initialState.conj().T,
+                        np.matmul(
+                            np.linalg.matrix_power(F, steps),
+                            self.initialState
+                        )
+                    )
+                )**2
+            ])
+            for steps in range(offset, reps+1)
+        )
+        return 1/(reps + 1 - offset) * average
 
 
 ################################################################################
