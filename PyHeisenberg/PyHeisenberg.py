@@ -478,6 +478,44 @@ class HeisenbergGraph:
         )
         return 1/(reps + 1 - offset) * average
 
+    def floquetInterestingQuantities(self, dt, reps=100, offset=20):
+        '''
+        Function for computing interesting
+        Floquet dynamics indicators
+        - IPR
+        - Long time average fidelity
+        '''
+        F = self.floquetUnitary(dt)
+        F = self.floquetUnitary(dt)
+        average = sum(
+            np.array([
+                np.abs(
+                    np.matmul(
+                        np.matmul(
+                            self.exactEvolutionUnitary(t=steps*dt),
+                            self.initialState
+                        ).conj().T,
+                        np.matmul(
+                            np.linalg.matrix_power(F, steps),
+                            self.initialState
+                        )
+                    )
+                )**2,
+                np.abs(
+                    np.matmul(
+                        self.initialState.conj().T,
+                        np.matmul(
+                            np.linalg.matrix_power(F, steps),
+                            self.initialState
+                        )
+                    )
+                )**2
+            ])
+            for steps in range(offset, reps+1)
+        )
+        return 1/(reps + 1 - offset) * average
+
+
 ################################################################################
 ##                          GRAPH EVOLUTION ROUTINES                          ##
 ################################################################################
