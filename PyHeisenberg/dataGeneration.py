@@ -5,7 +5,7 @@ import warnings
 from operator import itemgetter
 warnings.filterwarnings('ignore')
 
-numSpins = 8
+numSpins = 10
 print(f'Using {numSpins} spins...')
 benchmarkGraph = HeisenbergGraph(
     spinInteractions={
@@ -23,9 +23,9 @@ benchmarkGraph = HeisenbergGraph(
 )
 benchmarkAnalyzer = DataAnalyzer(spinGraph=benchmarkGraph)
 print('Starting data generation...')
-dts = np.linspace(0.01, 1.25, num=100)
+dts = np.linspace(0.01, 0.35, num=50)
 timeAverageFidelities = np.array([
-    benchmarkGraph.floquetTimeAverageFidelity(dt, reps=1000, offset=700)
+    benchmarkGraph.floquetTimeAverageFidelity(dt, reps=9000, offset=4500)
     for dt in dts
 ])
 print('Finished data generation...')
@@ -33,5 +33,5 @@ data = np.array([
     dts, timeAverageFidelities
 ])
 data = data.T
-np.savetxt("sampleData_8spins.csv", data, delimiter=',')
+np.savetxt("sampleData_12spins.csv", data, delimiter=',')
 print('Saved data to csv file')
