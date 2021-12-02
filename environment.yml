@@ -7,6 +7,7 @@ dependencies:
   - numpy
   - matplotlib
   - pylatexenc
+  - pandas
   - pip:
     - python-igraph>=0.9.6
     - qiskit>=0.23.0
