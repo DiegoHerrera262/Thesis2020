@@ -486,7 +486,6 @@ class HeisenbergGraph:
         - Long time average fidelity
         '''
         F = self.floquetUnitary(dt)
-        F = self.floquetUnitary(dt)
         average = sum(
             np.array([
                 np.abs(
