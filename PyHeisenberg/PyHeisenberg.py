@@ -1569,7 +1569,7 @@ class DataAnalyzer:
         # axSteps.legend(loc='lower left')
         # Plot of time vs steps
         axTimes.set_title(r'Log Plot of Error v. Time')
-        axTimes.set_ylabel(r'$\ln(E)$')
+        # axTimes.set_ylabel(r'$\ln(E)$')
         axTimes.set_xlabel(r'$\ln(t)$')
         for idx in range(numSteps):
             axTimes.scatter(

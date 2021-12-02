@@ -6,9 +6,9 @@ import warnings
 warnings.filterwarnings('ignore')
 
 if __name__ == '__main__':
-    STEPS = np.array([idx for idx in range(10, 15)])
+    STEPS = np.array([idx for idx in range(200, 232, 2)])
     times = [1, 2, 4, 8, 16, 32]
-    for numSpins in [2]:
+    for numSpins in [2, 4, 6, 8]:
         print(f'Using {numSpins} spins...')
         benchmarkGraph = HeisenbergGraph(
             spinInteractions={
@@ -34,26 +34,26 @@ if __name__ == '__main__':
         # Data analysis
         # IMP: Rows vary STEPS for fixed t
         # IMP: Cols vary t for fixed STEPS
-        stepsLinregress = {
+        stepsLinregress = [
             [
                 item
                 for item in linregress(
                     np.log(STEPS),
-                    np.log(errorData[idx])
+                    np.log(errorData[idx, :])
                 )
             ]
             for idx in range(len(times))
-        }
-        timesLinregress = {
+        ]
+        timesLinregress = [
             [
                 item
                 for item in linregress(
                     np.log(times),
-                    np.log(errorData[idx])
+                    np.log(errorData[:, idx])
                 )
             ]
-            for idx in enumerate(len(times))
-        }
+            for idx in range(len(STEPS))
+        ]
         # Saving data
         columns = ["slope", "intercept", "r-value", "p-value", "std-err"]
         stepRows = [f"t={t}" for t in times]
