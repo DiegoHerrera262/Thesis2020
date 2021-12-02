@@ -1540,18 +1540,22 @@ class DataAnalyzer:
 
     def unitaryErrorMixedPlot(self,
                               STEPS=np.array([200]),
-                              times=np.array([3.4])
+                              times=np.array([3.4]),
+                              saveToFile=False
                               ):
         '''
         Function for plotting error as function of
         number of steps for given times and viceversa
         '''
+        print("Started data generation...")
         errors = self.unitaryEvolutionErrorVectorized(
             STEPS=STEPS,
             times=times
         )
+        print("Finished data generation...")
         numSteps = len(STEPS)
         numTimes = len(times)
+        print("Generating plot")
         fig, (axSteps, axTimes) = plt.subplots(1, 2)
         # Plot of error vs steps
         axSteps.set_title(r'Log Plot of Error v. No. Steps')
@@ -1575,7 +1579,15 @@ class DataAnalyzer:
                 label='$N={}$'.format(STEPS[idx])
             )
         # axTimes.legend(loc='lower left')
-        plt.show()
+        fig.savefig(
+            f"../images/unitaryErrorPlot_{numSteps}N{numTimes}ts.pdf"
+        )
+        if saveToFile:
+            np.savetxt(
+                f"../datafiles/unitaryErrorData_{numSteps}N{numTimes}ts.csv",
+                errors,
+                delimiter=','
+            )
         return errors
 
     def unitaryErrorExponents(self,

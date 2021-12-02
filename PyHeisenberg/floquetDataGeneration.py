@@ -1,8 +1,6 @@
-from PyHeisenberg import HeisenbergGraph, DataAnalyzer, NaiveSpinGraph
+from PyHeisenberg import HeisenbergGraph
 import numpy as np
-import matplotlib.pyplot as plt
 import warnings
-from operator import itemgetter
 warnings.filterwarnings('ignore')
 
 if __name__ == '__main__':
