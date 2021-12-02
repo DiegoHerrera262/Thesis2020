@@ -21,7 +21,6 @@ benchmarkGraph = HeisenbergGraph(
     noisySimulation=False,
     initialState=np.array([1 if idx == 1 else 0 for idx in range(2**numSpins)])
 )
-benchmarkAnalyzer = DataAnalyzer(spinGraph=benchmarkGraph)
 print('Starting data generation...')
 dts = np.linspace(0.01, 1.25, num=100)
 timeAverageFidelities = np.array([

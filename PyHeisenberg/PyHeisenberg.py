@@ -471,6 +471,16 @@ class HeisenbergGraph:
                 np.abs(np.matmul(targetState.conj().T, floquetState))**2)
         return 1/len(average) * sum(term for term in average)
 
+    def floquetInterestingQuantities(self, dt, reps=100, offset=20):
+        '''
+        Function for computing interesting
+        Floquet dynamics indicators
+        - IPR
+        - Long time average fidelity
+        '''
+        F = self.floquetUnitary(dt)
+
+
 ################################################################################
 ##                          GRAPH EVOLUTION ROUTINES                          ##
 ################################################################################
