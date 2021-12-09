@@ -129,7 +129,7 @@ class HeisenbergGraph:
             self.withInitialState = True
         except KeyError:
             initState = np.zeros(2**len(self.graph.vs))
-            initState[0] = 1
+            initState[2**len(self.graph.vs)-2] = 1
             self.initialState = initState
             self.withInitialState = False
 
@@ -316,6 +316,9 @@ class HeisenbergGraph:
         qcStep = self.evolutionStep(dt, spinChain)
         if self.withInitialState:
             qcEvolution.initialize(self.initialState)
+        else:
+            numSpins = len(self.graph.vs)
+            qcEvolution.initialize((2**numSpins)-2)
         for _ in range(STEPS):
             qcEvolution.append(qcStep, spinChain)
         qcEvolution.measure(spinChain, measureReg)
@@ -343,7 +346,11 @@ class HeisenbergGraph:
         circ = []
         for idx in range(1, STEPS+1):
             qc = QuantumCircuit(spinChain)
-            qc.initialize(self.initialState)
+            if self.withInitialState:
+                qc.initialize(self.initialState)
+            else:
+                numSpins = len(self.graph.vs)
+                qc.initialize((2**numSpins)-2)
             qc.append(
                 self.rawEvolutionCircuit(
                     STEPS=idx if not twoSpins else 1,
@@ -364,7 +371,11 @@ class HeisenbergGraph:
         circ = []
         for idx in range(1, STEPS+1):
             qc = QuantumCircuit(spinChain)
-            qc.initialize(self.initialState)
+            if self.withInitialState:
+                qc.initialize(self.initialState)
+            else:
+                numSpins = len(self.graph.vs)
+                qc.initialize((2**numSpins)-2)
             qc.append(
                 self.rawEvolutionCircuit(
                     STEPS=idx,
@@ -529,7 +540,7 @@ class HeisenbergGraph:
         experiments according to
         backend
         '''
-        return execute(circuits, backend, shots=shots)
+        return execute(circuits, backend, shots=shots, optimization_level=3)
 
     # MEASUREMENT ERROR MITIGATION ROUTINES
 
@@ -1295,7 +1306,11 @@ class DataAnalyzer:
         evolutionSteps = []
         for idx, time in enumerate(times):
             qc = QuantumCircuit(len(self.spinGraph.graph.vs))
-            qc.initialize(self.spinGraph.initialState)
+            if self.spinGraph.withInitialState:
+                qc.initialize(self.spinGraph.initialState)
+            else:
+                numSpins = len(self.spinGraph.graph.vs)
+                qc.initialize((2**numSpins)-2)
             qc.append(
                 self.spinGraph.rawEvolutionCircuit(
                     STEPS=idx+1 if sum > 1e-3 and twoSpins else 1,
