@@ -95,7 +95,11 @@ class HeisenbergGraph:
             self.localSimulation = kwargs['localSimulation']
             if not self.localSimulation:
                 IBMQ.load_account()
-                provider = IBMQ.get_provider('ibm-q')
+                provider = IBMQ.get_provider(
+                    hub='ibm-q-community',
+                    group='ibmquantumawards',
+                    project='open-science-22'
+                )
                 try:
                     self.backendName = kwargs['backendName']
                 except KeyError:
@@ -519,6 +523,15 @@ class HeisenbergGraph:
 ##                          GRAPH EVOLUTION ROUTINES                          ##
 ################################################################################
 
+
+    def execute(self, circuits, backend, shots=2048):
+        '''
+        Function for executing the
+        experiments according to
+        backend
+        '''
+        return execute(circuits, backend, shots=shots)
+
     # MEASUREMENT ERROR MITIGATION ROUTINES
 
     def getCalibrationFitter(self):
@@ -561,7 +574,7 @@ class HeisenbergGraph:
         density at time t
         '''
         timeEvolution = [self.evolutionCircuit(STEPS=STEPS, t=t)]
-        job = execute(timeEvolution, self.backend, shots=shots)
+        job = self.execute(timeEvolution, self.backend, shots=shots)
         if not self.localSimulation:
             job_monitor(job)
         try:
@@ -573,7 +586,6 @@ class HeisenbergGraph:
                 measurementFilter=measurementFilter
             )[0]
         except KeyError:
-            job = execute(timeEvolution, self.backend, shots=shots)
             return 1/shots * aux.Counts2Pdf(
                 len(self.graph.vs),
                 job,
@@ -607,7 +619,7 @@ class HeisenbergGraph:
         dt = t/STEPS
         evolutionSteps = [self.evolutionCircuit(STEPS=idx, t=dt*idx)
                           for idx in range(1, STEPS+1)]
-        job = execute(evolutionSteps, self.backend, shots=shots)
+        job = self.execute(evolutionSteps, self.backend, shots=shots)
         if not self.localSimulation:
             job_monitor(job)
         numSpins = len(self.graph.vs)
@@ -666,7 +678,7 @@ class HeisenbergGraph:
         '''
         evolutionSteps = [self.evolutionCircuit(STEPS=idx, t=t)
                           for idx in range(1, MAX_STEPS+1)]
-        job = execute(evolutionSteps, self.backend, shots=shots)
+        job = self.execute(evolutionSteps, self.backend, shots=shots)
         if not self.localSimulation:
             job_monitor(job)
         numSpins = len(self.graph.vs)
@@ -726,7 +738,7 @@ class HeisenbergGraph:
             STEPS=MAX_STEPS,
             t=t
         )
-        job = execute(pauliSchedule, self.backend, shots=shots)
+        job = self.execute(pauliSchedule, self.backend, shots=shots)
         if not self.localSimulation:
             job_monitor(job)
         # Filter result if error correction is true
@@ -884,7 +896,7 @@ class HeisenbergGraph:
             stateCircuit = QuantumCircuit(numSpins)
             stateCircuit.append(extendedQNN.to_instruction(), range(numSpins))
             stateCircuit.measure_all()
-            job = execute(
+            job = self.execute(
                 stateCircuit,
                 backend=self.backend,
                 shots=totCounts
@@ -1071,11 +1083,11 @@ class HeisenbergGraph:
         )
         qcQpe.append(qpe, [*pointerRegister, *stateRegister])
         qcQpe.measure(pointerRegister, energyRegister)
-        job = execute(qcQpe, self.backend, shots=2048)
-        return qcUnitary
+        job = self.execute(qcQpe, self.backend, shots=2048)
+        return job
 
 
-class NaiveSpinGraph(HeisenbergGraph):
+class PulseSpinGraph(HeisenbergGraph):
 
     '''
     Class for simulating a generic Heisenberg hamiltonian
@@ -1345,6 +1357,7 @@ class DataAnalyzer:
 ##                      COMPARATIVE EVOLUTION PLOTS                           ##
 ################################################################################
 
+
     def comparativeEvolution(
             self,
             STEPS=200,
@@ -1462,6 +1475,7 @@ class DataAnalyzer:
 ################################################################################
 ##                     EVOLUTION OPERATOR ERROR PLOTS                         ##
 ################################################################################
+
 
     def unitaryEvolutionError(self, STEPS=200, t=3.4):
         '''
