@@ -523,7 +523,6 @@ class HeisenbergGraph:
 ##                          GRAPH EVOLUTION ROUTINES                          ##
 ################################################################################
 
-
     def execute(self, circuits, backend, shots=2048):
         '''
         Function for executing the
@@ -1137,6 +1136,7 @@ class PulseSpinGraph(HeisenbergGraph):
 ##         DEFINITION OF FUNDAMENTAL QUANTUM CIRCUIT FOR SIMULATION           ##
 ################################################################################
 
+
     def edgeCircuit(self, edge, spinChain):
         '''
         Function for building circuit that
@@ -1159,88 +1159,6 @@ class PulseSpinGraph(HeisenbergGraph):
         qcEdge.u3(*gamma[12:15], spinChain[start])
         qcEdge.u3(*gamma[15:18], spinChain[end])
         return qcEdge.to_instruction()
-
-################################################################################
-##     VARIATIONAL OPTIMIZATION OF PARAMETES OF SPIN-SPIN EVOLUTION. OP       ##
-################################################################################
-
-    def variationalOperatorMatrix(self, gamma):
-        '''
-        Function for retrieving matrix of
-        designated variational form
-        '''
-        qcVar = QuantumCircuit(2)
-        qcVar.u3(*gamma[0:3], 0)
-        qcVar.u3(*gamma[3:6], 1)
-        # Include CNOT
-        qcVar.cx(0, 1)
-        # append last two u3 gates
-        qcVar.u3(*gamma[6:9], 0)
-        qcVar.u3(*gamma[9:12], 1)
-        # Include CNOT
-        qcVar.cx(0, 1)
-        # append last two u3 gates
-        qcVar.u3(*gamma[12:15], 0)
-        qcVar.u3(*gamma[15:18], 1)
-        # get matrix
-        job = execute(qcVar, Aer.get_backend('unitary_simulator'))
-        return job.result().get_unitary(qcVar, decimals=5)
-
-    def edgeCostFunction(self, gamma, edge, dt=0.01):
-        '''
-        Function for computing cost
-        of approximation of local
-        evolution operator
-        '''
-        edgeHam = sum(edge['exchangeIntegrals'][i] *
-                      np.kron(PauliMatrices[i], PauliMatrices[i]) for i in range(3))
-        return np.linalg.norm(
-            self.variationalOperatorMatrix(gamma) - expm(-1j * dt * edgeHam)
-        )**2
-
-    def edgeOptimalVarParams(self, edge, dt=0.01):
-        '''
-        Function for computing the
-        optimal parameters for edge
-        evolution operator
-        '''
-        def costFunc(gm):
-            return self.edgeCostFunction(gm, edge, dt=dt)
-        opt = minimize(costFunc, edge['optimalParams'],
-                       method=self.optimizationMethod, options={'disp': True})
-        # opt = optimize.differential_evolution(
-        #     costFunc,
-        #     tuple((-np.pi, np.pi) for _ in range(18)),
-        #     disp=True
-        # )
-        print(opt.x)
-        return opt.x.tolist()
-
-    def setOptimalParameters(self, dt=0.01):
-        '''
-        Function for computing the
-        optimal parameters for all
-        spin-spin interactions
-        '''
-        params = []
-        for edge in self.graph.es:
-            params.append(self.edgeOptimalVarParams(edge, dt))
-        self.graph.es['optimalParams'] = params
-
-################################################################################
-##         DEFINITION OF FUNDAMENTAL QUANTUM CIRCUIT FOR SIMULATION           ##
-################################################################################
-
-    def evolutionStep(self, dt, spinChain):
-        '''
-        Function for binding parameters and
-        producing time evolution step
-        '''
-        qcEvolution = QuantumCircuit(spinChain)
-        self.setOptimalParameters(dt=dt)
-        bindingDict = aux.BindVarParameters(self.graph, dt)
-        qcEvolution.append(self.HamiltonianQNN(spinChain), spinChain)
-        return qcEvolution.bind_parameters(bindingDict).to_instruction()
 
 
 class DataAnalyzer:
@@ -1287,7 +1205,6 @@ class DataAnalyzer:
 ################################################################################
 ##                      COMPARATIVE EVOLUTION PLOTS                           ##
 ################################################################################
-
 
     def comparativeEvolution(
             self,
@@ -1406,7 +1323,6 @@ class DataAnalyzer:
 ################################################################################
 ##                     EVOLUTION OPERATOR ERROR PLOTS                         ##
 ################################################################################
-
 
     def unitaryEvolutionError(self, STEPS=200, t=3.4):
         '''
