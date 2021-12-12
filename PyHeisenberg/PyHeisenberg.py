@@ -25,6 +25,9 @@ from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
 from qiskit.ignis.mitigation.measurement import complete_meas_cal
 from qiskit.ignis.mitigation.measurement import CompleteMeasFitter
 from qiskit.circuit.library import PhaseEstimation
+from qiskit import schedule, transpile, assemble
+from qiskit.transpiler import PassManager
+from qiskit.transpiler.passes import RZXCalibrationBuilderNoEcho
 
 plt.style.use('FigureStyle.mplstyle')
 
@@ -77,6 +80,7 @@ class HeisenbergGraph:
                  spinInteractions=defaultSpinInteractions,
                  externalField=defaultExternalField,
                  withColoring=True,
+                 initializeList=[0],
                  **kwargs):
         self.spinInteractions = spinInteractions
         self.externalField = externalField
@@ -129,7 +133,9 @@ class HeisenbergGraph:
             self.withInitialState = True
         except KeyError:
             initState = np.zeros(2**len(self.graph.vs))
-            initState[2**len(self.graph.vs)-2] = 1
+            idx = sum(2**i for i in initializeList)
+            self.initializeList = initializeList
+            initState[idx] = 1
             self.initialState = initState
             self.withInitialState = False
 
@@ -311,17 +317,17 @@ class HeisenbergGraph:
         '''
         dt = t/STEPS
         spinChain = QuantumRegister(len(self.graph.vs), name='s')
-        measureReg = ClassicalRegister(len(self.graph.vs), name='r')
-        qcEvolution = QuantumCircuit(spinChain, measureReg)
+        # measureReg = ClassicalRegister(len(self.graph.vs), name='r')
+        qcEvolution = QuantumCircuit(spinChain)
         qcStep = self.evolutionStep(dt, spinChain)
         if self.withInitialState:
             qcEvolution.initialize(self.initialState)
         else:
-            numSpins = len(self.graph.vs)
-            qcEvolution.initialize((2**numSpins)-2)
+            for idx in self.initializeList:
+                qcEvolution.x(spinChain[idx])
         for _ in range(STEPS):
             qcEvolution.append(qcStep, spinChain)
-        qcEvolution.measure(spinChain, measureReg)
+        qcEvolution.measure_all()
         return qcEvolution.decompose()
 
 ################################################################################
@@ -349,8 +355,8 @@ class HeisenbergGraph:
             if self.withInitialState:
                 qc.initialize(self.initialState)
             else:
-                numSpins = len(self.graph.vs)
-                qc.initialize((2**numSpins)-2)
+                for jdx in self.initializeList:
+                    qc.x(spinChain[jdx])
             qc.append(
                 self.rawEvolutionCircuit(
                     STEPS=idx if not twoSpins else 1,
@@ -374,8 +380,8 @@ class HeisenbergGraph:
             if self.withInitialState:
                 qc.initialize(self.initialState)
             else:
-                numSpins = len(self.graph.vs)
-                qc.initialize((2**numSpins)-2)
+                for jdx in self.initializeList:
+                    qc.x(spinChain[jdx])
             qc.append(
                 self.rawEvolutionCircuit(
                     STEPS=idx,
@@ -1105,71 +1111,243 @@ class PulseSpinGraph(HeisenbergGraph):
     '''
 
 ################################################################################
-#           OVERLOAD OF SPIN SPIN CIRCUIT TO MATCH LAS HERAS ET. AL.           #
-################################################################################
-
-    def edgeCircuit(self, edge, spinChain):
-        '''
-        Function for building circuit that
-        performs edge Hamiltonian evolution
-        '''
-        start, end = edge.tuple
-        J = edge['paramExchangeIntegrals']
-        qcEdge = QuantumCircuit(spinChain)
-        # Compute J0 phase
-        qcEdge.h(spinChain[start])
-        qcEdge.h(spinChain[end])
-        qcEdge.cx(spinChain[start], spinChain[end])
-        qcEdge.rz(J[0], spinChain[end])
-        qcEdge.cx(spinChain[start], spinChain[end])
-        qcEdge.h(spinChain[start])
-        qcEdge.h(spinChain[end])
-        # Compute J1 phase
-        qcEdge.sdg(spinChain[start])
-        qcEdge.h(spinChain[start])
-        qcEdge.sdg(spinChain[end])
-        qcEdge.h(spinChain[end])
-        qcEdge.cx(spinChain[start], spinChain[end])
-        qcEdge.rz(J[1], spinChain[end])
-        qcEdge.cx(spinChain[start], spinChain[end])
-        qcEdge.h(spinChain[start])
-        qcEdge.s(spinChain[start])
-        qcEdge.h(spinChain[end])
-        qcEdge.s(spinChain[end])
-        # Compute J2 phase
-        qcEdge.cx(spinChain[start], spinChain[end])
-        qcEdge.rz(J[2], spinChain[end])
-        qcEdge.cx(spinChain[start], spinChain[end])
-        return qcEdge.to_instruction()
-
-
-################################################################################
 ##         DEFINITION OF FUNDAMENTAL QUANTUM CIRCUIT FOR SIMULATION           ##
 ################################################################################
 
+    def vertexCircuit(self, vertex, spinChain, **kwargs):
+        '''
+        Function for building circuit that 
+        performs vertex Hamiltonian evolution
+        '''
+        Hx = vertex['externalField'][0]
+        Hy = vertex['externalField'][1]
+        Hz = vertex['externalField'][2]
+        H = np.sqrt(Hx**2 + Hy**2 + Hz**2)
+        # Parameter values for Qiskit
+        PHI = np.arctan2(Hy, Hx) + 2*np.pi if H > 0 else 0
+        THETA = np.arccos(Hz/H) if H > 0 else 0
+        LAMBDA = np.pi if H > 0 else 0
+        # Align to field main axis
+        qcVertex = QuantumCircuit(spinChain)
+        if H > 1e-3:
+            # qcVertex.u(-THETA, -LAMBDA, -PHI, spinChain[vertex.index])
+            qcVertex.rz(-PHI-np.pi/2, spinChain[vertex.index])
+            qcVertex.sx(spinChain[vertex.index])
+            qcVertex.rz(np.pi-(-THETA), spinChain[vertex.index])
+            qcVertex.sx(spinChain[vertex.index])
+            qcVertex.rz(-LAMBDA-np.pi/2, spinChain[vertex.index])
+            try:
+                dt = kwargs['dt']
+                qcVertex.rz(2*dt*H, spinChain[vertex.index])
+            except KeyError:
+                qcVertex.rz(vertex['paramExternalField'],
+                            spinChain[vertex.index])
+            # qcVertex.u(THETA, PHI, LAMBDA, spinChain[vertex.index])
+            qcVertex.rz(PHI-np.pi/2, spinChain[vertex.index])
+            qcVertex.sx(spinChain[vertex.index])
+            qcVertex.rz(np.pi-(THETA), spinChain[vertex.index])
+            qcVertex.sx(spinChain[vertex.index])
+            qcVertex.rz(LAMBDA-np.pi/2, spinChain[vertex.index])
+        return qcVertex
 
-    def edgeCircuit(self, edge, spinChain):
+    def fieldCircuit(self, spinChain, **kwargs):
+        '''
+        Function for building circuit that
+        performs field Hamiltonian evolution
+        '''
+        qcField = QuantumCircuit(spinChain)
+        for vertex in self.graph.vs:
+            try:
+                dt = kwargs['dt']
+                qcField.append(
+                    self.vertexCircuit(vertex, spinChain, dt=dt),
+                    spinChain
+                )
+            except KeyError:
+                qcField.append(
+                    self.vertexCircuit(vertex, spinChain),
+                    spinChain
+                )
+        return qcField.decompose()
+
+    def spinSpinCircuit(self, spinChain, **kwargs):
+        '''
+        Function for building circuit that
+        performs spin-spin Ham. evolution
+        '''
+        spinChain = QuantumRegister(len(self.graph.vs))
+        qcSpin = QuantumCircuit(spinChain)
+        for color in self.graphColors:
+            for edge in self.matching[color]:
+                try:
+                    dt = kwargs['dt']
+                    qcSpin.append(
+                        self.edgeCircuit(edge, spinChain, dt=dt),
+                        spinChain
+                    )
+                except KeyError:
+                    qcSpin.append(
+                        self.edgeCircuit(edge, spinChain),
+                        spinChain
+                    )
+        return qcSpin.decompose()
+
+    def HamiltonianQNN(self, spinChain, **kwargs):
+        '''
+        Function for building circuit that
+        implements parametric QNN
+        '''
+        try:
+            dt = kwargs['dt']
+            qnn = QuantumCircuit(spinChain)
+            qnn.append(self.spinSpinCircuit(spinChain, dt=dt), spinChain)
+            qnn.append(self.fieldCircuit(spinChain, dt=dt), spinChain)
+        except KeyError:
+            qnn = QuantumCircuit(spinChain)
+            qnn.append(self.spinSpinCircuit(spinChain), spinChain)
+            qnn.append(self.fieldCircuit(spinChain), spinChain)
+        return qnn.decompose()
+
+    def evolutionStep(self, dt, spinChain):
+        '''
+        Function for binding parameters and
+        producing time evolution step
+        '''
+        qcEvolution = QuantumCircuit(spinChain)
+        qcEvolution.append(
+            self.HamiltonianQNN(spinChain, dt=dt),
+            spinChain
+        )
+        return qcEvolution.decompose()
+        # qcEvolution = QuantumCircuit(spinChain)
+        # bindingDict = aux.BindParameters(self.graph, dt)
+        # qcEvolution.append(self.HamiltonianQNN(spinChain), spinChain)
+        # try:
+        #     return qcEvolution.bind_parameters(bindingDict)
+        # except exceptions.CircuitError:
+        #     # print('An error occurred')
+        #     return qcEvolution.decompose()
+
+    def rawEvolutionCircuit(self, STEPS=200, t=1.7):
+        ''''
+        Function for retrieving evolution
+        circuit without measurement
+        '''
+        dt = t/STEPS
+        spinChain = QuantumRegister(len(self.graph.vs), name='s')
+        qcEvolution = QuantumCircuit(spinChain)
+        qcStep = self.evolutionStep(dt, spinChain)
+        for _ in range(STEPS):
+            qcEvolution.append(qcStep, spinChain)
+        return qcEvolution.decompose()
+
+    def evolutionCircuit(self, STEPS=200, t=1.7):
+        '''
+        Function for retrieving a simulation 
+        circuit with several evolution steps
+        and given target time
+        '''
+        dt = t/STEPS
+        spinChain = QuantumRegister(len(self.graph.vs), name='s')
+        # measureReg = ClassicalRegister(len(self.graph.vs), name='r')
+        qcEvolution = QuantumCircuit(spinChain)
+        qcStep = self.evolutionStep(dt, spinChain)
+        if self.withInitialState:
+            qcEvolution.initialize(self.initialState)
+        else:
+            for idx in self.initializeList:
+                qcEvolution.x(spinChain[idx])
+        for _ in range(STEPS):
+            qcEvolution.append(qcStep, spinChain)
+        qcEvolution.measure_all()
+        return qcEvolution.decompose()
+
+################################################################################
+#           OVERLOAD OF SPIN SPIN CIRCUIT TO MATCH LAS HERAS ET. AL.           #
+################################################################################
+
+    def edgeCircuit(self, edge, spinChain, **kwargs):
         '''
         Function for building circuit that
         performs edge Hamiltonian evolution
         '''
         start, end = edge.tuple
-        gamma = edge['variationalParams']
+        try:
+            dt = kwargs['dt']
+            J = 2*dt*np.array(edge['exchangeIntegrals'])
+        except KeyError:
+            J = edge['paramExchangeIntegrals']
         qcEdge = QuantumCircuit(spinChain)
-        # append first two u3 gates
-        qcEdge.u3(*gamma[0:3], spinChain[start])
-        qcEdge.u3(*gamma[3:6], spinChain[end])
-        # Include CNOT
-        qcEdge.cx(spinChain[start], spinChain[end])
-        # append middle two u3 gates
-        qcEdge.u3(*gamma[6:9], spinChain[start])
-        qcEdge.u3(*gamma[9:12], spinChain[end])
-        # Include CNOT
-        qcEdge.cx(spinChain[start], spinChain[end])
-        # append last two u3 gates
-        qcEdge.u3(*gamma[12:15], spinChain[start])
-        qcEdge.u3(*gamma[15:18], spinChain[end])
+        if np.abs(edge['exchangeIntegrals'][0]) > 1e-3:
+            # Compute J0 phase
+            qcEdge.h(spinChain[start])
+            # qcEdge.rz(np.pi/2, spinChain[start])
+            # qcEdge.sx(spinChain[start])
+            # qcEdge.rz(np.pi/2, spinChain[start])
+            qcEdge.rzx(J[0], spinChain[start], spinChain[end])
+            qcEdge.h(spinChain[start])
+            # qcEdge.rz(np.pi/2, spinChain[start])
+            # qcEdge.sx(spinChain[start])
+            # qcEdge.rz(np.pi/2, spinChain[start])
+        if np.abs(edge['exchangeIntegrals'][1]) > 1e-3:
+            # Compute J1 phase
+            qcEdge.sdg(spinChain[start])
+            # qcEdge.rz(-np.pi/2, spinChain[start])
+            qcEdge.h(spinChain[start])
+            # qcEdge.rz(np.pi/2, spinChain[start])
+            # qcEdge.sx(spinChain[start])
+            # qcEdge.rz(-np.pi/2, spinChain[start])
+            qcEdge.sdg(spinChain[end])
+            # qcEdge.rz(-np.pi/2, spinChain[end])
+            qcEdge.rzx(J[1], spinChain[start], spinChain[end])
+            qcEdge.h(spinChain[start])
+            # qcEdge.rz(np.pi/2, spinChain[start])
+            # qcEdge.sx(spinChain[start])
+            # qcEdge.rz(np.pi/2, spinChain[start])
+            qcEdge.s(spinChain[start])
+            # qcEdge.rz(np.pi/2, spinChain[start])
+            qcEdge.s(spinChain[end])
+            # qcEdge.rz(np.pi/2, spinChain[end])
+        if np.abs(edge['exchangeIntegrals'][2]) > 1e-3:
+            # Compute J2 phase
+            qcEdge.h(spinChain[end])
+            # qcEdge.rz(np.pi/2, spinChain[end])
+            # qcEdge.sx(spinChain[start])
+            # qcEdge.rz(np.pi/2, spinChain[end])
+            qcEdge.rzx(J[2], spinChain[start], spinChain[end])
+            qcEdge.h(spinChain[end])
+            # qcEdge.rz(np.pi/2, spinChain[end])
+            # qcEdge.sx(spinChain[start])
+            # qcEdge.rz(np.pi/2, spinChain[end])
         return qcEdge.to_instruction()
+
+################################################################################
+#               OVERLOAD OF EXECUTE FUNCTION TO USE OPENPULSE                  #
+################################################################################
+
+    def execute(self, circuits, backend, shots=2048):
+        '''
+        Function for executing a
+        pulse schedule representing
+        the algorithm
+        '''
+        if self.localSimulation:
+            return execute(circuits, backend, shots=2048, optimization_level=3)
+        else:
+            transpiledCircuits = transpile(
+                circuits,
+                basis_gates=['x', 'sx', 'rz', 'rzx'],
+                optimization_level=1
+            )
+            pm = PassManager([RZXCalibrationBuilderNoEcho(backend)])
+            passCircuits = pm.run(transpiledCircuits)
+            experiment = schedule(passCircuits, backend)
+            return execute(
+                experiment,
+                backend=backend,
+                meas_level=2,
+                shots=shots,
+            )
 
 
 class DataAnalyzer:
@@ -1309,8 +1487,8 @@ class DataAnalyzer:
             if self.spinGraph.withInitialState:
                 qc.initialize(self.spinGraph.initialState)
             else:
-                numSpins = len(self.spinGraph.graph.vs)
-                qc.initialize((2**numSpins)-2)
+                for idx in self.spinGraph.initializeList:
+                    qc.x(idx)
             qc.append(
                 self.spinGraph.rawEvolutionCircuit(
                     STEPS=idx+1 if sum > 1e-3 and twoSpins else 1,
