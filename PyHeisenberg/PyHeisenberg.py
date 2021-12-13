@@ -1281,44 +1281,28 @@ class PulseSpinGraph(HeisenbergGraph):
         if np.abs(edge['exchangeIntegrals'][0]) > 1e-3:
             # Compute J0 phase
             qcEdge.h(spinChain[start])
-            # qcEdge.rz(np.pi/2, spinChain[start])
-            # qcEdge.sx(spinChain[start])
-            # qcEdge.rz(np.pi/2, spinChain[start])
+            # Duplicate pulse to cancel
+            # undesired terms on CR
             qcEdge.rzx(J[0], spinChain[start], spinChain[end])
             qcEdge.h(spinChain[start])
-            # qcEdge.rz(np.pi/2, spinChain[start])
-            # qcEdge.sx(spinChain[start])
-            # qcEdge.rz(np.pi/2, spinChain[start])
         if np.abs(edge['exchangeIntegrals'][1]) > 1e-3:
             # Compute J1 phase
             qcEdge.sdg(spinChain[start])
-            # qcEdge.rz(-np.pi/2, spinChain[start])
             qcEdge.h(spinChain[start])
-            # qcEdge.rz(np.pi/2, spinChain[start])
-            # qcEdge.sx(spinChain[start])
-            # qcEdge.rz(-np.pi/2, spinChain[start])
             qcEdge.sdg(spinChain[end])
-            # qcEdge.rz(-np.pi/2, spinChain[end])
+            # Duplicate pulse to cancel
+            # undesired terms on CR
             qcEdge.rzx(J[1], spinChain[start], spinChain[end])
             qcEdge.h(spinChain[start])
-            # qcEdge.rz(np.pi/2, spinChain[start])
-            # qcEdge.sx(spinChain[start])
-            # qcEdge.rz(np.pi/2, spinChain[start])
             qcEdge.s(spinChain[start])
-            # qcEdge.rz(np.pi/2, spinChain[start])
             qcEdge.s(spinChain[end])
-            # qcEdge.rz(np.pi/2, spinChain[end])
         if np.abs(edge['exchangeIntegrals'][2]) > 1e-3:
             # Compute J2 phase
             qcEdge.h(spinChain[end])
-            # qcEdge.rz(np.pi/2, spinChain[end])
-            # qcEdge.sx(spinChain[start])
-            # qcEdge.rz(np.pi/2, spinChain[end])
+            # Duplicate pulse to cancel
+            # undesired terms on CR
             qcEdge.rzx(J[2], spinChain[start], spinChain[end])
             qcEdge.h(spinChain[end])
-            # qcEdge.rz(np.pi/2, spinChain[end])
-            # qcEdge.sx(spinChain[start])
-            # qcEdge.rz(np.pi/2, spinChain[end])
         return qcEdge.to_instruction()
 
 ################################################################################
@@ -1332,20 +1316,21 @@ class PulseSpinGraph(HeisenbergGraph):
         the algorithm
         '''
         if self.localSimulation:
-            return execute(circuits, backend, shots=2048, optimization_level=3)
+            return execute(circuits, backend, shots=2048, optimization_level=1)
         else:
             transpiledCircuits = transpile(
                 circuits,
                 basis_gates=['x', 'sx', 'rz', 'rzx'],
-                optimization_level=1
+                # optimization_level=1
             )
             pm = PassManager([RZXCalibrationBuilderNoEcho(backend)])
             passCircuits = pm.run(transpiledCircuits)
-            experiment = schedule(passCircuits, backend)
+            # experiment = schedule(passCircuits, backend)
             return execute(
-                experiment,
+                passCircuits,
+                # experiment,
                 backend=backend,
-                meas_level=2,
+                # meas_level=2,
                 shots=shots,
             )
 
