@@ -4,11 +4,12 @@ channels:
 dependencies:
   - python=3.8
   - pip
+  - jupyterlab
   - numpy
   - matplotlib
   - pylatexenc
   - pandas
   - pip:
-    - python-igraph>=0.9.6
+    - igraph
     - qiskit>=0.23.0
     - pycairo

@@ -11,7 +11,7 @@ import numpy as np
 from scipy.linalg import expm
 from scipy.stats import linregress
 from scipy.optimize import curve_fit, minimize
-from scipy import optimize
+# from scipy import optimize
 import matplotlib.pyplot as plt
 from matplotlib import cm
 import auxiliaryRoutines as aux
@@ -98,7 +98,8 @@ class HeisenbergGraph:
         try:
             self.localSimulation = kwargs['localSimulation']
             if not self.localSimulation:
-                IBMQ.load_account()
+                if not IBMQ.active_account():
+                    IBMQ.load_account()
                 provider = IBMQ.get_provider(
                     hub='ibm-q-community',
                     group='ibmquantumawards',
@@ -1280,28 +1281,51 @@ class PulseSpinGraph(HeisenbergGraph):
         qcEdge = QuantumCircuit(spinChain)
         if np.abs(edge['exchangeIntegrals'][0]) > 1e-3:
             # Compute J0 phase
+            # Rotate start qubit to X
             qcEdge.h(spinChain[start])
             # Duplicate pulse to cancel
             # undesired terms on CR
-            qcEdge.rzx(J[0], spinChain[start], spinChain[end])
+            qcEdge.barrier()
+            qcEdge.rzx(J[0]/2, spinChain[start], spinChain[end])
+            qcEdge.x(spinChain[start])
+            qcEdge.rzx(-J[0]/2, spinChain[start], spinChain[end])
+            qcEdge.x(spinChain[start])
+            qcEdge.barrier()
+            # Rotate start qubit to X
             qcEdge.h(spinChain[start])
         if np.abs(edge['exchangeIntegrals'][1]) > 1e-3:
             # Compute J1 phase
+            # Rotate start qubit to X -> Y
             qcEdge.sdg(spinChain[start])
             qcEdge.h(spinChain[start])
+            # Rotate end qubit to Y
             qcEdge.sdg(spinChain[end])
             # Duplicate pulse to cancel
             # undesired terms on CR
-            qcEdge.rzx(J[1], spinChain[start], spinChain[end])
+            qcEdge.barrier()
+            qcEdge.rzx(J[1]/2, spinChain[start], spinChain[end])
+            qcEdge.x(spinChain[start])
+            qcEdge.rzx(-J[1]/2, spinChain[start], spinChain[end])
+            qcEdge.x(spinChain[start])
+            qcEdge.barrier()
+            # Rotate start qubit to X
             qcEdge.h(spinChain[start])
             qcEdge.s(spinChain[start])
+            # Rotate end qubit to Y
             qcEdge.s(spinChain[end])
         if np.abs(edge['exchangeIntegrals'][2]) > 1e-3:
             # Compute J2 phase
+            # Rotate end qubit to Z
             qcEdge.h(spinChain[end])
             # Duplicate pulse to cancel
             # undesired terms on CR
-            qcEdge.rzx(J[2], spinChain[start], spinChain[end])
+            qcEdge.barrier()
+            qcEdge.rzx(J[2]/2, spinChain[start], spinChain[end])
+            qcEdge.x(spinChain[start])
+            qcEdge.rzx(-J[2]/2, spinChain[start], spinChain[end])
+            qcEdge.x(spinChain[start])
+            qcEdge.barrier()
+            # Rotate end qubit to Z
             qcEdge.h(spinChain[end])
         return qcEdge.to_instruction()
 
@@ -1385,6 +1409,7 @@ class DataAnalyzer:
             STEPS=200,
             t=3.4,
             saveToFiles=False,
+            figureFile='comparativeEvolution.pdf',
             **kwargs):
         '''
         Function for comparative plotting
@@ -1409,26 +1434,27 @@ class DataAnalyzer:
             t=t,
             saveToFile=saveToFiles
         )
-        plt.xlabel(r'$t$ (u. a.)')
-        plt.ylabel(r'$|\langle \psi_0 | k \rangle|^2$')
+        fig, ax = plt.subplots(1)
+        ax.set_xlabel(r'$t$ (u. a.)')
+        ax.set_ylabel(r'$|\langle \psi_0 | k \rangle|^2$')
         shape = simulatedData.shape
         # plot exactData using solid curves (expected to have more points)
         # and simulatedData with scatter plot
         for idx in range(1, shape[1]):
-            plt.plot(
+            ax.plot(
                 exactData[:, 0],
                 exactData[:, idx],
                 '--'
             )
-            plt.scatter(
+            ax.scatter(
                 simulatedData[:, 0],
                 simulatedData[:, idx],
                 label=str(idx-1)
             )
-            ax = plt.gca()
-            ax.set_aspect(2)
-            ax.set_ylim([-0.1, 1.1])
-        plt.legend()
+        ax.set_aspect(2)
+        ax.set_ylim([-0.1, 1.1])
+        ax.legend()
+        fig.savefig(figureFile)
         plt.show()
 
     def comparativeExactPauliExpEvolution(
