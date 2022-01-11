@@ -1,0 +1,8 @@
+\begin{figure}
+    \centering
+    \begin{quantikz}
+        & \gate{H} & \gate[wires=2]{RZX(\alpha)} & \gate{H} & \gate{S^{\dagger}} & \gate{H} & \gate[wires=2]{RZX(\beta)} & \gate{H} & \gate{S} & \qw    & \gate[wires=2]{RZX(\gamma)} & \qw &\\
+        & \qw      &                             & \qw      & \gate{S^{\dagger}} & \qw      &                            & \qw      & \gate{S} & \gate{H} &                                & \gate{H} &
+    \end{quantikz}
+    \caption{Circuit representation of efficient pulse implementation of unitary operation \ref{eq:CartanDecomp}, according to \cite{RXZPulseEfficient}. Each $RZX$ gate represents a cross resonance interaction with pulse schedule as in figure \ref{fig:echoedPulseQiskit}, with scaling performed as proposed in \cite{MajoranaSimulation}.}
+\end{figure}

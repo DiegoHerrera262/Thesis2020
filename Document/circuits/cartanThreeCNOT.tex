@@ -1,0 +1,9 @@
+\begin{figure}
+    \centering
+    \begin{quantikz}
+        & \ctrl{1} & \gate{U_{1\alpha}}         & \ctrl{1} & \gate{U_{11}} & \ctrl{1} & \gate{\sqrt{X}} & \\
+        & \targ{} & \gate{\hat{R}_{z, \gamma}} & \targ{} & \gate{\hat{R}_{z, \gamma}} & \targ{} & \gate{U_{22}}
+    \end{quantikz}
+    \caption{Implementation of $SU(4)$ group gates following the technique proposed by \cite{BellUniversalCartan}. Transpilation to IBM Q devices was performed by \cite{RXZPulseEfficient}.}
+    \label{fig:cartan3Cnot}
+\end{figure}
