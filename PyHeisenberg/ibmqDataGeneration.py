@@ -222,6 +222,14 @@ if __name__ == '__main__':
     pAnalyzer = DataAnalyzer(spinGraph = pGraph)
 
 ################################################################################
+#                           GET MEASUREMENT FITTER                             #
+################################################################################
+
+    print("Capture measurement error fitter")
+    print("=========================================")
+    measurementFitter = hGraph.getCalibrationFitter()
+
+################################################################################
 #                          GENERATE PAULI OBS PLOTS                            #
 ################################################################################
 
@@ -243,7 +251,8 @@ if __name__ == '__main__':
         qasmGraph,
         '../images/Benchmark/qasm/qasm_control_pauli_exps.pdf',
         STEPS = STEPS,
-        t = t
+        t = t,
+        measurementFitter=measurementFitter
     )
     print("Finished qasm control plot")
     plotSingleQubitObservables(
@@ -251,7 +260,8 @@ if __name__ == '__main__':
         hGraph,
         '../images/Benchmark/basis/basis_efficient_pauli_exps.pdf',
         STEPS = STEPS,
-        t = t
+        t = t,
+        measurementFitter=measurementFitter
     )
     print("Finished basis efficient plot")
     plotSingleQubitObservables(
@@ -259,7 +269,8 @@ if __name__ == '__main__':
         dGraph,
         '../images/Benchmark/direct/direct_pauli_exps.pdf',
         STEPS = STEPS,
-        t = t 
+        t = t,
+        measurementFitter=measurementFitter 
     )
     print("Finished direct transpilation plot")
     plotSingleQubitObservables(
@@ -267,7 +278,8 @@ if __name__ == '__main__':
         pGraph,
         '../images/Benchmark/pulse/pulse_efficient_pauli_exps.pdf',
         STEPS = STEPS,
-        t = t   
+        t = t,
+        measurementFitter=measurementFitter   
     )
     print(f"Finished pulse efficient plot")
     print(f"Ellapsed time: {(time.time()-tstart)/60} min")
@@ -283,6 +295,7 @@ if __name__ == '__main__':
     qasmAnalyzer.comparativeEvolution(
         STEPS=STEPS,
         t=t,
+        measurementFitter=measurementFitter,
         figureFile='../images/Benchmark/qasm/qasm_control_pdf_evol.pdf',
         showLegend=True
     )
@@ -290,6 +303,7 @@ if __name__ == '__main__':
     hAnalyzer.comparativeEvolution(
         STEPS=STEPS,
         t=t,
+        measurementFitter=measurementFitter,
         figureFile='../images/Benchmark/basis/basis_efficient_pdf_evol.pdf',
         showLegend=True
     )
@@ -297,6 +311,7 @@ if __name__ == '__main__':
     dAnalyzer.comparativeEvolution(
         STEPS=STEPS,
         t=t,
+        measurementFitter=measurementFitter,
         figureFile='../images/Benchmark/direct/direct_pdf_evol.pdf',
         showLegend=True
     )
@@ -304,6 +319,7 @@ if __name__ == '__main__':
     pAnalyzer.comparativeEvolution(
         STEPS=STEPS,
         t=t,
+        measurementFitter=measurementFitter,
         figureFile='../images/Benchmark/pulse/pulse_efficient_pdf_evol.pdf',
         showLegend=False
     )
@@ -322,28 +338,32 @@ if __name__ == '__main__':
         qasmAnalyzer,
         '../images/Benchmark/qasm/qasm_control_pdf_fidelity.pdf',
         STEPS = STEPS,
-        times = times
+        times = times,
+        measurementFitter=measurementFitter
     )
     print("Finished qasm control plot")
     plotFidelityStepsSeries(
         hAnalyzer,
         '../images/Benchmark/basis/basis_efficient_pdf_fidelity.pdf',
         STEPS = STEPS,
-        times = times
+        times = times,
+        measurementFitter=measurementFitter
     )
     print("Finished basis efficient plot")
     plotFidelityStepsSeries(
         dAnalyzer,
         '../images/Benchmark/direct/direct_pdf_fidelity.pdf',
         STEPS = STEPS,
-        times = times 
+        times = times,
+        measurementFitter=measurementFitter 
     )
     print("Finished direct transpilation plot")
     plotFidelityStepsSeries(
         pAnalyzer,
         '../images/Benchmark/pulse/pulse_efficient_pdf_fidelity.pdf',
         STEPS = STEPS,
-        times = times   
+        times = times,
+        measurementFitter=measurementFitter   
     )
     print(f"Finished pulse efficient plot")
     print(f"Ellapsed time: {(time.time()-tstart)/60} min")
