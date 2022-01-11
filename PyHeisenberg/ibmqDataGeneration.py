@@ -134,11 +134,11 @@ if __name__ == '__main__':
 #                                GLOBAL PARAMS                                 #
 ################################################################################
 
-    localSimulation = True
-    backendName = 'qasm_simulator'
+    localSimulation = False
+    backendName = 'ibmq_jakarta'
     noisySimulation = False
 
-    STEPS = 8
+    STEPS = 12
     t = np.pi/2
     times = [np.pi/4, np.pi/2, np.pi]
 
@@ -225,91 +225,91 @@ if __name__ == '__main__':
 #                          GENERATE PAULI OBS PLOTS                            #
 ################################################################################
 
-    # pauliDict = {
-    #     'x': ['XII', 'IXI', 'IIX'],
-    #     'y': ['YII', 'IYI', 'IIY'],
-    #     'z': ['ZII', 'IZI', 'IIZ'],
-    # }
-    # pulseDict = {
-    #     'x': ['IXIIIII', 'IIIXIII', 'IIIIIXI'],
-    #     'y': ['IYIIIII','IIIYIII', 'IIIIIYI'], 
-    #     'z': ['IZIIIII', 'IIIZIII', 'IIIIIZI']
-    # }
-    # tstart = time.time()
-    # print("Starting Pauli Observable Plot Generation")
-    # print("=========================================")
-    # plotSingleQubitObservables(
-    #     pauliDict,
-    #     qasmGraph,
-    #     '../images/Benchmark/qasm/qasm_control_pauli_exps.pdf',
-    #     STEPS = STEPS,
-    #     t = t
-    # )
-    # print("Finished qasm control plot")
-    # plotSingleQubitObservables(
-    #     pauliDict,
-    #     hGraph,
-    #     '../images/Benchmark/basis/basis_efficient_pauli_exps.pdf',
-    #     STEPS = STEPS,
-    #     t = t
-    # )
-    # print("Finished basis efficient plot")
-    # plotSingleQubitObservables(
-    #     pauliDict,
-    #     dGraph,
-    #     '../images/Benchmark/direct/direct_pauli_exps.pdf',
-    #     STEPS = STEPS,
-    #     t = t 
-    # )
-    # print("Finished direct transpilation plot")
-    # plotSingleQubitObservables(
-    #     pulseDict,
-    #     pGraph,
-    #     '../images/Benchmark/pulse/pulse_efficient_pauli_exps.pdf',
-    #     STEPS = STEPS,
-    #     t = t   
-    # )
-    # print(f"Finished pulse efficient plot")
-    # print(f"Ellapsed time: {(time.time()-tstart)/60} min")
-    # print("=========================================")
+    pauliDict = {
+        'x': ['XII', 'IXI', 'IIX'],
+        'y': ['YII', 'IYI', 'IIY'],
+        'z': ['ZII', 'IZI', 'IIZ'],
+    }
+    pulseDict = {
+        'x': ['IXIIIII', 'IIIXIII', 'IIIIIXI'],
+        'y': ['IYIIIII','IIIYIII', 'IIIIIYI'], 
+        'z': ['IZIIIII', 'IIIZIII', 'IIIIIZI']
+    }
+    tstart = time.time()
+    print("Starting Pauli Observable Plot Generation")
+    print("=========================================")
+    plotSingleQubitObservables(
+        pauliDict,
+        qasmGraph,
+        '../images/Benchmark/qasm/qasm_control_pauli_exps.pdf',
+        STEPS = STEPS,
+        t = t
+    )
+    print("Finished qasm control plot")
+    plotSingleQubitObservables(
+        pauliDict,
+        hGraph,
+        '../images/Benchmark/basis/basis_efficient_pauli_exps.pdf',
+        STEPS = STEPS,
+        t = t
+    )
+    print("Finished basis efficient plot")
+    plotSingleQubitObservables(
+        pauliDict,
+        dGraph,
+        '../images/Benchmark/direct/direct_pauli_exps.pdf',
+        STEPS = STEPS,
+        t = t 
+    )
+    print("Finished direct transpilation plot")
+    plotSingleQubitObservables(
+        pulseDict,
+        pGraph,
+        '../images/Benchmark/pulse/pulse_efficient_pauli_exps.pdf',
+        STEPS = STEPS,
+        t = t   
+    )
+    print(f"Finished pulse efficient plot")
+    print(f"Ellapsed time: {(time.time()-tstart)/60} min")
+    print("=========================================")
 
 ################################################################################
 #                          GENERATE PAULI OBS PLOTS                            #
 ################################################################################
 
-    # tstart = time.time()
-    # print("Starting Pdf Evolution Plot Generation")
-    # print("=========================================")
-    # qasmAnalyzer.comparativeEvolution(
-    #     STEPS=STEPS,
-    #     t=t,
-    #     figureFile='../images/Benchmark/qasm/qasm_control_pdf_evol.pdf',
-    #     showLegend=True
-    # )
-    # print(f"Finished qasm control plot")
-    # hAnalyzer.comparativeEvolution(
-    #     STEPS=STEPS,
-    #     t=t,
-    #     figureFile='../images/Benchmark/basis/basis_efficient_pdf_evol.pdf',
-    #     showLegend=True
-    # )
-    # print(f"Finished basis efficient plot")
-    # dAnalyzer.comparativeEvolution(
-    #     STEPS=STEPS,
-    #     t=t,
-    #     figureFile='../images/Benchmark/direct/direct_pdf_evol.pdf',
-    #     showLegend=True
-    # )
-    # print(f"Finished direct transpilation plot")
-    # pAnalyzer.comparativeEvolution(
-    #     STEPS=STEPS,
-    #     t=t,
-    #     figureFile='../images/Benchmark/pulse/pulse_efficient_pdf_evol.pdf',
-    #     showLegend=False
-    # )
-    # print(f"Finished pulse efficient plot")
-    # print(f"Ellapsed time: {(time.time()-tstart)/60} min")
-    # print("=========================================")
+    tstart = time.time()
+    print("Starting Pdf Evolution Plot Generation")
+    print("=========================================")
+    qasmAnalyzer.comparativeEvolution(
+        STEPS=STEPS,
+        t=t,
+        figureFile='../images/Benchmark/qasm/qasm_control_pdf_evol.pdf',
+        showLegend=True
+    )
+    print(f"Finished qasm control plot")
+    hAnalyzer.comparativeEvolution(
+        STEPS=STEPS,
+        t=t,
+        figureFile='../images/Benchmark/basis/basis_efficient_pdf_evol.pdf',
+        showLegend=True
+    )
+    print(f"Finished basis efficient plot")
+    dAnalyzer.comparativeEvolution(
+        STEPS=STEPS,
+        t=t,
+        figureFile='../images/Benchmark/direct/direct_pdf_evol.pdf',
+        showLegend=True
+    )
+    print(f"Finished direct transpilation plot")
+    pAnalyzer.comparativeEvolution(
+        STEPS=STEPS,
+        t=t,
+        figureFile='../images/Benchmark/pulse/pulse_efficient_pdf_evol.pdf',
+        showLegend=False
+    )
+    print(f"Finished pulse efficient plot")
+    print(f"Ellapsed time: {(time.time()-tstart)/60} min")
+    print("=========================================")
 
 ################################################################################
 #                           GENERATE FIDELITY PLOTS                            #
