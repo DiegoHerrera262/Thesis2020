@@ -6,6 +6,7 @@
 # DESCRIPTION: In this program, I define subroutines that will help on defining # Suzuki-Trotter schemes for simulation. They are based upon the graph
 # constructs designed on file graphRoutines.py
 
+from qiskit.ignis.verification.tomography.basis.circuits import state_tomography_circuits
 import graphRoutines as gr
 import numpy as np
 from scipy.linalg import expm
@@ -19,7 +20,9 @@ import qiskit.quantum_info as qi
 from qiskit.circuit import exceptions
 from qiskit import IBMQ, execute, Aer
 from qiskit.tools.monitor import job_monitor
-from qiskit.ignis.verification.tomography import process_tomography_circuits, ProcessTomographyFitter
+#from qiskit.ignis.verification.tomography import process_tomography_circuits, ProcessTomographyFitter
+from qiskit.ignis.verification.tomography import state_tomography_circuits, StateTomographyFitter
+from qiskit.quantum_info import state_fidelity, Statevector, partial_trace
 from qiskit.test.mock import FakeSantiago
 from qiskit import QuantumCircuit, QuantumRegister, ClassicalRegister
 from qiskit.ignis.mitigation.measurement import complete_meas_cal
@@ -242,20 +245,41 @@ class HeisenbergGraph:
         start, end = edge.tuple
         J = edge['paramExchangeIntegrals']
         qcEdge = QuantumCircuit(spinChain)
-        # Convert to computational basis
+
+        # See thesis document for more information
+        # on the nature of the implementation
+
         qcEdge.cx(spinChain[start], spinChain[end])
+
         qcEdge.h(spinChain[start])
-        # Compute J3 phase
-        qcEdge.rz(J[2], spinChain[end])
-        # Compute J1 phase
         qcEdge.rz(J[0], spinChain[start])
-        # Copmute J2 phase
-        qcEdge.cx(spinChain[end], spinChain[start])
-        qcEdge.rz(-J[1], spinChain[start])
-        qcEdge.cx(spinChain[end], spinChain[start])
-        # Return to computational basis
-        qcEdge.h(spinChain[start])
+        qcEdge.rz(J[2], spinChain[end])
+
+        # qcEdge.rz(np.pi/2, spinChain[start])
+        # qcEdge.sx(spinChain[start])
+        # qcEdge.rz(J[0], spinChain[start])
+        # qcEdge.rz(J[2], spinChain[end])
+
         qcEdge.cx(spinChain[start], spinChain[end])
+        
+        qcEdge.rz(-J[1], spinChain[end])
+
+        # qcEdge.rz(np.pi/2, spinChain[start])
+        # qcEdge.sx(spinChain[start])
+        # qcEdge.rz(np.pi/2, spinChain[start])
+        # qcEdge.rz(J[1], spinChain[end])
+
+        qcEdge.cx(spinChain[start], spinChain[end])
+
+        qcEdge.h(spinChain[start])
+
+        # qcEdge.sx(spinChain[start])
+        # qcEdge.rz(np.pi, spinChain[end])
+        # qcEdge.sx(spinChain[end])
+        # qcEdge.rz(np.pi, spinChain[end])
+
+        qcEdge.cx(spinChain[start], spinChain[end])
+
         return qcEdge
 
     def spinSpinCircuit(self, spinChain):
@@ -1104,12 +1128,69 @@ class HeisenbergGraph:
         return job
 
 
+class DirectSpinGraph(HeisenbergGraph):
+
+    '''
+    Class for simulating a generic Heisenberg hamiltonian
+    defined on a graph, using direct transpilation
+    '''
+
+    def edgeCircuit(self, edge, spinChain):
+        '''
+        Function for building circuit that
+        performs edge Hamiltonian evolution
+        '''
+        start, end = edge.tuple
+        J = edge['paramExchangeIntegrals']
+        qcEdge = QuantumCircuit(spinChain)
+        # Compute J1 phase
+        qcEdge.h([spinChain[start], spinChain[end]])
+        qcEdge.cx(spinChain[start], spinChain[end])
+        qcEdge.rz(J[0], spinChain[end])
+        qcEdge.cx(spinChain[start], spinChain[end])
+        qcEdge.h([spinChain[start], spinChain[end]])
+        # Compute J3 phase
+        qcEdge.sdg([spinChain[start], spinChain[end]])
+        qcEdge.h([spinChain[start], spinChain[end]])
+        qcEdge.cx(spinChain[start], spinChain[end])
+        qcEdge.rz(J[1], spinChain[end])
+        qcEdge.cx(spinChain[start], spinChain[end])
+        qcEdge.h([spinChain[start], spinChain[end]])
+        qcEdge.s([spinChain[start], spinChain[end]])
+        # Compute J3 phase
+        qcEdge.cx(spinChain[start], spinChain[end])
+        qcEdge.rz(J[2], spinChain[end])
+        qcEdge.cx(spinChain[start], spinChain[end])
+        return qcEdge
+
+
+
 class PulseSpinGraph(HeisenbergGraph):
 
     '''
     Class for simulating a generic Heisenberg hamiltonian
-    defined on a graph, with Las Heras algorithm
+    defined on a graph, using pulse efficient transpilation
     '''
+
+    def hasNoFields(self):
+        '''
+        Function for evaluating if there are
+        external local fields
+        '''
+        fieldSum = 0
+        for vertex in self.graph.vs:
+            Hx = vertex['externalField'][0]
+            Hy = vertex['externalField'][1]
+            Hz = vertex['externalField'][2]
+            fieldSum += Hx**2 + Hy**2 + Hz**2
+        return np.abs(fieldSum) < 1e-3
+    
+    def hasBipartiteGraph(self):
+        '''
+        Function for evaluating if the
+        spin graph is bipartite
+        '''
+        return len(self.graphColors) == 2
 
 ################################################################################
 ##         DEFINITION OF FUNDAMENTAL QUANTUM CIRCUIT FOR SIMULATION           ##
@@ -1171,12 +1252,33 @@ class PulseSpinGraph(HeisenbergGraph):
                 )
         return qcField.decompose()
 
+    def colorSpinSpinCircuit(self, color, spinChain, **kwargs):
+        '''
+        Function for building a spin-spin
+        interaction circuit for a given
+        graph color
+        '''
+        qcSpin = QuantumCircuit(spinChain)
+        for edge in self.matching[color]:
+            try:
+                dt = kwargs['dt']
+                qcSpin.append(
+                    self.edgeCircuit(edge, spinChain, dt=dt),
+                    spinChain
+                )
+            except KeyError:
+                qcSpin.append(
+                    self.edgeCircuit(edge, spinChain),
+                    spinChain
+                )
+            return qcSpin.decompose()
+    
     def spinSpinCircuit(self, spinChain, **kwargs):
         '''
         Function for building circuit that
         performs spin-spin Ham. evolution
         '''
-        spinChain = QuantumRegister(len(self.graph.vs))
+        # spinChain = QuantumRegister(len(self.graph.vs))
         qcSpin = QuantumCircuit(spinChain)
         for color in self.graphColors:
             for edge in self.matching[color]:
@@ -1238,8 +1340,69 @@ class PulseSpinGraph(HeisenbergGraph):
         spinChain = QuantumRegister(len(self.graph.vs), name='s')
         qcEvolution = QuantumCircuit(spinChain)
         qcStep = self.evolutionStep(dt, spinChain)
+
+        useThirdOrderTrot = self.hasNoFields() and self.hasBipartiteGraph()
+
+        if useThirdOrderTrot:
+            # print(useThirdOrderTrot)
+            # Third Order Trotter is [A/2][B][A]···[B][A/2]
+            # Where A, B are the Hamiltonians of each subgraph
+            A = self.graphColors[0]
+            B = self.graphColors[1]
+            # Compute operators
+            eA2 = self.colorSpinSpinCircuit(A, spinChain, dt=dt/2)
+            eA = self.colorSpinSpinCircuit(A, spinChain, dt=dt)
+            eB = self.colorSpinSpinCircuit(B, spinChain, dt=dt)
+            # Prepend [A/2]
+            qcEvolution.append(eA2, spinChain)
+            # Append sandwiched steps
+            for step in range(STEPS):
+                qcEvolution.append(eB, spinChain)
+                if step < STEPS - 1:
+                    qcEvolution.append(eA, spinChain)
+            # Append [A/2]
+            qcEvolution.append(eA2, spinChain)
+            return qcEvolution
+
+        # fieldSum = 0
+        # for vertex in self.graph.vs:
+        #     Hx = vertex['externalField'][0]
+        #     Hy = vertex['externalField'][1]
+        #     Hz = vertex['externalField'][2]
+        #     fieldSum += Hx**2 + Hy**2 + Hz**2
+        # # Compute bipartite circuits
+        # qcFirstColorStep = self.colorSpinSpinCircuit(
+        #     1,
+        #     spinChain,
+        #     dt=dt/2
+        # )
+        # qcSecondColorStep = self.colorSpinSpinCircuit(
+        #     2,
+        #     spinChain,
+        #     dt=dt
+        # )
+        # Check if the graph is bipartite and
+        # there is no external field for
+        # implementing third order Trotter
+        # if np.abs(fieldSum) < 1e-3 and len(self.graphColors) == 2:
+        #     qcEvolution.append(
+        #         qcFirstColorStep,
+        #         spinChain
+        #     )
+        #     qcEvolution.append(
+        #         qcSecondColorStep,
+        #         spinChain
+        #     )
+
         for _ in range(STEPS):
             qcEvolution.append(qcStep, spinChain)
+        
+        # if np.abs(fieldSum) < 1e-3 and len(self.graphColors) == 2:
+        #     qcEvolution.append(
+        #         qcFirstColorStep,
+        #         spinChain
+        #     )
+        
         return qcEvolution.decompose()
 
     def evolutionCircuit(self, STEPS=200, t=1.7):
@@ -1285,12 +1448,12 @@ class PulseSpinGraph(HeisenbergGraph):
             qcEdge.h(spinChain[start])
             # Duplicate pulse to cancel
             # undesired terms on CR
-            qcEdge.barrier()
+            # qcEdge.barrier()
             qcEdge.rzx(J[0]/2, spinChain[start], spinChain[end])
             qcEdge.x(spinChain[start])
             qcEdge.rzx(-J[0]/2, spinChain[start], spinChain[end])
             qcEdge.x(spinChain[start])
-            qcEdge.barrier()
+            # qcEdge.barrier()
             # Rotate start qubit to X
             qcEdge.h(spinChain[start])
         if np.abs(edge['exchangeIntegrals'][1]) > 1e-3:
@@ -1302,12 +1465,12 @@ class PulseSpinGraph(HeisenbergGraph):
             qcEdge.sdg(spinChain[end])
             # Duplicate pulse to cancel
             # undesired terms on CR
-            qcEdge.barrier()
+            # qcEdge.barrier()
             qcEdge.rzx(J[1]/2, spinChain[start], spinChain[end])
             qcEdge.x(spinChain[start])
             qcEdge.rzx(-J[1]/2, spinChain[start], spinChain[end])
             qcEdge.x(spinChain[start])
-            qcEdge.barrier()
+            # qcEdge.barrier()
             # Rotate start qubit to X
             qcEdge.h(spinChain[start])
             qcEdge.s(spinChain[start])
@@ -1319,12 +1482,12 @@ class PulseSpinGraph(HeisenbergGraph):
             qcEdge.h(spinChain[end])
             # Duplicate pulse to cancel
             # undesired terms on CR
-            qcEdge.barrier()
+            # qcEdge.barrier()
             qcEdge.rzx(J[2]/2, spinChain[start], spinChain[end])
             qcEdge.x(spinChain[start])
             qcEdge.rzx(-J[2]/2, spinChain[start], spinChain[end])
             qcEdge.x(spinChain[start])
-            qcEdge.barrier()
+            # qcEdge.barrier()
             # Rotate end qubit to Z
             qcEdge.h(spinChain[end])
         return qcEdge.to_instruction()
@@ -1345,16 +1508,14 @@ class PulseSpinGraph(HeisenbergGraph):
             transpiledCircuits = transpile(
                 circuits,
                 basis_gates=['x', 'sx', 'rz', 'rzx'],
-                # optimization_level=1
+                optimization_level=1
             )
             pm = PassManager([RZXCalibrationBuilderNoEcho(backend)])
             passCircuits = pm.run(transpiledCircuits)
             # experiment = schedule(passCircuits, backend)
             return execute(
                 passCircuits,
-                # experiment,
                 backend=backend,
-                # meas_level=2,
                 shots=shots,
             )
 
@@ -1399,7 +1560,6 @@ class DataAnalyzer:
         # slope, intercept, r-value, p-value, stderr
         return linregress(logSteps, logDepth)
 
-
 ################################################################################
 ##                      COMPARATIVE EVOLUTION PLOTS                           ##
 ################################################################################
@@ -1410,6 +1570,8 @@ class DataAnalyzer:
             t=3.4,
             saveToFiles=False,
             figureFile='comparativeEvolution.pdf',
+            showLegend=True,
+            showPlot=False,
             **kwargs):
         '''
         Function for comparative plotting
@@ -1453,9 +1615,11 @@ class DataAnalyzer:
             )
         ax.set_aspect(2)
         ax.set_ylim([-0.1, 1.1])
-        ax.legend()
+        if showLegend:
+            ax.legend()
         fig.savefig(figureFile)
-        plt.show()
+        if showPlot:
+            plt.show()
 
     def comparativeExactPauliExpEvolution(
             self,
@@ -1522,7 +1686,6 @@ class DataAnalyzer:
                     PauliString
                 )
         return times, expVals
-
 
 ################################################################################
 ##                     EVOLUTION OPERATOR ERROR PLOTS                         ##
@@ -1687,45 +1850,106 @@ class DataAnalyzer:
 ##                   PROCESS TOMOGRAPHY FIDELITY PLOTS                        ##
 ################################################################################
 
-    def processTomographyInfidelity(self, STEPS=200, t=3.4):
+    def stateQSTFidelity(
+        self, 
+        result, 
+        circs, 
+        measQubits=[1,3,5], 
+        t=1.7):
         '''
-        Function for computing process fidelity
-        of trotterization using SQPT
+        Function for computing state fidelity
+        after time evolution
         '''
-        # Set up QPT
-        spinChain = QuantumRegister(len(self.spinGraph.graph.vs))
-        qcFidelity = QuantumCircuit(spinChain)
-        qcFidelity.append(
-            self.spinGraph.rawEvolutionCircuit(STEPS=STEPS, t=t),
-            spinChain
-        )
-        qpt_circs = process_tomography_circuits(qcFidelity, spinChain)
-        job = execute(qpt_circs, self.spinGraph.backend, shots=2048)
-        tomography = ProcessTomographyFitter(
-            job.result(),
-            qpt_circs
-        )
-        # Fit process Chi matrix
-        chi_fit = tomography.fit(method='lstsq')
-        # Get target process
-        targetProcess = self.spinGraph.exactEvolutionUnitary(t=t)
-        return 1 - qi.average_gate_fidelity(
-            chi_fit,
-            target=targetProcess,
-        )
-
-    def processTomographyData(self, STEPS=[200], times=[3.4]):
-        '''
-        Function for generating average
-        fidelity data
-        '''
-        return np.array([
+        totalStateVec = Statevector(np.matmul(
+            self.spinGraph.exactEvolutionUnitary(t=t),
+            self.spinGraph.initialState
+        ))
+        # trace subsystem
+        targetStateVec = partial_trace(
+            totalStateVec,
             [
-                self.processTomographyInfidelity(STEPS=N, t=t)
-                for N in STEPS
+                idx 
+                for idx in range(len(self.spinGraph.graph.vs))
+                if idx not in measQubits
             ]
-            for t in times
-        ])
+        )
+        # Instantiate tomography fitter qiskit v0.32.1
+        fitter = StateTomographyFitter(result, circs)
+        # Fit state density
+        density = fitter.fit(method="lstsq")
+        # return fidelity
+        return state_fidelity(density, targetStateVec)
+
+    def averageStepsQSTFidelity(
+        self, 
+        STEPS=200, 
+        t=1.7, 
+        reps=8,
+        measQubits=[1,3,5]):
+        '''
+        Function for computing average process
+        fidelity of time evolution as function of
+        the number of steps
+        '''
+        # Get quantum circuits for each step
+        # for each repetition. Reps are on rows
+        print("Setting up raw circuits...")
+        # Due to current structure of tomography
+        # fitters, a circuit with defined register
+        # needs to be used for optimization
+        qcReps = [
+            self.spinGraph.stepsSeriesCircuits(STEPS=STEPS, t=t)
+            for _ in range(reps)
+        ]
+        # return qcReps
+        # Generate tomography circuits
+        print("Rendering tomography circuits...")
+        qcTomography = [
+            [
+                state_tomography_circuits(
+                    circuit,
+                    measured_qubits=[
+                        circuit.qregs[0][idx] 
+                        for idx in measQubits
+                    ]
+                )
+                for circuit in rep
+            ]
+            for rep in qcReps
+        ]
+        # Flatten circuits for job execution
+        qcFlat = [
+            qc 
+            for repetition in qcTomography 
+            for stepTomography in repetition
+            for qc in stepTomography
+        ]
+        # execute job
+        job = self.spinGraph.execute(
+            qcFlat, 
+            self.spinGraph.backend, 
+            shots=2048
+        )
+        if not self.spinGraph.localSimulation:
+            job_monitor(job)
+        result = job.result()
+        # Get fidelities
+        print("Computing fidelities...")
+        fidelities = [
+            [
+                self.stateQSTFidelity(
+                    result, 
+                    circs, 
+                    t=t,
+                    measQubits=measQubits
+                )
+                for circs in rep
+            ]
+            for rep in qcTomography
+        ]
+        print("Finished experiment")
+        return np.array(fidelities)
+
 
 ################################################################################
 ##                     EVOLUTION FIDELITY ERROR PLOTS                         ##
@@ -1784,12 +2008,11 @@ class DataAnalyzer:
         ])
         return self.pdfFidelities(data, targetPdf)
 
-    def pdfErrorStepsPlot(
+    def pdfErrorStepsSeries(
             self,
             MAX_STEPS=200,
             times=[3.4],
             reps=50,
-            saveToFile=False,
             **kwargs):
         '''
         Function for plotting pdf error
@@ -1800,7 +2023,7 @@ class DataAnalyzer:
             times=times,
             reps=reps
         )
-        job = execute(experiment, self.spinGraph.backend, shots=2048)
+        job = self.spinGraph.execute(experiment, self.spinGraph.backend, shots=2048)
         if not self.spinGraph.localSimulation:
             job_monitor(job)
         try:
@@ -1821,36 +2044,6 @@ class DataAnalyzer:
             for repetition in repetitions
         ])
         return data
-
-        # evolutionSteps = None
-        # try:
-        #     evolutionSteps = self.spinGraph.stepsSeries(
-        #         MAX_STEPS=MAX_STEPS,
-        #         t=t,
-        #         saveToFile=saveToFile,
-        #         measurementFitter=kwargs['measurementFitter']
-        #     )
-        # except KeyError:
-        #     evolutionSteps = self.spinGraph.stepsSeries(
-        #         MAX_STEPS=MAX_STEPS,
-        #         t=t,
-        #         saveToFile=saveToFile
-        #     )
-        # exactPdf = self.spinGraph.exactTimeEvolution(t=t)
-        # errorArray = np.array([
-        #     1-self.pdfFidelities(evolutionSteps[idx, 1:], exactPdf)
-        #     for idx in range(MAX_STEPS)
-        # ])
-        # logSteps = np.log(evolutionSteps[:, 0])
-        # logErrors = np.log(errorArray)
-        # plt.xlabel(r'$\ln(N)$')
-        # plt.ylabel(r'$\ln(1-F_N)$')
-        # plt.scatter(
-        #     logSteps,
-        #     logErrors
-        # )
-        # plt.show()
-        # return linregress(logSteps, logErrors)
 
     def pdfErrorStepsData(
             self,
@@ -1943,7 +2136,11 @@ class DataAnalyzer:
 ##                        ANNIHILATION ENERGY PLOTS                           ##
 ################################################################################
 
-    def annealingProcessGraph(self, maxPeriod=13, periodStep=1, STEPS=250):
+    def annealingProcessGraph(
+            self, 
+            maxPeriod=13, 
+            periodStep=1, 
+            STEPS=250):
         '''
         Function for plotting 
         annihilation convergence
