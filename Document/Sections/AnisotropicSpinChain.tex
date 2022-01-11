@@ -1,18 +1,121 @@
-This chapter presents generic trotterization schemes for quantum time simulation governed by Hamiltonian \ref{eq:HeisenbergHamiltonian}. Section \ref{sec:MainCircuits} presents quantum circuits that are best suited to IBM Quantum architecture. Results obtained by Slathe et. al. \cite{HeisenbergSimulLasHeras} and Las Heras et. al. \cite{HubbardSimulLasHeras} are reproduced, using IBM Quantum's backend Santiago. As a demonstration of the potential of quantum time simulation for studying magnetic systems, some instances of magnetic systems modeled by Heisenberg-like Hamiltonians are studied on section \ref{sec:SolidStateAplications}. In particular, a five-qubit Ising model in the presence of a transverse magnetic field is studied at zero temperature. Finally, limitations of time simulation due to decoherence and gate errors are discussed on section \ref{sec:Benchmark}. An error model is used to assess the fidelity limits of quantum simulation for the particular target Hamiltonian, at finite times.
+This chapter introduces a time simulation algorithm for Hamiltonian \ref{eq:HeisenbergHamiltonian}. First a trotterization scheme is introduced, and its advantages are discussed for simulating certain types of graphs or lattices. Relations between discretization step, evolution time and evolution error are computed and discussed in order to establish disadvantages of execution on current (noisy) quantum devices. Then, three possible implementation strategies are introduced: 1) a direct transpilation of circuits proposed by Las Heras et. al. \cite{HubbardSimulLasHeras}, 2) a basis-efficient transpilation relying on commutation properties of local Hamiltonians \footnote{The work was performed at early stages independently of that on \cite{BellUniversalCartan}. However, the insights are identical and thus the author is compelled to refer to this previous work. It is clear, however, that the mentioned reference considers the problem of universal two qubit gates which, albeit related to the specific problem of the present dissertation, is a quite different approach. This dissertation uses the results derived to solve a specific time evolution problem with potential application to specific areas of solid state physics and physical chemistry.}, and 3) a pulse-efficient transpilation based on cross-resonance interaction. Finally, the three algorithms are tested using a three-qubit Hamiltonian. Single-qubit Pauli expected value evolution and probability density evolution as qualitative indicators, whereas probability density fidelity and state fidelity are used as quantitative indicators.
 
-\section{Hamiltonian Evolution on IBM Q devices}
-\label{sec:MainCircuits}
-  
-  On chapter \ref{chap:qts}, some networks for simulating time evolution of the two-qubit Hamiltonian were introduced (see fig. \ref{fig:salathe-circuits}). In this section, a possible transpilation of those algorithms to IBM Quantum devices, based on the universal set $\{\text{CNOT}, \hat{X}, \sqrt{\hat{X}}, \hat{R}_{\hat{z}, \phi}\}$, is presented. An optimization step is carried out by explicitly considering the commutation properties of the terms in the Hamiltonian, leading to a more hardware efficient Trotterization scheme. Those insights are used for designing a general approach to simulating the full Hamiltonian 
+\section{Trotterization And Time Evolution}
+\label{sec:MainTrotterScheme}
+
+  Consider the multiple spin Hamiltonian
 
   \begin{equation}
     \hat{H} = \sum_{\langle i,j \rangle} J_{ij}^{(X)} \hat{X}_i \hat{X}_j + J_{ij}^{(Y)} \hat{Y}_i \hat{Y}_j + J_{ij}^{(Z)} \hat{Z}_i \hat{Z}_j + \sum_i h_i^{(X)} \hat{X}_i + h_i^{(Y)} \hat{Y}_i + h_i^{(Z)} \hat{Z}_i
     \label{eq:HeisenbergHamiltonian2}
   \end{equation}
 
-  Finally, some simulations are carried out using IBM Quantum devices, as well as QASM simulators. Results of simulating Hamiltonians \ref{eq:IsingSlathe} and \ref{eq:XYZSalathe} are reproduced from previous work \cite{HeisenbergSimulLasHeras,HubbardSimulLasHeras}. Average process fidelities, over the Hamiltonian parameters, are computed using QASM simulators, in order to demonstrate the relations between state fidelity, evolution time and number of integration steps.
+  Defined over an arbitrary graph. The shape already suggests that the Hamiltonian above can be decomposed in local interactions of the shape
 
-  \subsection{Fundamental Quantum Circuits}
+  \begin{gather}
+    \hat{H}_{ij} = J_{ij}^{(X)} \hat{X}_i \hat{X}_j + J_{ij}^{(Y)} \hat{Y}_i \hat{Y}_j + J_{ij}^{(Z)} \hat{Z}_i \hat{Z}_j \\
+    \hat{H}_{i} = h_i^{(X)} \hat{X}_i + h_i^{(Y)} \hat{Y}_i + h_i^{(Z)} \hat{Z}_i
+    \label{eq:HamiltonianDecomposition}
+  \end{gather}
+
+  Such that
+
+  \begin{equation}
+    \hat{H} = \sum_{\langle i,j \rangle} \hat{H}_{ij} + \sum_i \hat{H}_i
+  \end{equation}
+
+  This leads to a direct second order trotterization of the shape
+
+  \begin{equation}
+    \mathrm{e}^{-\mathrm{i}\hat{H}\Delta t} \approx \prod_{\langle i,j \rangle} \mathrm{e}^{-\mathrm{i}\hat{H}_{i,j}\Delta t} \prod_{i} \mathrm{e}^{-\mathrm{i}\hat{H}_i \Delta t} + \mathcal{O}(\Delta t^2)
+    \label{eq:HamiltonianTrotterization}
+  \end{equation}
+
+  In general, interactions associated to disjoint edges commute, and thus can be simulated simultaneously. Hence, an advantage of this approach to time evolution is that by partitioning the graph on sets of mutually disjoint sets, several terms can be implemented in parallel on actual quantum devices. This approach is implemented in the present work, and discussed further on the appendix. This parallelism is illustrated for a spin chain in figure \ref{fig:spinChainCircuit}. It can be noticed that the circuit depth of the trotter step of three or more spins with chain topology is independent of the number of spins. As a result, time complexity only increases with the desired time discretization, which correlates with the error in the time simulation approximation. 
+  
+  Another interesting feature, as shown in figure \ref{fig:spinChainCircuit}, is that it is possible to perform third order time evolution using the first iteration of Suzuki-Trotter scheme with roughly the sme time complexity as the second order trotterization. This, clearly, in the case where no external local fields are present in the model Hamiltonian, and the graph corresponds to a chain. To illustrate the point more precisely, consider the Hamiltonian
+
+  \begin{equation}
+    \hat{H} = \sum_{i=0}^{N-2} \hat{H}_{i,i+1}
+    \label{eq:ChainHamiltonian}
+  \end{equation}
+
+  Where $\hat{H}_{i,j}$ is defined as on equation \ref{eq:HamiltonianDecomposition}. It is quite straightforward to see the that the second order evolution corresponds to the approximation
+
+  \begin{equation}
+    \mathrm{e}^{-\mathrm{i}\hat{H}\Delta t} \approx \prod_{i \text{ even}} \mathrm{e}^{-\mathrm{i}\hat{H}_{i,i+1}t} \prod_{i \text{ odd}} \mathrm{e}^{-\mathrm{i}\hat{H}_{i,i+1}t} + \mathcal{O}(\Delta t^2)
+    \label{eq:HamiltonianTrotterization}
+  \end{equation}
+
+  For this particular system, denote
+
+  \begin{gather}
+    \hat{A}(\Delta t) = \prod_{i \text{ even}} \mathrm{e}^{-\mathrm{i}\hat{H}_{i,i+1}t} \\
+    \hat{B}(\Delta t) = \prod_{i \text{ odd}} \mathrm{e}^{-\mathrm{i}\hat{H}_{i,i+1}t}
+    \label{eq:ChainOpsTrotter}
+  \end{gather}
+
+  Such that
+
+  \begin{equation}
+    \mathrm{e}^{-\mathrm{i}\hat{H}\Delta t} \approx \hat{A}(\Delta t) \hat{B}(\Delta t) + \mathcal{O}(\Delta t^2)
+    \label{eq:HamiltonianTrotterization}
+  \end{equation}
+
+  Simulation over a time $t = M \Delta t$ yields
+
+  \begin{equation}
+    \mathrm{e}^{-\mathrm{i}\hat{H}t} \approx \bigg( \hat{A}(\Delta t) \hat{B}(\Delta t) \bigg)^{M}
+    \label{eq:HamiltonianTrotterization}
+  \end{equation}
+
+  The third order scheme may be implemented using Suzuki-Trotter zeroth order evolution (eq. \ref{eq:Suzuki0}), yielding the following finite time approximation
+
+  \begin{equation}
+    \begin{aligned}
+      \mathrm{e}^{-\mathrm{i}\hat{H}t} \approx & \bigg( \hat{A}(\Delta t/2) \hat{B}(\Delta t) \hat{A}(\Delta t/2) \bigg)^{M} \\
+    = &  \hat{A}(\Delta t/2) \bigg( \hat{B}(\Delta t) \hat{A}(\Delta t) \bigg)^{M-1} \hat{B}(\Delta t) \hat{A}(\Delta t/2) \\
+    = & \hat{A}(\Delta t/2) \hat{B}(\Delta t) \bigg( \hat{A}(\Delta t) \hat{B}(\Delta t) \bigg)^{M-1} \hat{A}(\Delta t/2)
+    \label{eq:HamiltonianTrotterization}
+    \end{aligned}
+  \end{equation}
+
+  It can be seen that the \textit{power} operator (the one with a power in the approximation unitary) on each scheme can be implemented in the same fashion on a quantum circuit. Hence, both second order and third order schemes have roughly the same time complexity when implemented on quantum devices. This optimization is taken into account during implementation on IBM Quantum backends.
+  
+  \include{circuits/spinChainCircuit}
+
+\section{Circuit implementations}
+\label{sec:MainCircuits}
+  
+  On chapter \ref{chap:qc}, some networks for simulating time evolution of the two-qubit Hamiltonian were introduced (see fig. \ref{fig:salathe-circuits}). In this section, three possible transpiled circuits are introduced. Those implement the single qubit and two qubit operators on equation \ref{eq:HamiltonianDecomposition}. The single qubit operators are implemented in the same way on all three alternatives. Each circuit differs from the others on the implementation of the two spin operators. The first alternative is a direct basis transpilation, based on the controlled phase gate. The second alternative is one that takes advantage of the commutation properties of the local two spin Hamiltonian. This alternative was derived mostly independently from \cite{BellUniversalCartan} at early stages of the present work. However,a thorough discussion of the insights required to derive this circuit is included. The last option is a cross resonance based implementation as discussed on chapter \ref{chap:qc}.
+
+  \subsection{Simulation of field interaction}
+
+  To simulate evolution under Hamiltonian \ref{eq:HamiltonianDecomposition}, a direct approach would be to us te definition of single qubit rotations, and implement a second order trotterization scheme as illustrated on figure \ref{fig:directSimulationFieldSpin}. However, exact simulation of this model is possible by rotating the Bloch sphere main axes so that the external field points to the $\hat{z}$ direction. This can be done by the operator
+
+  \begin{equation}
+    \hat{U}_{\theta,\phi} = \begin{bmatrix}
+      \cos(\frac{\theta}{2}) & \sin(\frac{\theta}{2}) \\
+      \mathrm{e}^{\mathrm{i}\phi}\sin(\frac{\theta}{2}) & -\mathrm{e}^{\mathrm{i}\phi}\cos(\frac{\theta}{2})
+    \end{bmatrix}
+    \label{eq:UGate}
+  \end{equation}
+
+  Where $\theta$ and $\phi$ are defined by the spherical representation of the external field (see eq. \ref{eq:PolarRepresentation}):
+
+  \begin{gather}
+    h^2 =  (h_i^{(x)})^2 + (h_i^{(y)})^2 + (h_i^{(z)})^2 \\
+    h_i^{(x)} = h \sin(\theta)\cos(\phi) \\
+    h_i^{(y)} = h \sin(\theta)\sin(\phi) \\
+    h_i^{(z)} = h \cos(\theta)
+    \label{eq:PolarRepresentation}
+  \end{gather}
+
+  This approach is illustrated on figure \ref{fig:rotatedSimulationFieldSpin}. Therefore, at the same computational cost, this interaction can be simulated exactly by the former algorithm.
+
+  \input{circuits/directTrotterizationFieldSpin}
+
+  \subsection{Simulation of Two-spin Interaction}
 
   First, the simpler spin-spin Hamiltonian
 
@@ -21,16 +124,9 @@ This chapter presents generic trotterization schemes for quantum time simulation
     \label{eq:SpinSpin}
   \end{equation}
 
-  Is simulated using IBM Quantum's universal set. To this end, the algorithm on figure \ref{fig:heras-hubbard} is transpiled, and further improved using commutation properties of the involved terms. The external field part of Hamiltonian \ref{eq:HeisenbergHamiltonian2} 
+  Is simulated using IBM Quantum device's universal set, or cross resonance pulses. This is the most computationally expensive part of the evolution scheme. As may be seen on figure \ref{fig:echoedPulseQiskit}, the most time consuming processes are simulating two qubit interactions. In consequence, reducing the number and duration of CNOT gates or cross resonance pulses on the evolution algorithm is crucial for obtaining high fidelity results. Here, a first network that performs direct transpilation of circuit \ref{fig:heras-hubbard} is presented. It will be used as a control case, since non-optimized transpilations would yield this network for simulating the Hamiltonian \cite{Qiskit}. A basis efficient circuit is introduced, and its mathematical and physical insights are discussed \cite{BellUniversalCartan}. Finally, the pulse efficient network proposed on \cite{RXZPulseEfficient} is revisited.
   
-  \begin{equation}
-    \hat{H}_{i} = h_i^{(X)} \hat{X}_i + h_i^{(Y)} \hat{Y}_i + h_i^{(Z)} \hat{Z}_i
-    \label{eq:FieldSpin}
-  \end{equation}
-  
-  is somewhat straightforward to simulate, but a simple approach is taken to reduce the number of gates required when the filed is not parallel to the main axes $\hat{x}$, $\hat{y}$, $\hat{z}$. With those insights, a general scheme for simulating the full Hamiltonian \ref{eq:HeisenbergHamiltonian2} follows.
-
-  \subsubsection{Simulation of Two-spin Interaction}
+  \subsubsection{Direct transpilation circuit}
 
   To adapt circuit \ref{fig:heras-hubbard} for IBM Quantum devices, it is helpful to note that
 
@@ -59,7 +155,11 @@ This chapter presents generic trotterization schemes for quantum time simulation
 
   \input{circuits/directTrotterSpinSpin}
 
-  This leads to a straightforward algorithm for simulating spin-spin interaction that uses 6 CNOT gates, and 15 single-qubit rotations. This gate count can be reduced further by considering the commutation relations between the operators that constitute the spin-spin interaction Hamiltonian
+  This leads to a straightforward algorithm for simulating spin-spin interaction that uses 6 CNOT gates, and 15 single-qubit rotations. 
+  
+  \subsubsection{Basis efficient circuit}
+
+  This gate count can be reduced further by considering the commutation relations between the operators that constitute the spin-spin interaction Hamiltonian
 
   \begin{equation}
     [\hat{X}_i\hat{X}_j, \hat{Z}_i\hat{Z}_j] = [\hat{Y}_i\hat{Y}_j, \hat{Z}_i\hat{Z}_j] = 0
@@ -106,72 +206,46 @@ This chapter presents generic trotterization schemes for quantum time simulation
     \label{eq:SpinSpinPhases}
   \end{gather}
   
-  Where $\Delta t$ is the time interval to be simulated. A quantum circuit representing this approach to evolution is presented on figure \ref{fig:abelianTrotterSpinSpin}. It can be seen that the amount of two-qubit gates is reduced by $2/3$ at least ($1/2$ at best in case of an $XZ$ model). Also, the amount of single-qubit gates is reduced to a third. It represents an improvement upon direct transpilation of the algorithms proposed by previous work (see chap. \ref{chap:qts}).
+  Where $\Delta t$ is the time interval to be simulated. A quantum circuit representing this approach to evolution is presented on figure \ref{fig:abelianTrotterSpinSpin}. Main stages are separated by slices, which correspond to
+
+  \begin{enumerate}
+    \item Basis change from computational to Bell.
+    \item Append $\phi_{xx}$ and $\phi_{zz}$ phases.
+    \item Shuffle the basis to append $\phi_{yy}$ phase.
+    \item Return to ordered Bell basis
+  \end{enumerate}
+
+  In the first stage, the Bell basis is mapped according to
+
+  \begin{gather}
+    \ket{\Phi^{+}} \rightarrow \ket{00} \\
+    \ket{\Phi^{-}} \rightarrow \ket{01} \\
+    \ket{\Psi^{+}} \rightarrow \ket{10} \\
+    \ket{\Psi^{-}} \rightarrow \ket{11} 
+  \end{gather}
+
+  From equations \ref{eq:SpinSpinEnergies}, it may be noted that $xx$ phase correlates to the less significant bit, while $zz$ phase correlates to the most significant bit. Also, $yy$ phase correlates to the parity of the mapped computational basis state, hence the need of a CNOT gate. The last part undoes the CNOT gate action on the previous step, and returns to the Bell basis. The direct way to perform the last step is illustrated on figure \ref{fig:abelianTrotterSpinSpin}(a). A more clever approach relies on the following equalities (up to global state phases)
+
+  \begin{gather}
+    \ket{\Phi^{+}} = \frac{1}{\sqrt{2}}(\ket{00} + \ket{11}) = \frac{1}{\sqrt{2}}(\ket{+\mathrm{i},-\mathrm{i}} + \ket{-\mathrm{i},+\mathrm{i}}) \\
+    \ket{\Phi^{-}} = \frac{1}{\sqrt{2}}(\ket{00} - \ket{11}) = \frac{1}{\sqrt{2}}(\ket{+\mathrm{i},+\mathrm{i}} + \ket{-\mathrm{i},-\mathrm{i}}) \\
+    \ket{\Psi^{+}} = \frac{1}{\sqrt{2}}(\ket{01} + \ket{10}) = \frac{1}{\sqrt{2}}(\ket{+\mathrm{i},+\mathrm{i}} - \ket{-\mathrm{i},-\mathrm{i}}) \\
+    \ket{\Psi^{-}} = \frac{1}{\sqrt{2}}(\ket{01} - \ket{10}) = \frac{1}{\sqrt{2}}(\ket{+\mathrm{i},-\mathrm{i}} - \ket{-\mathrm{i},+\mathrm{i}}) 
+    \label{eq:bellOnYBasis}
+  \end{gather}
+
+  Where the single qubit states $\{\ket{+\mathrm{i}}, \ket{+\mathrm{i}}\}$ are defined as on chapter \ref{chap:qc}, and correspond to the $\hat{Y}$ eigenstates. The shuffling stage that appends $yy$ phase actually permutes states $\ket{\Psi^{-}}$ and $\ket{\Psi^{+}}$ of the Bell basis. It is now easy to see that by performing single qubit rotations that are equivalent to the mappings
+
+  \begin{gather}
+    \ket{0}_0 \rightarrow \ket{-\mathrm{i}}_0 \\
+    \ket{1}_0 \rightarrow -\mathrm{i}\ket{+\mathrm{i}}_0 \\
+    \ket{0}_1 \rightarrow \ket{+\mathrm{i}}_1 \\
+    \ket{1}_1 \rightarrow \mathrm{i}\ket{-\mathrm{i}}_1 \\
+    \label{eq:localBellShuffling}
+  \end{gather}
+
+  Where the subindex corresponds to qubits 0 and 1, respectively. It is possible to perform the desired reordering without using an additional CNOT gate. Such procedure is illustrated on figure \ref{fig:abelianTrotterSpinSpin}(b). On the last state, the computational basis is mapped back to the Bell basis, and the reordering is performed on the Bell basis using local rotations that correspond to transformation \ref{eq:localBellShuffling}. As a result, the number of expensive CNOT gates has been halved with respect to the direct transpilation circuit.
 
   \input{circuits/abelianTrotterSpinSpin}
 
-  \subsection{Simulation of field interaction}
-
-  To simulate evolution under Hamiltonian \ref{eq:FieldSpin}, a direct approach would be to us te definition of single qubit rotations, and implement a second order trotterization scheme as illustrated on figure \ref{fig:directSimulationFieldSpin}. However, exact simulation of this model is possible by rotating the Bloch sphere main axes so that the external field points to the $\hat{z}$ direction. This can be done by the operator
-
-  \begin{equation}
-    \hat{U}_{\theta,\phi} = \begin{bmatrix}
-      \cos(\frac{\theta}{2}) & \sin(\frac{\theta}{2}) \\
-      \mathrm{e}^{\mathrm{i}\phi}\sin(\frac{\theta}{2}) & -\mathrm{e}^{\mathrm{i}\phi}\cos(\frac{\theta}{2})
-    \end{bmatrix}
-    \label{eq:UGate}
-  \end{equation}
-
-  Where $\theta$ and $\phi$ are defined by the spherical representation of the external field (see eq. \ref{eq:PolarRepresentation}):
-
-  \begin{gather}
-    h^2 =  (h_i^{(x)})^2 + (h_i^{(y)})^2 + (h_i^{(z)})^2 \\
-    h_i^{(x)} = h \sin(\theta)\cos(\phi) \\
-    h_i^{(y)} = h \sin(\theta)\sin(\phi) \\
-    h_i^{(z)} = h \cos(\theta)
-    \label{eq:PolarRepresentation}
-  \end{gather}
-
-  This approach is illustrated on figure \ref{fig:rotatedSimulationFieldSpin}. Therefore, at the same computational cost, this interaction can be simulated exactly by the former algorithm.
-
-  \input{circuits/directTrotterizationFieldSpin}
-
-  \subsection{Simulation of full Hamiltonian}
-
-  It is useful to rewrite the Hamiltonian \ref{eq:HeisenbergHamiltonian2} in terms of Hamiltonians \ref{eq:SpinSpin} and \ref{eq:FieldSpin} as follows
-
-  \begin{equation}
-    \hat{H} = \sum_{\langle i,j \rangle} \hat{H}_{ij} + \sum_i \hat{H}_i
-  \end{equation}
-
-  This leads to a direct second order trotterization of the shape
-
-  \begin{equation}
-    \mathrm{e}^{-\mathrm{i}\hat{H}t} \approx \prod_{\langle i,j \rangle} \mathrm{e}^{-\mathrm{i}\hat{H}_{i,j}t} \prod_{i} \mathrm{e}^{-\mathrm{i}\hat{H}_i t} + \mathcal{O}(t^2)
-    \label{eq:HamiltonianTrotterization}
-  \end{equation}
-
-  In general, a Hamiltonian defines a graph whose edges represent spin-spin interactions, and whose vertices correspond to spin half sites where a local external field may be defined. Since edges that do not share a vertex can be simulated in parallel, it is possible to reduce the gate depth by scheduling evolution operators as grouped by non adjacent edges. The particular case of a non-periodic three spin chain is illustrated on figure \ref{fig:spinChainCircuit}. In general, however, finding the smallest number of non-adjacent sets of edges is a hard computational problem. Hence, a greedy algorithm may be used for partitioning the graph. This may not produce an optimal solution for all graphs, but for simple topologies, like a spin chain, it can find pretty good approximate solutions.
-
-  \include{circuits/spinChainCircuit}
-
-\section{Algorithm benchmark}
-\label{sec:Benchmark}
-
-  In following sections of this chapter, simulation algorithms proposed on section \ref{sec:MainCircuits} are studied in further detail. Results from previous work is reproduced to demonstrate the correctness of the algorithms \cite{HeisenbergSimulLasHeras, HubbardSimulLasHeras}. More simulations are carried out to assess the limitations of Trotterization schemes for quantum time evolution of spin systems. In particular, a non-periodic spin chain topology is used for assessing average state fidelities. Five spins are simulated using both fault tolerant and noisy quantum computing models.
-
-  \subsection{Simulation of Two-spin Hamiltonians}
-
-  In this section, both $XYZ$ interaction and a two-mode Hubbard model are simulated using QASM simulator and IBM Quito. For the first model, expected value of single-qubit Pauli operators are measured, while occupation numbers on the second model, as a function of evolution time. Since measurements on IBM's quantum devices are carried out on computational basis, appropriate rotations are performed to measure Pauli string operators that involve $\hat{X}$ or $\hat{Y}$ operators.
-
-  Simulation results for the $XYZ$ interaction are reported on figure \ref{fig:XYZObservables}. The system is initialized to the product state
-
-  \begin{equation}
-    \ket{\psi_0} = \ket{+} \otimes \ket{0}
-  \end{equation}
-
-\section{Computation of magnetic properties}
-\label{sec:SolidStateAplications}
-
-  \subsection{Quantum Phase Transitions at Zero Temperature}
-  \lipsum[2-4]
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

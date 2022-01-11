@@ -1,12 +1,27 @@
 \begin{figure}
     \centering
-    \begin{quantikz}
-        & \gate[wires=2]{\mathrm{e}^{-\mathrm{i}\hat{H}_{0,1}\Delta t}} & \qw & \gate{\mathrm{e}^{-\mathrm{i}\hat{H}_{0}\Delta t}} & \qw \\
-        & \qw & \gate[wires=2]{\mathrm{e}^{-\mathrm{i}\hat{H}_{1,2}\Delta t}} & \gate{\mathrm{e}^{-\mathrm{i}\hat{H}_{1}\Delta t}} & \qw \\
-        & \gate[wires=2]{\mathrm{e}^{-\mathrm{i}\hat{H}_{2,3}\Delta t}} & \qw & \gate{\mathrm{e}^{-\mathrm{i}\hat{H}_{2}\Delta t}} & \qw \\
-        & \qw & \gate[wires=2]{\mathrm{e}^{-\mathrm{i}\hat{H}_{3,4}\Delta t}} & \gate{\mathrm{e}^{-\mathrm{i}\hat{H}_{1}\Delta t}} & \qw \\
-        & \qw & \qw  &      \gate{\mathrm{e}^{-\mathrm{i}\hat{H}_{4}\Delta t}} & \qw
-    \end{quantikz}
-    \caption{Trotter step for simulating a spin chain. Notice that spin-spin terms that do not share a graph point can be evolved in parallel. A greedy algorithm can be used to determine a possible, if not optimal, scheme for simulating spin-spin interactions on parallel.}
+    \begin{subfigure}[b]{1.0\textwidth}
+        \caption{}
+        \centering
+        \begin{quantikz}
+            & \gate[wires=2]{\mathrm{e}^{-\mathrm{i}\hat{H}_{0,1}\Delta t}} & \qw                                                           & \gate{\mathrm{e}^{-\mathrm{i}\hat{H}_{0}\Delta t}} & \qw \\
+            & \qw                                                           & \gate[wires=2]{\mathrm{e}^{-\mathrm{i}\hat{H}_{1,2}\Delta t}} & \gate{\mathrm{e}^{-\mathrm{i}\hat{H}_{1}\Delta t}} & \qw \\
+            & \gate[wires=2]{\mathrm{e}^{-\mathrm{i}\hat{H}_{2,3}\Delta t}} & \qw                                                           & \gate{\mathrm{e}^{-\mathrm{i}\hat{H}_{2}\Delta t}} & \qw \\
+            & \qw                                                           & \gate[wires=2]{\mathrm{e}^{-\mathrm{i}\hat{H}_{3,4}\Delta t}} & \gate{\mathrm{e}^{-\mathrm{i}\hat{H}_{1}\Delta t}} & \qw \\
+            & \qw                                                           & \qw                                                           & \gate{\mathrm{e}^{-\mathrm{i}\hat{H}_{4}\Delta t}} & \qw
+        \end{quantikz}
+    \end{subfigure}
+    \begin{subfigure}[b]{1.0\textwidth}
+        \caption{}
+        \centering
+        \begin{quantikz}
+            & \gate[wires=2]{\mathrm{e}^{-\mathrm{i}\hat{H}_{0,1}\Delta t/2}} & \qw \gategroup[wires=5, steps=2, style={dashed, rounded corners}]{}                                                           & \gate[wires=2]{\mathrm{e}^{-\mathrm{i}\hat{H}_{0,1}\Delta t}} & \qw                                                           & \gate[wires=2]{\mathrm{e}^{-\mathrm{i}\hat{H}_{0,1}\Delta t/2}} & \qw  \\
+            & \qw                                                             & \gate[wires=2]{\mathrm{e}^{-\mathrm{i}\hat{H}_{1,2}\Delta t}} & \qw                                                           & \gate[wires=2]{\mathrm{e}^{-\mathrm{i}\hat{H}_{1,2}\Delta t}} & \qw                                                           & \qw  \\
+            & \gate[wires=2]{\mathrm{e}^{-\mathrm{i}\hat{H}_{2,3}\Delta t/2}} & \qw                                                           & \gate[wires=2]{\mathrm{e}^{-\mathrm{i}\hat{H}_{2,3}\Delta t}} & \qw                                                           & \gate[wires=2]{\mathrm{e}^{-\mathrm{i}\hat{H}_{2,3}\Delta t/2}} & \qw  \\
+            & \qw                                                             & \gate[wires=2]{\mathrm{e}^{-\mathrm{i}\hat{H}_{3,4}\Delta t}} & \qw                                                           & \gate[wires=2]{\mathrm{e}^{-\mathrm{i}\hat{H}_{3,4}\Delta t}} & \qw                                                           & \qw  \\
+            & \qw                                                             & \qw                                                           & \qw                                                           & \qw                                                           & \qw                                                           & \qw 
+        \end{quantikz}
+    \end{subfigure}
+    \caption{(a) Trotter step for simulating a spin chain. Notice that spin-spin terms that do not share a graph point can be evolved in parallel. A greedy algorithm can be used to determine a possible, if not optimal, scheme for simulating spin-spin interactions on parallel. (b) Third order integration scheme with two steps. Notice that the highlighted part has roughly the same time complexity as the second order scheme in (a). The other gates add a constant to the total circuit depth.}
     \label{fig:spinChainCircuit}
 \end{figure}

@@ -2,9 +2,21 @@
 
 [![Binder](https://mybinder.org/badge_logo.svg)](https://mybinder.org/v2/gh/DiegoHerrera262/Thesis2020/HEAD)
 
-## Summary
+## Abstract
 
-This project proposes a digital quantum algorithm for simulating time evolution of a completely anisotropic Heisenberg Hamiltonian on an arbitrary lattice. Experiments were performed on IBM Q devices, and fidelities grater than 80% were obtained for spin chains with up to 4 lattice sites. Moreover, the gate count is significantly improved over similar algorithms, and by the nature of the gates used, transpilation is quite cost-effective. As an interesting application of quantum time evolution, the quantum algorithm is used as a quantum node for producing thermal states of a magnetic lattice describe by a Heisenberg-like model.
+A digital quantum algorithm for simulating Heisenberg-like Hamiltonians is proposed and tested on IBM Quantum Systems. This algorithm is based on a direct trotterization that exploits the commutation properties of the spin-spin interaction. This leads to a reduction in the amount of two qubit gates necessary to perform a single Trotter step. The algorithm is also implemented efficiently on hardware by using a cross-resonance based transpilation. Models with up to three interacting spins are simulated on actual quantum processors, probability density fidelities and some interesting observables are measured and discussed. Applications to solid state physics and universal quantum computation are briefly introduced as possible perspectives of the work.
+
+## Introduction
+
+One of the most promising applications of quantum computing is the simulation of quantum systems. It has been shown that quantum computing models have a natural advantage for this type of problems [[4]](#4). As a matter of fact, previous work has been done on simulation of Heisenberg models and transverse field Ising models with superconducting qubits and microwave pulses [[1]](#1). By means of an elementary fermion-to-qubit mapping of Hilbert spaces, the Hubbard model on a chain has been successfully simulated using digital quantum algorithms [[2]](#2). Other works on quantum time simulation showcase the potential of digital time evolution algorithms for studying physical phenomena ranging from solid state and material science, to high energy physics.
+
+The key of most implementations is to profit hardware-optimized two-qubit gates for simulating a second order trotterization scheme. Albeit useful when a direct control of the microwave pulse schedule is available, this technique is restricted by the current cloud quantum computing backends available to the public by IBM Quantum. Due to the level of specialization and skills required to control a device directly, most publicly available quantum processors only offer a universal set of calibrated gates. The aim of this work is to present a trotterization scheme that is suited for implementation on IBM Quantum backends, that also uses an efficient pulse schedule. This work also aims to generalize the scheme for describing systems modeled by Heisenberg-like Hamiltonians of the shape
+
+$$
+\hat{H} = \sum_{\langle i,j \rangle} J_{ij}^{(X)} \hat{X}_i \hat{X}_j + J_{ij}^{(Y)} \hat{Y}_i \hat{Y}_j + J_{ij}^{(Z)} \hat{Z}_i \hat{Z}_j + \sum_i h_i^{(X)} \hat{X}_i + h_i^{(Y)} \hat{Y}_i + h_i^{(Z)} \hat{Z}_i
+$$
+
+In general, there is a tradeoff between time evolution discretization and hardware noise. The smaller the time discretization, the larger the number of integration steps, and thus, given the finite coherence time of quantum states, the larger the noise error. As a result, a second order Trotter scheme is used. Such evolution algorithm is benchmarked using both QASM simulators and real quantum backends. The first benchmark is intended for studying the errors associated exclusively to the discretization, and determine the minimum time step required to control this source of error. The former benchmark is used for actual simulation and studying the limitations imposed by the finite coherence time of current quantum backends available through IBM Quantum.
 
 ## Justification
 
@@ -32,8 +44,6 @@ To propose a digital quantum algorithm for simulating a parametric Heisenberg Ha
 
 - To compare expected theoretical and experimental probability density fidelities, so as to characterize the optimal number of integration steps required for obtaining a given fidelity.
 
-- To implement a VQT algorithm, with a QNN based upon time evolution of a parametric Heisenberg Hamiltonian.
-
 ## Contents of the Repo
 
 This repository is used to log all my work in the completion of my undergraduate thesis at Universidad Nacional de Colombia - Sede Bogotá. It contains:
@@ -50,3 +60,13 @@ To reproduce the results of this repository, the system requirements are:
 - Qiskit 0.11.0 (Or newer)
 
 I ran the notebooks locally using `qasm_simulator` from Qiskit.
+
+## References
+
+<a id="1">[1]</a> Slathé Y. et al. (2015). Digital Quantum Simulation of Spin Models with Circuit Quantum Electrodynamics. Physical Review X.
+<a id="2">[2]</a> Barends R. et al. (2015). Digital quantum simulation of fermionic models with a superconducting circuit. Nature Communications.
+<a id="3">[3]</a> Las Heras U. et al. (2015). Fermionic Models with Superconducting Circuits. (2015). EPJ Quantum Technology
+<a id="4">[4]</a> Lloyd S. (1996). Universal Quantum Simulators. Nature.
+<a id="5">[5]</a> Feynman R. (1982). Simulating Physics with Computers. International Journal of Theoretical Physics.
+<a id="6">[6]</a> Benentia G., Casati G., Strini G. (2004). Principles of Quantum Computation and Information. Volume I: Basic Concepts. World Scientific.
+<a id="7">[7]</a> Nielsen M., Chuang I. (2010). Quantum Computation and Information. Cambridge University Press.
