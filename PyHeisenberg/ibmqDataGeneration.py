@@ -138,7 +138,7 @@ if __name__ == '__main__':
     backendName = 'ibmq_jakarta'
     noisySimulation = False
 
-    STEPS = 12
+    STEPS = 8
     t = np.pi/2
     times = [np.pi/4, np.pi/2, np.pi]
 
