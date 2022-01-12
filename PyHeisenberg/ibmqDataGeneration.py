@@ -228,6 +228,7 @@ if __name__ == '__main__':
     print("Capture measurement error fitter")
     print("=========================================")
     measurementFitter = hGraph.getCalibrationFitter()
+    measurementFitterPulse = pGraph.getCalibrationFitter()
 
 ################################################################################
 #                          GENERATE PAULI OBS PLOTS                            #
@@ -251,8 +252,7 @@ if __name__ == '__main__':
         qasmGraph,
         '../images/Benchmark/qasm/qasm_control_pauli_exps.pdf',
         STEPS = STEPS,
-        t = t,
-        measurementFitter=measurementFitter
+        t = t
     )
     print("Finished qasm control plot")
     plotSingleQubitObservables(
@@ -279,7 +279,7 @@ if __name__ == '__main__':
         '../images/Benchmark/pulse/pulse_efficient_pauli_exps.pdf',
         STEPS = STEPS,
         t = t,
-        measurementFitter=measurementFitter   
+        measurementFitter=measurementFitterPulse   
     )
     print(f"Finished pulse efficient plot")
     print(f"Ellapsed time: {(time.time()-tstart)/60} min")
@@ -319,7 +319,7 @@ if __name__ == '__main__':
     pAnalyzer.comparativeEvolution(
         STEPS=STEPS,
         t=t,
-        measurementFitter=measurementFitter,
+        measurementFitter=measurementFitterPulse,
         figureFile='../images/Benchmark/pulse/pulse_efficient_pdf_evol.pdf',
         showLegend=False
     )
@@ -363,7 +363,7 @@ if __name__ == '__main__':
         '../images/Benchmark/pulse/pulse_efficient_pdf_fidelity.pdf',
         STEPS = STEPS,
         times = times,
-        measurementFitter=measurementFitter   
+        measurementFitter=measurementFitterPulse   
     )
     print(f"Finished pulse efficient plot")
     print(f"Ellapsed time: {(time.time()-tstart)/60} min")
