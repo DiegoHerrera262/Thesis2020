@@ -69,6 +69,8 @@ if __name__ == '__main__':
         fig.tight_layout(pad=3.0)
         for pauliObs, axis, title in zip(pauliStrings, ax, titles):
 
+            axis.set_aspect(aspect=0.5)
+
             for pauli, color, line in zip(pauliObs, colors, lines):
                 axis.plot(
                     timesTheor, 
@@ -139,8 +141,8 @@ if __name__ == '__main__':
     noisySimulation = False
 
     STEPS = 8
-    t = np.pi/2
-    times = [np.pi/4, np.pi/2, np.pi]
+    t = 1
+    times = [1, 2, 3]
 
 ################################################################################
 #                         DECLARE SPIN GRAPH OBJECTS                           #
