@@ -1448,12 +1448,12 @@ class PulseSpinGraph(HeisenbergGraph):
             qcEdge.h(spinChain[start])
             # Duplicate pulse to cancel
             # undesired terms on CR
-            # qcEdge.barrier()
+            qcEdge.barrier()
             qcEdge.rzx(J[0]/2, spinChain[start], spinChain[end])
             qcEdge.x(spinChain[start])
             qcEdge.rzx(-J[0]/2, spinChain[start], spinChain[end])
             qcEdge.x(spinChain[start])
-            # qcEdge.barrier()
+            qcEdge.barrier()
             # Rotate start qubit to X
             qcEdge.h(spinChain[start])
         if np.abs(edge['exchangeIntegrals'][1]) > 1e-3:
@@ -1465,12 +1465,12 @@ class PulseSpinGraph(HeisenbergGraph):
             qcEdge.sdg(spinChain[end])
             # Duplicate pulse to cancel
             # undesired terms on CR
-            # qcEdge.barrier()
+            qcEdge.barrier()
             qcEdge.rzx(J[1]/2, spinChain[start], spinChain[end])
             qcEdge.x(spinChain[start])
             qcEdge.rzx(-J[1]/2, spinChain[start], spinChain[end])
             qcEdge.x(spinChain[start])
-            # qcEdge.barrier()
+            qcEdge.barrier()
             # Rotate start qubit to X
             qcEdge.h(spinChain[start])
             qcEdge.s(spinChain[start])
@@ -1482,12 +1482,12 @@ class PulseSpinGraph(HeisenbergGraph):
             qcEdge.h(spinChain[end])
             # Duplicate pulse to cancel
             # undesired terms on CR
-            # qcEdge.barrier()
+            qcEdge.barrier()
             qcEdge.rzx(J[2]/2, spinChain[start], spinChain[end])
             qcEdge.x(spinChain[start])
             qcEdge.rzx(-J[2]/2, spinChain[start], spinChain[end])
             qcEdge.x(spinChain[start])
-            # qcEdge.barrier()
+            qcEdge.barrier()
             # Rotate end qubit to Z
             qcEdge.h(spinChain[end])
         return qcEdge.to_instruction()
