@@ -1316,12 +1316,6 @@ class PulseSpinGraph(HeisenbergGraph):
         Function for binding parameters and
         producing time evolution step
         '''
-        qcEvolution = QuantumCircuit(spinChain)
-        qcEvolution.append(
-            self.HamiltonianQNN(spinChain, dt=dt),
-            spinChain
-        )
-        return qcEvolution.decompose()
         # qcEvolution = QuantumCircuit(spinChain)
         # bindingDict = aux.BindParameters(self.graph, dt)
         # qcEvolution.append(self.HamiltonianQNN(spinChain), spinChain)
@@ -1330,6 +1324,13 @@ class PulseSpinGraph(HeisenbergGraph):
         # except exceptions.CircuitError:
         #     # print('An error occurred')
         #     return qcEvolution.decompose()
+        
+        qcEvolution = QuantumCircuit(spinChain)
+        qcEvolution.append(
+            self.HamiltonianQNN(spinChain, dt=dt),
+            spinChain
+        )
+        return qcEvolution.decompose()
 
     def rawEvolutionCircuit(self, STEPS=200, t=1.7):
         ''''
@@ -1341,28 +1342,28 @@ class PulseSpinGraph(HeisenbergGraph):
         qcEvolution = QuantumCircuit(spinChain)
         qcStep = self.evolutionStep(dt, spinChain)
 
-        useThirdOrderTrot = self.hasNoFields() and self.hasBipartiteGraph()
+        # useThirdOrderTrot = self.hasNoFields() and self.hasBipartiteGraph()
 
-        if useThirdOrderTrot:
-            # print(useThirdOrderTrot)
-            # Third Order Trotter is [A/2][B][A]···[B][A/2]
-            # Where A, B are the Hamiltonians of each subgraph
-            A = self.graphColors[0]
-            B = self.graphColors[1]
-            # Compute operators
-            eA2 = self.colorSpinSpinCircuit(A, spinChain, dt=dt/2)
-            eA = self.colorSpinSpinCircuit(A, spinChain, dt=dt)
-            eB = self.colorSpinSpinCircuit(B, spinChain, dt=dt)
-            # Prepend [A/2]
-            qcEvolution.append(eA2, spinChain)
-            # Append sandwiched steps
-            for step in range(STEPS):
-                qcEvolution.append(eB, spinChain)
-                if step < STEPS - 1:
-                    qcEvolution.append(eA, spinChain)
-            # Append [A/2]
-            qcEvolution.append(eA2, spinChain)
-            return qcEvolution
+        # if useThirdOrderTrot:
+        #     # print(useThirdOrderTrot)
+        #     # Third Order Trotter is [A/2][B][A]···[B][A/2]
+        #     # Where A, B are the Hamiltonians of each subgraph
+        #     A = self.graphColors[0]
+        #     B = self.graphColors[1]
+        #     # Compute operators
+        #     eA2 = self.colorSpinSpinCircuit(A, spinChain, dt=dt/2)
+        #     eA = self.colorSpinSpinCircuit(A, spinChain, dt=dt)
+        #     eB = self.colorSpinSpinCircuit(B, spinChain, dt=dt)
+        #     # Prepend [A/2]
+        #     qcEvolution.append(eA2, spinChain)
+        #     # Append sandwiched steps
+        #     for step in range(STEPS):
+        #         qcEvolution.append(eB, spinChain)
+        #         if step < STEPS - 1:
+        #             qcEvolution.append(eA, spinChain)
+        #     # Append [A/2]
+        #     qcEvolution.append(eA2, spinChain)
+        #     return qcEvolution
 
         # fieldSum = 0
         # for vertex in self.graph.vs:
