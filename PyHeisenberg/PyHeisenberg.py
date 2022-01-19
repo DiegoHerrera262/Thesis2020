@@ -571,7 +571,7 @@ class HeisenbergGraph:
         experiments according to
         backend
         '''
-        return execute(circuits, backend, shots=shots, optimization_level=3)
+        return execute(circuits, backend, shots=shots, optimization_level=0)
 
     # MEASUREMENT ERROR MITIGATION ROUTINES
 
@@ -1341,69 +1341,8 @@ class PulseSpinGraph(HeisenbergGraph):
         spinChain = QuantumRegister(len(self.graph.vs), name='s')
         qcEvolution = QuantumCircuit(spinChain)
         qcStep = self.evolutionStep(dt, spinChain)
-
-        # useThirdOrderTrot = self.hasNoFields() and self.hasBipartiteGraph()
-
-        # if useThirdOrderTrot:
-        #     # print(useThirdOrderTrot)
-        #     # Third Order Trotter is [A/2][B][A]···[B][A/2]
-        #     # Where A, B are the Hamiltonians of each subgraph
-        #     A = self.graphColors[0]
-        #     B = self.graphColors[1]
-        #     # Compute operators
-        #     eA2 = self.colorSpinSpinCircuit(A, spinChain, dt=dt/2)
-        #     eA = self.colorSpinSpinCircuit(A, spinChain, dt=dt)
-        #     eB = self.colorSpinSpinCircuit(B, spinChain, dt=dt)
-        #     # Prepend [A/2]
-        #     qcEvolution.append(eA2, spinChain)
-        #     # Append sandwiched steps
-        #     for step in range(STEPS):
-        #         qcEvolution.append(eB, spinChain)
-        #         if step < STEPS - 1:
-        #             qcEvolution.append(eA, spinChain)
-        #     # Append [A/2]
-        #     qcEvolution.append(eA2, spinChain)
-        #     return qcEvolution
-
-        # fieldSum = 0
-        # for vertex in self.graph.vs:
-        #     Hx = vertex['externalField'][0]
-        #     Hy = vertex['externalField'][1]
-        #     Hz = vertex['externalField'][2]
-        #     fieldSum += Hx**2 + Hy**2 + Hz**2
-        # # Compute bipartite circuits
-        # qcFirstColorStep = self.colorSpinSpinCircuit(
-        #     1,
-        #     spinChain,
-        #     dt=dt/2
-        # )
-        # qcSecondColorStep = self.colorSpinSpinCircuit(
-        #     2,
-        #     spinChain,
-        #     dt=dt
-        # )
-        # Check if the graph is bipartite and
-        # there is no external field for
-        # implementing third order Trotter
-        # if np.abs(fieldSum) < 1e-3 and len(self.graphColors) == 2:
-        #     qcEvolution.append(
-        #         qcFirstColorStep,
-        #         spinChain
-        #     )
-        #     qcEvolution.append(
-        #         qcSecondColorStep,
-        #         spinChain
-        #     )
-
         for _ in range(STEPS):
             qcEvolution.append(qcStep, spinChain)
-        
-        # if np.abs(fieldSum) < 1e-3 and len(self.graphColors) == 2:
-        #     qcEvolution.append(
-        #         qcFirstColorStep,
-        #         spinChain
-        #     )
-        
         return qcEvolution.decompose()
 
     def evolutionCircuit(self, STEPS=200, t=1.7):
@@ -1414,7 +1353,6 @@ class PulseSpinGraph(HeisenbergGraph):
         '''
         dt = t/STEPS
         spinChain = QuantumRegister(len(self.graph.vs), name='s')
-        # measureReg = ClassicalRegister(len(self.graph.vs), name='r')
         qcEvolution = QuantumCircuit(spinChain)
         qcStep = self.evolutionStep(dt, spinChain)
         if self.withInitialState:
@@ -1504,7 +1442,7 @@ class PulseSpinGraph(HeisenbergGraph):
         the algorithm
         '''
         if self.localSimulation:
-            return execute(circuits, backend, shots=2048, optimization_level=1)
+            return execute(circuits, backend, shots=2048, optimization_level=0)
         else:
             transpiledCircuits = transpile(
                 circuits,
@@ -1513,7 +1451,6 @@ class PulseSpinGraph(HeisenbergGraph):
             )
             pm = PassManager([RZXCalibrationBuilderNoEcho(backend)])
             passCircuits = pm.run(transpiledCircuits)
-            # experiment = schedule(passCircuits, backend)
             return execute(
                 passCircuits,
                 backend=backend,
