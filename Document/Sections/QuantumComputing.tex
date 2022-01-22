@@ -1,4 +1,4 @@
-This chapter introduces the elements of quantum computing and digital time simulation. First, the qubit as a two-level system and a quantum register as a \textit{multi-qubit} system are presented. After a review of the elements of quantum computing, from single qubit operations to universal quantum computing, digital integration schemes for solving Schrödinger equation are presented. With this background, previous work on simulation of spin and fermionic systems is introduced. Finally, recent techniques fori mplementing hardware efficient two qubit gates are introduced. The present chapter is expected to give a broad overview of the concepts and techniques used in subsequent chapters for implementing a quantum time evolution algorithm for anisotropic Heisenberg-like Hamiltonians.
+This chapter introduces the elements of quantum computing and digital time simulation. First, the qubit as a two-level system and a quantum register as a \textit{multi-qubit} system are presented. After a review of the elements of quantum computing, from single qubit operations to universal quantum computing, digital integration schemes for solving Schrödinger equation are presented. With this background, previous work on simulation of spin and fermionic systems is introduced. Finally, recent techniques for implementing hardware efficient two qubit gates are introduced. The present chapter is expected to give a broad overview of the concepts and techniques used in subsequent chapters for implementing a quantum time evolution algorithm for anisotropic Heisenberg-like Hamiltonians.
 
 \section{Quantum circuit model elements}
 \label{sec:fundaQC}
@@ -8,49 +8,49 @@ This chapter introduces the elements of quantum computing and digital time simul
   In contrast, a quantum bit or \textit{qubit}, corresponds physically to a two-level quantum system, whose Hilbert space can be spanned by a \textit{computational basis set} $\{\ket{0}, \ket{1}\}$. It is reasonable to assume that this basis set is orthonormal
 
   \begin{equation}
-    \braket{s}{s'} = \delta_{ss'} \text{ for } s, s' \in \{0,1\}
+    \braket{s}{s'} = \delta_{ss'} \text{ for } s, s' \in \{0,1\},
     \label{eq:comp-basis}
   \end{equation}
 
   The canonical representation of a qubit is as a vector in the \textit{Bloch sphere}. This representation maps a generic qubit superposition state
 
   \begin{align}
-    \cos(\frac{\theta}{2}) \ket{0} &  + \mathrm{e}^{\mathrm{i}\phi}\sin(\frac{\theta}{2})\ket{1} \\
+    \cos(\frac{\theta}{2}) \ket{0} &  + \mathrm{e}^{\mathrm{i}\phi}\sin(\frac{\theta}{2})\ket{1}, \\
     & \theta, \phi \in \mathcal{R}
     \label{eq:qubit-state}
   \end{align}
 
-  To a vector on the unitary 3-sphere
+  \noindent to a vector on the unitary 3-sphere
 
   \begin{equation}
-    \hat{\mathbf{n}} = \sin(\theta) \cos(\phi) \hat{\mathbf{x}}  + \sin(\theta) \sin(\phi)\hat{\mathbf{y}} + \cos(\theta) \hat{\mathbf{z}}
+    \hat{\mathbf{n}} = \sin(\theta) \cos(\phi) \hat{\mathbf{x}}  + \sin(\theta) \sin(\phi)\hat{\mathbf{y}} + \cos(\theta) \hat{\mathbf{z}},
     \label{eq:bloch-vector}
   \end{equation}
 
   In addition to the computational basis, other important states are the \textit{sign basis}
 
   \begin{gather}
-    \ket{+} = \frac{1}{\sqrt{2}}\ket{0} + \frac{1}{\sqrt{2}}\ket{1} \\
-    \ket{-} = \frac{1}{\sqrt{2}}\ket{0} - \frac{1}{\sqrt{2}}\ket{1}
+    \ket{+} = \frac{1}{\sqrt{2}}\ket{0} + \frac{1}{\sqrt{2}}\ket{1}, \\
+    \ket{-} = \frac{1}{\sqrt{2}}\ket{0} - \frac{1}{\sqrt{2}}\ket{1},
     \label{eq:sign-basis}
   \end{gather}
 
-  And the \textit{y basis}
+  \noindent and the \textit{y basis}
 
   \begin{gather}
-    \ket{+\mathrm{i}} = \frac{1}{\sqrt{2}}\ket{0} + \mathrm{i}\frac{1}{\sqrt{2}}\ket{1} \\
-    \ket{-\mathrm{i}} = \frac{1}{\sqrt{2}}\ket{0} - \mathrm{i}\frac{1}{\sqrt{2}}\ket{1}
+    \ket{+\mathrm{i}} = \frac{1}{\sqrt{2}}\ket{0} + \mathrm{i}\frac{1}{\sqrt{2}}\ket{1}, \\
+    \ket{-\mathrm{i}} = \frac{1}{\sqrt{2}}\ket{0} - \mathrm{i}\frac{1}{\sqrt{2}}\ket{1}.
     \label{eq:phase-basis}
   \end{gather}
 
-  Those states actually lie in the poles of the Bloch sphere, and each pair constitutes a basis for a qubit's Hilbert space that has interesting properties regarding measurement.
+  \noindent Those states actually lie in the poles of the Bloch sphere, and each pair constitutes a basis for a qubit's Hilbert space that has interesting properties regarding measurement.
 
-  In contrast to classical bits, a quantum bit can be transformed by an infinite number of operations, corresponding to all possible operators defined on its Hilbert space. Of those, two are of huge importance in quantum computing: unitary operators and measurement operators. Unitary operations are used mainly to process quantum information and perform a computation. These are commonly known as \textit{quantum gates}. The fundamental quantum gates are the Pauli operators
+  In contrast to classical bits, a quantum bit can be transformed by an infinite number of operations, corresponding to all possible operators defined on its Hilbert space. Of those, two classes of operators are of huge importance in quantum computing: unitary operators and measurement operators. Unitary operations are used mainly to process quantum information and perform a computation. These are commonly known as \textit{quantum gates}. The fundamental quantum gates are the Pauli operators
 
   \begin{gather}
-    \hat{X} = \ketbra{+}{+} - \ketbra{-}{-} \\
-    \hat{Y} = \ketbra{+\mathrm{i}}{+\mathrm{i}} - \ketbra{-\mathrm{i}}{-\mathrm{i}} \\
-    \hat{Z} = \ketbra{0}{0} - \ketbra{1}{1}
+    \hat{X} = \ketbra{+}{+} - \ketbra{-}{-}, \\
+    \hat{Y} = \ketbra{+\mathrm{i}}{+\mathrm{i}} - \ketbra{-\mathrm{i}}{-\mathrm{i}}, \\
+    \hat{Z} = \ketbra{0}{0} - \ketbra{1}{1}.
     \label{eq:pauli-ops}
   \end{gather}
   
@@ -58,9 +58,9 @@ This chapter introduces the elements of quantum computing and digital time simul
   For a single qubit, it is known that any unitary operation can be represented as rotation operator of the form
 
   \begin{gather}
-    \hat{R}_{\hat{n}, \theta} = \cos(\frac{\theta}{2}) - \mathrm{i}\sin(\frac{\theta}{2}) \hat{n} \vdot \sigma \\
-    \hat{n} \vdot \sigma = n_x \hat{X} + n_y \hat{Y} + n_z \hat{Z} \\
-    ||\hat{n}||^2 = 1
+    \hat{R}_{\hat{n}, \theta} = \cos(\frac{\theta}{2}) - \mathrm{i}\sin(\frac{\theta}{2}) \hat{n} \vdot \sigma, \\
+    \hat{n} \vdot \sigma = n_x \hat{X} + n_y \hat{Y} + n_z \hat{Z}, \\
+    ||\hat{n}||^2 = 1.
   \end{gather}
 
   In the Bloch sphere representation, quantum gates, therefore, correspond to rotations of the quantum state's associated vector (eq. \ref{eq:bloch-vector}). A quite important rotation is the so called \textit{Hadamard gate}, whose representation in the computational basis is
@@ -69,7 +69,7 @@ This chapter introduces the elements of quantum computing and digital time simul
     \hat{H} = \frac{1}{\sqrt{2}}\begin{bmatrix}
       1 & 1 \\
       1 & -1
-    \end{bmatrix}
+    \end{bmatrix}.
     \label{eq:hadamard-gate}
   \end{equation}
   
@@ -89,57 +89,57 @@ This chapter introduces the elements of quantum computing and digital time simul
     In general, more than one qubit is needed to perform meaningful computations. A system of several qubits is called \textit{quantum register}. A quantum register's Hilbert space is nothing more than the tensor product space of each of its constituent qubits. Thus, a $N$-qubit register has a $2^N$-dimensional Hilbert space. A basis for this space is built by all possible tensor products of computational basis states for each qubit. This would be the \textit{computational basis} of the register. A member of this set may be denoted by
 
     \begin{gather}
-      \ket{s_{N-1}s_{N-2} \cdots s_0} = \ket{s_{N-1}} \otimes \ket{s_{N-2}}\otimes \cdots \otimes \ket{s_{0}} \\
-      s_{N-1}, s_{N-2}, \ldots, s_0 \in \{0,1\}
+      \ket{s_{N-1}s_{N-2} \cdots s_0} = \ket{s_{N-1}} \otimes \ket{s_{N-2}}\otimes \cdots \otimes \ket{s_{0}}, \\
+      s_{N-1}, s_{N-2}, \ldots, s_0 \in \{0,1\}.
       \label{eq:multi-qubit-basis}
     \end{gather}
 
     There may be other basis of interest in quantum computing. For instance, with $N=2$, the so called \textit{Bell basis},
 
     \begin{gather}
-      \ket{\Phi^{+}} = \frac{1}{\sqrt{2}}(\ket{00} + \ket{11})\\
-      \ket{\Phi^{-}} = \frac{1}{\sqrt{2}}(\ket{00} - \ket{11})\\
-      \ket{\Psi^{+}} = \frac{1}{\sqrt{2}}(\ket{10} + \ket{01})\\
-      \ket{\Psi^{=}} = \frac{1}{\sqrt{2}}(\ket{10} - \ket{01})
+      \ket{\Phi^{+}} = \frac{1}{\sqrt{2}}(\ket{00} + \ket{11}),\\
+      \ket{\Phi^{-}} = \frac{1}{\sqrt{2}}(\ket{00} - \ket{11}),\\
+      \ket{\Psi^{+}} = \frac{1}{\sqrt{2}}(\ket{10} + \ket{01}),\\
+      \ket{\Psi^{=}} = \frac{1}{\sqrt{2}}(\ket{10} - \ket{01}),
       \label{eq:BellBasis}
     \end{gather}
 
-    is of capital importance in quantum information theory and quantum communications. It will also prove to be important in this work. Much like single-qubit gates, register gates or multi-qubit gates correspond to unitary operators defined on the register's Hilbert space. An important multi-qubit gate, defined by its action on two qubits is CNOT
+    \noindent is of capital importance in quantum information theory and quantum communications. It will also prove to be important in this work. Much like single-qubit gates, register gates or multi-qubit gates correspond to unitary operators defined on the register's Hilbert space. An important multi-qubit gate, defined by its action on two qubits is CNOT
 
     \begin{gather}
-      \text{CNOT}\ket{\psi}_t \otimes \ket{1}_c = \big(\hat{X}\ket{\psi}_t\big) \otimes \ket{0}_c\\
-      \text{CNOT}\ket{\psi}_t \otimes \ket{0}_c = \ket{\psi}_t \otimes \ket{0}_c
+      \text{CNOT}\ket{\psi}_t \otimes \ket{1}_c = \big(\hat{X}\ket{\psi}_t\big) \otimes \ket{0}_c, \\
+      \text{CNOT}\ket{\psi}_t \otimes \ket{0}_c = \ket{\psi}_t \otimes \ket{0}_c,
       \label{eq:cnot-gate}
     \end{gather}
 
-    Where the subscript $t$ denotes the \textit{target} qubit, and the subscript $c$, the control qubit. Hence, CNOT corresponds to a controlled-$\hat{X}$ operation. This gate can entangle separable two-qubit states. This is of vital importance for universal quantum computing, and can be readily seen from the definition.
+    \noindent where the subscript $t$ denotes the \textit{target} qubit, and the subscript $c$, the control qubit. Hence, CNOT corresponds to a controlled-$\hat{X}$ operation. This gate can entangle separable two-qubit states. This is of vital importance for universal quantum computing, and can be readily seen from the definition.
 
   \subsection{Circuit representation}
 
     This model of computation can be represented graphically by a \textit{circuit}, in which every wire represents a quantum bit, and a gate corresponds to a unitary operator acting on the register's Hilbert space (possibly a Hilbert subspace). For instance, an algorithm for producing a Bell basis state can be represented as in fig. \ref{fig:bell-pair-circuit}
 
-    \input{circuits/demoBellPairCircuit.tex}
+    \input{includes/demoBellPairCircuit.tex}
 
-    In this circuit representation, the algorithm depicted consists on an application of a hadamard operator to a control qubit, followed by a CNOT operation, to a two qubit register on state $\ket{00}$. In general, quantum gates are represented by boxes, labeled properly by the operation that represent. These boxes cover the subspace over which the corresponding quantum operator acts. For instance, in the case of the algorithm depicted on fig. \ref{fig:bell-pair-circuit}, the Hadamard gate acts on a single-qubit subspace, where the CNOT gate acts on the whole two-qubit register's space. Operations are executed from left to right in a quantum algorithm.
+    The figure presents an prescription for producing state $\ket{\Phi^{+}}$. In this circuit representation, the algorithm consists on an application of a Hadamard operator to a control qubit, followed by a CNOT operation, to a two qubit register, initialized on state $\ket{00}$. In general, quantum gates are represented by boxes, labeled properly by the operation that they represent. These boxes cover the subspace over which the corresponding quantum operator acts. For instance, in the case of the algorithm depicted on fig. \ref{fig:bell-pair-circuit}, the Hadamard gate acts on a single-qubit subspace, while the CNOT gate acts on the whole two-qubit register's space. Operations are executed from left to right in a quantum algorithm.
 
   \subsection{Universal quantum computing}
     
     As was stated before, all quantum gates correspond to unitary operations (or measurements), acting on a quantum register. It is desirable to find a set of elementary quantum gates, that act on a small number of qubits, that can generate all possible unitary operations on an $N$-qubit register. This is the question of universal quantum computing. It can be shown that CNOT and the set of single-qubit unitary operations are enough for producing all possible $N$-qubit register gates \cite{Nielsen}. For instance, it is possible to perform the three-qubit \textit{Controlled CNOT} operation
 
     \begin{gather}
-      \text{CCNOT} \ket{\psi} \otimes \ket{s_t} \otimes \ket{s'_t} = \big(\hat{X}^{s_t s'_t} \ket{\psi}\big) \otimes \ket{s_t} \otimes \ket{s'_t} \\
-      s_t, s'_t \in \{0,1\}
+      \text{CCNOT} \ket{\psi} \otimes \ket{s_t} \otimes \ket{s'_t} = \big(\hat{X}^{s_t s'_t} \ket{\psi}\big) \otimes \ket{s_t} \otimes \ket{s'_t}, \\
+      s_t, s'_t \in \{0,1\},
       \label{eq:toffoli-definition}
     \end{gather}
 
-    by following algorithm on figure \ref{fig:toffoli-universal}. In general, however, performing arbitrary single-qubit rotations by hardware operations is impractical. This would require a huge control on the physical qubits that is not yet available for all possible architectures \cite{Nielsen}. As a result, most quantum processors available today use a limited set of single-qubit rotations for \textit{approximating} arbitrary rotations.
+    \noindent by following algorithm on figure \ref{fig:toffoli-universal}. In general, however, performing arbitrary single-qubit rotations by hardware operations is impractical. This would require a huge control on the physical qubits that is not yet available for all possible architectures \cite{Nielsen}. As a result, most quantum processors available today use a limited set of single-qubit rotations for \textit{approximating} arbitrary rotations.
 
-    \input{circuits/toffoliUniversal}
+    \input{includes/toffoliUniversal}
 
     A commonly used universal set is $\{\hat{H}, \hat{S} = \sqrt{\hat{Z}}, \hat{T} = \sqrt{\hat{S}}\}$. With this set, it is possible to approximate any single qubit rotation to an arbitrary precision, but not exactly, using a finite number of operations. In contrast, IBM Quantum devices use a basis set $\{\hat{S}_x = \sqrt{\hat{X}}, \hat{X}, \hat{R}_{z,\phi} \}$, which can reproduce any single-qubit rotation exactly. As an example, the Hadamard gate can be decomposed as follows
 
     \begin{equation}
-      \hat{H} = \hat{R}_{z,\pi/2} \hat{S}_x \hat{R}_{z,\pi/2}
+      \hat{H} = \hat{R}_{z,\pi/2} \hat{S}_x \hat{R}_{z,\pi/2}.
       \label{eq:hadamard-decomp}
     \end{equation}
 
@@ -152,17 +152,15 @@ This chapter introduces the elements of quantum computing and digital time simul
       \label{eq:CartanDecomp}
     \end{equation}
 
-    Can be performed using only three CNOT gates. Introducing single qubit operators \cite{RXZPulseEfficient}
+    \noindent can be performed using only three CNOT gates. The circuit representation of such algorithm can be found on figure \ref{fig:cartan3Cnot}. In that circuit the following single qubit operators are used \cite{RXZPulseEfficient}:
 
     \begin{gather}
-      \hat{U}_{mn} = \hat{R}_{z}(m\pi/2)\sqrt{X}\hat{R}_{z}(n\pi/2) \\
-      \hat{U}_{1\alpha} = \hat{R}_{z}(\pi/2)\sqrt{X}\hat{R}_{z}(\alpha)
+      \hat{U}_{mn} = \hat{R}_{z}(m\pi/2)\sqrt{X}\hat{R}_{z}(n\pi/2), \\
+      \hat{U}_{1\alpha} = \hat{R}_{z}(\pi/2)\sqrt{X}\hat{R}_{z}(\alpha),
       \label{eq:AuxUnitaryCartan}
     \end{gather}
 
-    The circuit representation of such algorithm can be found on figure \ref{fig:cartan3Cnot}
-
-    \input{circuits/cartanThreeCnot.tex}
+    \input{includes/cartanThreeCnot.tex}
 
   \subsection{Quantum computational advantage}
     
@@ -171,21 +169,21 @@ This chapter introduces the elements of quantum computing and digital time simul
 \section{Common Approximation Schemes for Unitary Evolution}
 \label{sec:trotter}
 
-  Consider a system of $N$ components, whose Hamiltonian can be expressed as a sum of local Hamiltonians (i. e. that model interaction between at most $C$ components) \cite{Nielsen,LloydNature}
+  Consider a system of $N$ components, whose Hamiltonian can be expressed as a sum of local Hamiltonians (i.e., that model interaction between at most $C$ components) \cite{Nielsen,LloydNature}
 
   \begin{equation}
-    \hat{H} = \sum_{k = 1}^{L} \hat{H}_k
+    \hat{H} = \sum_{k = 1}^{L} \hat{H}_k,
     \label{eq:SparseHam}
   \end{equation}
 
-  Where $L$ is some polynomial on the number of system components. Such system is said to have local interactions between its constituents. From general quantum theory, its dynamics is governed by the Schrödinger equation
+  \noindent where $L$ is some polynomial on the number of system components. Such system is said to have local interactions between its constituents. From general quantum theory, its dynamics is governed by the Schrödinger equation
   
   \begin{equation}
-    \mathrm{i}\dv{\ket{\psi}}{t} = \hat{H}\ket{\psi} 
+    \mathrm{i}\dv{\ket{\psi}}{t} = \hat{H}\ket{\psi},
     \label{eq:Schrodinger}
   \end{equation}
 
-  Whose solution, for time indenependent Hamiltonians, is
+  \noindent whose solution, for time indenependent Hamiltonians, is
 
   \begin{equation}
     \ket{\psi(t)} = \mathrm{e}^{-\mathrm{i}\hat{H}t}\ket{\psi(0)}
@@ -199,15 +197,15 @@ This chapter introduces the elements of quantum computing and digital time simul
     \label{eq:CommuteUnit}
   \end{equation}
 
-  Hence, solving Schrödinger equation is a non trivial task. Many systems are described by local interactions, for instance, electrons in a solid material or magnetic moments in a lattice. In several instances, local interaction Hamiltonians are non-commuting, and thus approximation methods are necessary for performing time evolution. In this section, schemes for approximating unitary evolution of a quantum system are discussed.
+  Hence, solving Schrödinger equation is a non trivial task. Many systems are described by local interactions; for instance, electrons in a solid material or magnetic moments in a lattice. In several instances, local interaction Hamiltonians are non-commuting, and thus approximation methods are necessary for performing time evolution. In this section, schemes for approximating unitary evolution of a quantum system are discussed.
 
   \subsection{Trotter Formulas}
 
   Consider operators $\hat{H}_1$, $\hat{H}_2$, with $[\hat{H}_1,\hat{H}_2] \neq 0$. By definition
 
   \begin{align}
-    \mathrm{e}^{-\mathrm{i}\hat{H}_1 t} & = \sum_{m = 0}^{\infty} \frac{(-\mathrm{i}t)^m}{m!}\hat{H}_1^m \\
-    \mathrm{e}^{-\mathrm{i}\hat{H}_2 t} & = \sum_{l = 0}^{\infty} \frac{(-\mathrm{i}t)^l}{l!}\hat{H}_2^l
+    \mathrm{e}^{-\mathrm{i}\hat{H}_1 t} & = \sum_{m = 0}^{\infty} \frac{(-\mathrm{i}t)^m}{m!}\hat{H}_1^m, \\
+    \mathrm{e}^{-\mathrm{i}\hat{H}_2 t} & = \sum_{l = 0}^{\infty} \frac{(-\mathrm{i}t)^l}{l!}\hat{H}_2^l.
     \label{eq:ExpSeries}
   \end{align}
 
@@ -218,17 +216,17 @@ This chapter introduces the elements of quantum computing and digital time simul
     \label{eq:ExpProdExact}
   \end{equation}
 
-  Fon non-commuting operators, it is so that
+  Fon non-commuting operators, the following identity is true
 
   \begin{equation}
     \sum_{m = 0}^k \binom{k}{m} \hat{H}_1^m \hat{H}_2^{k-m} = (\hat{H}_1 + \hat{H}_2)^k + f_k(\hat{H}_1,\hat{H}_2)
     \label{eq:BinomialTheorem}
   \end{equation}
 
-  Where $f_k(\hat{H}_1,\hat{H}_2)$ is a function of the commutator of the operators. Since $f_1(\hat{H}_1,\hat{H}_2) = 0$, it is so that
+  \noindent where $f_k(\hat{H}_1,\hat{H}_2)$ is a function of the commutator of the operators. Since $f_1(\hat{H}_1,\hat{H}_2) = 0$, it is so that
 
   \begin{equation}
-    \mathrm{e}^{-\mathrm{i}\hat{H}_1 t}\mathrm{e}^{-\mathrm{i}\hat{H}_2 t} = \mathrm{e}^{-\mathrm{i}(\hat{H}_1 + \hat{H}_2) t} + \mathcal{O}(t^2)
+    \mathrm{e}^{-\mathrm{i}\hat{H}_1 t}\mathrm{e}^{-\mathrm{i}\hat{H}_2 t} = \mathrm{e}^{-\mathrm{i}(\hat{H}_1 + \hat{H}_2) t} + \mathcal{O}(t^2).
     \label{eq:O2Approx}
   \end{equation}
 
@@ -398,7 +396,7 @@ This chapter introduces the elements of quantum computing and digital time simul
 
   It has been shown by Reiner \cite{Mastersthesis} that a one dimensional Hubbard model (eq. \ref{eq:HubbardHamiltonian}) can be mapped to a qubit Hamiltonian of the type \ref{eq:HeisenbergHamiltonian}, by means of the Jordan Wigner mapping. Thus, by generalizing the quantum algorithms presented on these examples, it is possible to study correlation phenomena on metallic solids efficiently, in contrast to current classical simulation methods \cite{Mastersthesis,HubbardOriginal}. In following chapters,  general routines for simulating evolution under Hamiltonian \ref{eq:HeisenbergHamiltonian} are presented, and quantum time evolution is showcased as a tool for studying magnetic properties of solids. Moreover, a discussion of the influence of decoherence and errors in the implementation is carried out, thus presenting the limitations of Suzuki-Trotter schemes for simulating many-body systems.
 
-  \include{circuits/SalatheXYZ}
+  \include{includes/SalatheXYZ}
 
 \section{Pulse Efficient Circuit Implementations}
 \label{sec:pulseFunda}
@@ -410,94 +408,98 @@ This chapter introduces the elements of quantum computing and digital time simul
   In this section, some techniques for quantum control of superconducting qubits are introduced, as well as novel techniques for efficient hardware implementation of quantum algorithms based on the cross resonance interaction \cite{RXZPulseEfficient, 2016RZXCalibration}. Those techniques aim towards optimal usage of the finite coherence times of superconducting qubits on current quantum devices. The insights here presented are the foundations of the time simulation algorithms discussed in following chapters.
 
   \subsection{Transmon qubits and single qubit gates}
+  \label{subsec:TransmonQubits}
 
-  IBM Quantum devices consist on a set of coupled superconducting qubits known as transmons \cite{Qiskit, quantumEngineer}. A transmon consists on a Josephson junction shunted by a capacitance. Such devices can be described by the quantum variables of charge ($\hat{Q}$) and magnetic flux ($\hat{\phi}$). This due to the collective motion of Cooper pairs in certain superconducting materials. The effective Hamiltonian of a transmon is \cite{quantumEngineer}
+    IBM Quantum devices consist on a set of coupled superconducting qubits known as transmons \cite{Qiskit, quantumEngineer}. A transmon consists on a Josephson junction shunted by a capacitance. Such devices can be described by the quantum variables of charge ($\hat{Q}$) and magnetic flux ($\hat{\phi}$). This due to the collective motion of Cooper pairs in certain superconducting materials. The effective Hamiltonian of a transmon is \cite{quantumEngineer}
 
-  \begin{equation}
-    \hat{H}_T = 4E_C \hat{n} - E_J \cos{\hat{\phi}}
-    \label{eq:transmonHamilonian}
-  \end{equation}
+    \begin{equation}
+      \hat{H}_T = 4E_C \hat{n} - E_J \cos{\hat{\phi}}
+      \label{eq:transmonHamilonian}
+    \end{equation}
 
-  Where $\hat{n} = \hat{Q}/2e$ is the reduced charge of the transmon. The constants $E_C$ and $E_J$ represent the capacitive and junction energy, respectively. In the transmon regime, the junction energy is much larger than the capacitive energy, and the Hamiltonian \ref{eq:transmonHamilonian} can be simplified to a Duffing oscillator Hamiltonian \cite{quantumEngineer}. The key insight is that the energy levels of the system are separated by different amounts from their immediate neighboring levels. Hence, engineering techniques can be devised for constraining the transmon to the subspace spanned by its first two levels, where the effective Hamiltonian is simply
+    Where $\hat{n} = \hat{Q}/2e$ is the reduced charge of the transmon. The constants $E_C$ and $E_J$ represent the capacitive and junction energy, respectively. In the transmon regime, the junction energy is much larger than the capacitive energy, and the Hamiltonian \ref{eq:transmonHamilonian} can be simplified to a Duffing oscillator Hamiltonian \cite{quantumEngineer}. The key insight is that the energy levels of the system are separated by different amounts from their immediate neighboring levels. Hence, engineering techniques can be devised for constraining the transmon to the subspace spanned by its first two levels, where the effective Hamiltonian is simply
 
-  \begin{equation}
-    \hat{H}_{efe} = -\frac{\omega_0}{2} \hat{Z}
-    \label{eq:qubitHamiltonian}
-  \end{equation}
+    \begin{equation}
+      \hat{H}_{efe} = -\frac{\omega_0}{2} \hat{Z}
+      \label{eq:qubitHamiltonian}
+    \end{equation}
 
-  Single qubit gates are implemented on hardware by a capacitive coupling to a microwave signal generator. The process is known as \textit{Rabi driving}, and is carefully summarized on \cite{quantumEngineer}. The advantage of this approach is that rotations around the $\hat{x}$ and $\hat{y}$ axes of the Bloch sphere can be controlled by the phase, amplitude and frequency of the microwave driving (which usually occurs at the resonance frequency of the transmon). Moreover, it is possible to implement \textit{virtual rotations} around the $\hat{z}$ axis by controlling the phase of the drive as illustrated on \cite{quantumEngineer}. Those gates employ zero execution time, and have maximum fidelity. Given that any single qubit unitary has a decomposition
+    Single qubit gates are implemented on hardware by a capacitive coupling to a microwave signal generator. The process is known as \textit{Rabi driving}, and is carefully summarized on \cite{quantumEngineer}. The advantage of this approach is that rotations around the $\hat{x}$ and $\hat{y}$ axes of the Bloch sphere can be controlled by the phase, amplitude and frequency of the microwave driving (which usually occurs at the resonance frequency of the transmon). Moreover, it is possible to implement \textit{virtual rotations} around the $\hat{z}$ axis by controlling the phase of the drive as illustrated on \cite{quantumEngineer}. Those gates employ zero execution time, and have maximum fidelity. Given that any single qubit unitary has a decomposition
 
-  \begin{equation}
-    \hat{U}(\theta, \phi, \lambda) = \begin{bmatrix}
-      \cos{\frac{\theta}{2}} & -\mathrm{e}^{\mathrm{i}\lambda}\sin{\frac{\theta}{2}} \\
-      \mathrm{e}^{\mathrm{i}\phi}\sin{\frac{\theta}{2}} & \mathrm{e}^{\mathrm{i}(\phi+\lambda)}\cos{\frac{\theta}{2}}
-    \end{bmatrix}= \hat{R}_{z, \phi-\pi/2} \sqrt{X} \hat{R}_{z, \pi-\theta} \sqrt{X} \hat{R}_{z, \lambda-\pi/2} 
-    \label{eq:qiskitGateImplement}
-  \end{equation}
+    \begin{equation}
+      \hat{U}(\theta, \phi, \lambda) = \begin{bmatrix}
+        \cos{\frac{\theta}{2}} & -\mathrm{e}^{\mathrm{i}\lambda}\sin{\frac{\theta}{2}} \\
+        \mathrm{e}^{\mathrm{i}\phi}\sin{\frac{\theta}{2}} & \mathrm{e}^{\mathrm{i}(\phi+\lambda)}\cos{\frac{\theta}{2}}
+      \end{bmatrix}= \hat{R}_{z, \phi-\pi/2} \sqrt{X} \hat{R}_{z, \pi-\theta} \sqrt{X} \hat{R}_{z, \lambda-\pi/2} 
+      \label{eq:qiskitGateImplement}
+    \end{equation}
 
-  It is possible to implement arbitrary single qubit rotations with only two microwave pulses at most. This is very similar to the way IBM Quantum backends implement this type of rotations on hardware \cite{Qiskit}. The main sources of error on digital quantum computation are entangling interactions \cite{HeisenbergSimulLasHeras}. In this section, the fundamental notions regarding two qubit gate implementation and novel advances in recent years are presented.
+    It is possible to implement arbitrary single qubit rotations with only two microwave pulses at most. This is very similar to the way IBM Quantum backends implement this type of rotations on hardware \cite{Qiskit}. The main sources of error on digital quantum computation are entangling interactions \cite{HeisenbergSimulLasHeras}. In this section, the fundamental notions regarding two qubit gate implementation and novel advances in recent years are presented.
 
   \subsection{Cross resonance interaction}
+  \label{subsec:CrossResonanceInteraction}
 
-  Transmon qubit pairs usually are coupled to one another by a quantum bus whose frequency is different that the resonance frequency of either qubit \cite{quantumEngineer, 2016RZXCalibration}. In most practical applications, the frequency difference of the two qubits is much larger than the coupling strength to the bus. Mathematical modelling of this system uses a Jaynes-Cummings coupling to the bus electromagnetic modes. The details of the study of circuit QED for modelling qubit-qubit interaction can be found on \cite{2020RZXHamiltonianModels}. In general, entangling operations are performed using so called \textit{cross resonance pulses}, in which a target qubit is driven at the \textit{dressed} \footnote{In this context, \textit{dressed} reference the effective qubit frequencies when projecting the Hamiltonian to the subspace of zero excitations of the quantum bus \cite{2020RZXHamiltonianModels}} resonance frequency of the other. For the purpose of this work, it is sufficient to know that the effective interaction between the qubits can be modelled by the \textbf{cross resonance Hamiltonian} \cite{DuplicatedRXZPulse, 2016RZXCalibration}
+    Transmon qubit pairs usually are coupled to one another by a quantum bus whose frequency is different that the resonance frequency of either qubit \cite{quantumEngineer, 2016RZXCalibration}. In most practical applications, the frequency difference of the two qubits is much larger than the coupling strength to the bus. Mathematical modelling of this system uses a Jaynes-Cummings coupling to the bus electromagnetic modes. The details of the study of circuit QED for modelling qubit-qubit interaction can be found on \cite{2020RZXHamiltonianModels}. In general, entangling operations are performed using so called \textit{cross resonance pulses}, in which a target qubit is driven at the \textit{dressed} \footnote{In this context, \textit{dressed} reference the effective qubit frequencies when projecting the Hamiltonian to the subspace of zero excitations of the quantum bus \cite{2020RZXHamiltonianModels}} resonance frequency of the other. For the purpose of this work, it is sufficient to know that the effective interaction between the qubits can be modelled by the \textbf{cross resonance Hamiltonian} \cite{DuplicatedRXZPulse, 2016RZXCalibration}
 
-  \begin{equation}
-    \hat{H}_{CR}(\Omega) = \nu_{ZX} \frac{\hat{Z}_1\hat{X}_2}{2} + \nu_{IZ} \frac{\hat{Z}_2}{2} + \nu_{ZI} \frac{\hat{Z}_1}{2} + \nu_{IX} \frac{\hat{X}_2}{2} + \nu_{ZZ} \frac{\hat{Z}_1\hat{Z}_2}{2}
-    \label{eq:CRHamiltonian}
-  \end{equation}
+    \begin{equation}
+      \hat{H}_{CR}(\Omega) = \nu_{ZX} \frac{\hat{Z}_1\hat{X}_2}{2} + \nu_{IZ} \frac{\hat{Z}_2}{2} + \nu_{ZI} \frac{\hat{Z}_1}{2} + \nu_{IX} \frac{\hat{X}_2}{2} + \nu_{ZZ} \frac{\hat{Z}_1\hat{Z}_2}{2}
+      \label{eq:CRHamiltonian}
+    \end{equation}
 
-  Where 1 denotes the control qubit, 2, the target, and the coefficients depend on the driving pulse amplitude $\Omega$. The cross resonance interaction is used on fixed-frequency transmons to implement entangling gates, specifically, highly calibrated CNOT gates. Ideally, cross resonance interaction would only have a $ZX$ interaction, thus generating a controlled rotation gate
+    Where 1 denotes the control qubit, 2, the target, and the coefficients depend on the driving pulse amplitude $\Omega$. The cross resonance interaction is used on fixed-frequency transmons to implement entangling gates, specifically, highly calibrated CNOT gates. Ideally, cross resonance interaction would only have a $ZX$ interaction, thus generating a controlled rotation gate
 
-  \begin{equation}
-    CR(\theta) = \mathrm{e}^{-\mathrm{i}\frac{\theta}{2}\hat{Z}_1\hat{X}_2}
-  \end{equation}
+    \begin{equation}
+      CR(\theta) = \mathrm{e}^{-\mathrm{i}\frac{\theta}{2}\hat{Z}_1\hat{X}_2}
+    \end{equation}
 
-  In that case, it would be possible to implement CNOT gates using the decomposition \cite{quantumEngineer}
+    In that case, it would be possible to implement CNOT gates using the decomposition \cite{quantumEngineer}
 
-  \begin{equation}
-    \text{CNOT} = \hat{R}_{z_1, \pi/2} \otimes \hat{R}_{x_2, \pi/2} \cdot CR(\theta)
-  \end{equation}
+    \begin{equation}
+      \text{CNOT} = \hat{R}_{z_1, \pi/2} \otimes \hat{R}_{x_2, \pi/2} \cdot CR(\theta)
+    \end{equation}
 
-  However, experiments show that, in general, all coefficients on Hamiltonian \ref{eq:CRHamiltonian} are non zero \cite{DuplicatedRXZPulse, 2016RZXCalibration}. As a result, undesired terms must be suppressed so that the evolution Hamiltonian is consistent with the target $ZX$ interaction that generates CNOT gates.
+    However, experiments show that, in general, all coefficients on Hamiltonian \ref{eq:CRHamiltonian} are non zero \cite{DuplicatedRXZPulse, 2016RZXCalibration}. As a result, undesired terms must be suppressed so that the evolution Hamiltonian is consistent with the target $ZX$ interaction that generates CNOT gates.
 
   \subsection{Echoed cross resonance gates}
+  \label{subsec:EchoedCrossResonance}
 
-  The current approach towards implementing high fidelity cross resonance gates is outlined on \cite{DuplicatedRXZPulse}. The key insight is that the coefficients of the diagonal terms in the Hamiltonian \ref{eq:CRHamiltonian} are even functions of the pulse amplitude, while the off-diagonal terms are odd functions of this quantity. As a result, by reversing the sign of the driving pulse amplitude, it is possible to mitigate the undesired diagonal terms by evolving the qubits by the operator
+    The current approach towards implementing high fidelity cross resonance gates is outlined on \cite{DuplicatedRXZPulse}. The key insight is that the coefficients of the diagonal terms in the Hamiltonian \ref{eq:CRHamiltonian} are even functions of the pulse amplitude, while the off-diagonal terms are odd functions of this quantity. As a result, by reversing the sign of the driving pulse amplitude, it is possible to mitigate the undesired diagonal terms by evolving the qubits by the operator
 
-  \begin{equation}
-    \hat{U} = \mathrm{e}^{-\mathrm{i}\hat{H}_{CR}^{efe}(\Omega)t} = \mathrm{e}^{-\mathrm{i}\hat{H}_{CR}(\Omega)t} \mathrm{e}^{-\mathrm{i}\hat{X}_1\hat{H}_{CR}(-\Omega)\hat{X}_1t}
-    \label{eq:pulseCREvolution}
-  \end{equation}
+    \begin{equation}
+      \hat{U} = \mathrm{e}^{-\mathrm{i}\hat{H}_{CR}^{efe}(\Omega)t} = \mathrm{e}^{-\mathrm{i}\hat{H}_{CR}(\Omega)t} \mathrm{e}^{-\mathrm{i}\hat{X}_1\hat{H}_{CR}(-\Omega)\hat{X}_1t}
+      \label{eq:pulseCREvolution}
+    \end{equation}
 
-  This scheme leads to an effective interaction Hamiltonian \cite{DuplicatedRXZPulse}
+    This scheme leads to an effective interaction Hamiltonian \cite{DuplicatedRXZPulse}
 
-  \begin{equation}
-    \hat{H}_{CR}^{efe}(\Omega) = \bar{\nu}_{ZX} \frac{\hat{Z}_1\hat{X}_2}{2} + \bar{\nu_{IZ}} \frac{\hat{Z}_2}{2} + \bar{\nu_{IY}} \frac{\hat{Y}_2}{2}
-    \label{eq:effectiveHamiltonian}
-  \end{equation}
+    \begin{equation}
+      \hat{H}_{CR}^{efe}(\Omega) = \bar{\nu}_{ZX} \frac{\hat{Z}_1\hat{X}_2}{2} + \bar{\nu_{IZ}} \frac{\hat{Z}_2}{2} + \bar{\nu_{IY}} \frac{\hat{Y}_2}{2}
+      \label{eq:effectiveHamiltonian}
+    \end{equation}
 
-  Undesired unitary error terms can be mitigated by applying appropriate pulses on the target qubit. The general scheme for implementing cross resonance gates on IBM Quantum systems can be seen on figure \ref{fig:echoedPulseQiskit}. The cross resonance drive is carried out by gaussian square pulses, and the $\hat{X}$ pulses are implemented using a Gaussian drive as discussed before in this section. Mathematical details and experimental demonstrations can be found on \cite{DuplicatedRXZPulse, 2016RZXCalibration}.
+    Undesired unitary error terms can be mitigated by applying appropriate pulses on the target qubit. The general scheme for implementing cross resonance gates on IBM Quantum systems can be seen on figure \ref{fig:echoedPulseQiskit}. The cross resonance drive is carried out by gaussian square pulses, and the $\hat{X}$ pulses are implemented using a Gaussian drive as discussed before in this section. Mathematical details and experimental demonstrations can be found on \cite{DuplicatedRXZPulse, 2016RZXCalibration}.
 
-  \begin{figure}
-    \centering
-    \includegraphics[scale=0.5]{demoEchoedCRPulse.pdf}
-    \caption{Echoed cross resonance gate calibration for implementation of CNOT gates in IBM Quantum backends. Control qubit corresponds to index 1, whereas target qubit, to index 3. This figure represents a typical calibration for \textit{ibmq jakarta}.}
-    \label{fig:echoedPulseQiskit}
-  \end{figure}
+    \begin{figure}
+      \centering
+      \includegraphics[scale=0.5]{demoEchoedCRPulse.pdf}
+      \caption{Echoed cross resonance gate calibration for implementation of CNOT gates in IBM Quantum backends. Control qubit corresponds to index 1, whereas target qubit, to index 3. This figure represents a typical calibration for \textit{ibmq jakarta}.}
+      \label{fig:echoedPulseQiskit}
+    \end{figure}
 
-  \subsection{Cross-resonance based transpilation of quantum circuits}
+  \subsection{Cross-resonance based transpilation of quantum includes}
+  \label{subsec:CrossResonanceTranspilation}
 
-  As mentioned before, IBM Quantum exposes a highly calibrated CNOT gates as entangling operations. However, in some instances, CNOT based circuit transpilation to microwave pulse schedules lead to execution times that are impossible to execute with high fidelity on current quantum devices. An example is time simulation of Majorana fermionic systems \cite{MajoranaSimulation}. A key insight towards performing pulse efficient implementation of quantum algorithms is to use the highly calibrated CNOT schedule exposed by IBM Quantum backends to perform cross resonance gates discussed on the previous section \cite{MajoranaSimulation, RXZPulseEfficient}. The details on the gaussian pulse scaling can be found on \cite{MajoranaSimulation}. The idea is to scale the area of the pulses in direct proportion to the angle of rotation of the cross resonance gate. Then, adjust the width, amplitude, and duration of the pulse accordingly. Through Qiskit SDK, it is possible to perform this calibration as discussed in the appendix of \cite{RXZPulseEfficient}.
+    As mentioned before, IBM Quantum exposes a highly calibrated CNOT gates as entangling operations. However, in some instances, CNOT based circuit transpilation to microwave pulse schedules lead to execution times that are impossible to execute with high fidelity on current quantum devices. An example is time simulation of Majorana fermionic systems \cite{MajoranaSimulation}. A key insight towards performing pulse efficient implementation of quantum algorithms is to use the highly calibrated CNOT schedule exposed by IBM Quantum backends to perform cross resonance gates discussed on the previous section \cite{MajoranaSimulation, RXZPulseEfficient}. The details on the gaussian pulse scaling can be found on \cite{MajoranaSimulation}. The idea is to scale the area of the pulses in direct proportion to the angle of rotation of the cross resonance gate. Then, adjust the width, amplitude, and duration of the pulse accordingly. Through Qiskit SDK, it is possible to perform this calibration as discussed in the appendix of \cite{RXZPulseEfficient}.
 
-  As pointed out on \cite{RXZPulseEfficient}, with calibrated cross resonance gates, it is possible to implement two qubit gates of the group
+    As pointed out on \cite{RXZPulseEfficient}, with calibrated cross resonance gates, it is possible to implement two qubit gates of the group
 
-  \begin{equation}
-    \hat{U}(\alpha, \beta, \gamma) = \mathrm{e}^{-\mathrm{i}(\alpha\hat{X}\hat{X} + \beta\hat{Y}\hat{Y} + \gamma\hat{Z}\hat{Z})}
-    \label{eq:CartanDecomp}
-  \end{equation}
+    \begin{equation}
+      \hat{U}(\alpha, \beta, \gamma) = \mathrm{e}^{-\mathrm{i}(\alpha\hat{X}\hat{X} + \beta\hat{Y}\hat{Y} + \gamma\hat{Z}\hat{Z})}
+      \label{eq:CartanDecomp}
+    \end{equation}
 
-  \input{circuits/CartanDecompCircuit.tex}
+    \input{includes/CartanDecompCircuit.tex}
 
-  As shown on \cite{RXZPulseEfficient} and \cite{MajoranaSimulation}, this type of algorithm transpilation leads to a significant relative error reduction for shorter pulse schedules, allowing time simulation of interesting physical systems. Benchmark test were made in comparison to the three CNOT decomposition depicted on figure \ref{fig:cartan3Cnot}. It was shown experimentally that the relative error can be decreased up to $50\%$ by implementing pulse efficient algorithms on current quantum devices \cite{RXZPulseEfficient}.
+    As shown on \cite{RXZPulseEfficient} and \cite{MajoranaSimulation}, this type of algorithm transpilation leads to a significant relative error reduction for shorter pulse schedules, allowing time simulation of interesting physical systems. Benchmark test were made in comparison to the three CNOT decomposition depicted on figure \ref{fig:cartan3Cnot}. It was shown experimentally that the relative error can be decreased up to $50\%$ by implementing pulse efficient algorithms on current quantum devices \cite{RXZPulseEfficient}.
 
 
