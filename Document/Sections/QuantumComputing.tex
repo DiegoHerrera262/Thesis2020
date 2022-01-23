@@ -183,148 +183,152 @@ This chapter introduces the elements of quantum computing and digital time simul
     \label{eq:Schrodinger}
   \end{equation}
 
-  \noindent whose solution, for time indenependent Hamiltonians, is
+  \noindent whose solution, for time independent Hamiltonians, is
 
   \begin{equation}
     \ket{\psi(t)} = \mathrm{e}^{-\mathrm{i}\hat{H}t}\ket{\psi(0)}
-    \label{eq:schrodSolution}
+    \label{eq:schrodSolution}.
   \end{equation}
   
   In general, $[\hat{H}_i,\hat{H}_j] \neq 0$, and thus
 
   \begin{equation}
-    \mathrm{e}^{-\mathrm{i}\hat{H}t} \neq \prod_{k = 1}^{L} \mathrm{e}^{-\mathrm{i}\hat{H}_kt}
+    \mathrm{e}^{-\mathrm{i}\hat{H}t} \neq \prod_{k = 1}^{L} \mathrm{e}^{-\mathrm{i}\hat{H}_kt}.
     \label{eq:CommuteUnit}
   \end{equation}
 
   Hence, solving Schrödinger equation is a non trivial task. Many systems are described by local interactions; for instance, electrons in a solid material or magnetic moments in a lattice. In several instances, local interaction Hamiltonians are non-commuting, and thus approximation methods are necessary for performing time evolution. In this section, schemes for approximating unitary evolution of a quantum system are discussed.
 
   \subsection{Trotter Formulas}
+  \label{subsec:TrotterFormulas}
 
-  Consider operators $\hat{H}_1$, $\hat{H}_2$, with $[\hat{H}_1,\hat{H}_2] \neq 0$. By definition
+    Consider operators $\hat{H}_1$, $\hat{H}_2$, with $[\hat{H}_1,\hat{H}_2] \neq 0$. By definition
 
-  \begin{align}
-    \mathrm{e}^{-\mathrm{i}\hat{H}_1 t} & = \sum_{m = 0}^{\infty} \frac{(-\mathrm{i}t)^m}{m!}\hat{H}_1^m, \\
-    \mathrm{e}^{-\mathrm{i}\hat{H}_2 t} & = \sum_{l = 0}^{\infty} \frac{(-\mathrm{i}t)^l}{l!}\hat{H}_2^l.
-    \label{eq:ExpSeries}
-  \end{align}
+    \begin{align}
+      \mathrm{e}^{-\mathrm{i}\hat{H}_1 t} & = \sum_{m = 0}^{\infty} \frac{(-\mathrm{i}t)^m}{m!}\hat{H}_1^m, \\
+      \mathrm{e}^{-\mathrm{i}\hat{H}_2 t} & = \sum_{l = 0}^{\infty} \frac{(-\mathrm{i}t)^l}{l!}\hat{H}_2^l.
+      \label{eq:ExpSeries}
+    \end{align}
 
-  It is readily shown that
+    It is readily shown that
 
-  \begin{equation}
-    \mathrm{e}^{-\mathrm{i}\hat{H}_1 t}\mathrm{e}^{-\mathrm{i}\hat{H}_2 t} = \sum_{k = 0}^{\infty} \frac{(-\mathrm{i}t)^k}{k!} \Bigg[\sum_{m = 0}^k \binom{k}{m} \hat{H}_1^m \hat{H}_2^{k-m}\Bigg]
-    \label{eq:ExpProdExact}
-  \end{equation}
+    \begin{equation}
+      \mathrm{e}^{-\mathrm{i}\hat{H}_1 t}\mathrm{e}^{-\mathrm{i}\hat{H}_2 t} = \sum_{k = 0}^{\infty} \frac{(-\mathrm{i}t)^k}{k!} \Bigg[\sum_{m = 0}^k \binom{k}{m} \hat{H}_1^m \hat{H}_2^{k-m}\Bigg].
+      \label{eq:ExpProdExact}
+    \end{equation}
 
-  Fon non-commuting operators, the following identity is true
+    For non-commuting operators, the following identity is true:
 
-  \begin{equation}
-    \sum_{m = 0}^k \binom{k}{m} \hat{H}_1^m \hat{H}_2^{k-m} = (\hat{H}_1 + \hat{H}_2)^k + f_k(\hat{H}_1,\hat{H}_2)
-    \label{eq:BinomialTheorem}
-  \end{equation}
+    \begin{equation}
+      \sum_{m = 0}^k \binom{k}{m} \hat{H}_1^m \hat{H}_2^{k-m} = (\hat{H}_1 + \hat{H}_2)^k + f_k(\hat{H}_1,\hat{H}_2),
+      \label{eq:BinomialTheorem}
+    \end{equation}
 
-  \noindent where $f_k(\hat{H}_1,\hat{H}_2)$ is a function of the commutator of the operators. Since $f_1(\hat{H}_1,\hat{H}_2) = 0$, it is so that
+    \noindent where $f_k(\hat{H}_1,\hat{H}_2)$ is a function of the commutator of the operators. Since $f_1(\hat{H}_1,\hat{H}_2) = 0$, it follows that
 
-  \begin{equation}
-    \mathrm{e}^{-\mathrm{i}\hat{H}_1 t}\mathrm{e}^{-\mathrm{i}\hat{H}_2 t} = \mathrm{e}^{-\mathrm{i}(\hat{H}_1 + \hat{H}_2) t} + \mathcal{O}(t^2).
-    \label{eq:O2Approx}
-  \end{equation}
+    \begin{equation}
+      \mathrm{e}^{-\mathrm{i}\hat{H}_1 t}\mathrm{e}^{-\mathrm{i}\hat{H}_2 t} = \mathrm{e}^{-\mathrm{i}(\hat{H}_1 + \hat{H}_2) t} + \mathcal{O}(t^2).
+      \label{eq:O2Approx}
+    \end{equation}
 
-  If $|t| \ll 1$, the product of the exponential operators estimate the evolution operator with an error $\mathcal{O}(t^2)$. In the general case, it must be noted that
+    If $|t| \ll 1$, the product of the exponential operators estimate the evolution operator with an error $\mathcal{O}(t^2)$. In the general case, it must be noted that
 
-  \begin{equation}
-    \mathrm{e}^{-\mathrm{i}\sum_{k = 0}^L \hat{H}_k t} = \hat{1} + (-\mathrm{i}t)\sum_{k = 0}^L \hat{H}_k + \frac{(-\mathrm{i}t)^2}{2} \Bigg[\sum_{k = 0}^L \hat{H}_k^2 + 2 \sum_{j > k}\hat{H}_k \hat{H}_j\Bigg] + \mathcal{O}(t^3)
-    \label{eq:TrotterFormula}
-  \end{equation}
+    \begin{equation}
+      \mathrm{e}^{-\mathrm{i}\sum_{k = 0}^L \hat{H}_k t} = \hat{1} + (-\mathrm{i}t)\sum_{k = 0}^L \hat{H}_k + \frac{(-\mathrm{i}t)^2}{2} \Bigg[\sum_{k = 0}^L \hat{H}_k^2 + 2 \sum_{j > k}\hat{H}_k \hat{H}_j\Bigg] + \mathcal{O}(t^3).
+      \label{eq:TrotterFormula}
+    \end{equation}
 
-  In consequence, a unitary evolution operator with local interactions may be approximated, to quadratic order, by the exponential product
+    In consequence, a unitary evolution operator with local interactions may be approximated, to quadratic order, by the exponential product
 
-  \begin{equation}
-    \mathrm{e}^{-\mathrm{i}\sum_{k = 0}^L \hat{H}_k t} = \prod_{k = 1}^{L} \mathrm{e}^{-\mathrm{i}\hat{H}_kt} + \mathcal{O}(t^2)
-    \label{eq:2ndOrderTrotter}
-  \end{equation}
+    \begin{equation}
+      \mathrm{e}^{-\mathrm{i}\sum_{k = 0}^L \hat{H}_k t} = \prod_{k = 1}^{L} \mathrm{e}^{-\mathrm{i}\hat{H}_kt} + \mathcal{O}(t^2).
+      \label{eq:2ndOrderTrotter}
+    \end{equation}
 
-  In some instances, quadratic approximations may be enough. In his seminal paper, Lloyd presents this quadratic approximation for simulation of quantum systems with local interaction \cite{LloydNature}. Also, Las Heras et. al. simulate a Hubbard Hamiltonian with up to 4 fermionic modes using second order approximations to unitary evolution \cite{HubbardSimul, HubbardSimulLasHeras}. However, in following sections, higher-order approximation schemes are discussed, based upon equation \ref{eq:TrotterFormula}.
+    In some instances, quadratic approximations may be enough. In his seminal paper, Lloyd presents this quadratic approximation for simulation of quantum systems with local interaction \cite{LloydNature}. Also, Las Heras et. al. simulate a Hubbard Hamiltonian with up to 4 fermionic modes using second order approximations to unitary evolution \cite{HubbardSimul, HubbardSimulLasHeras}. However, in following sections, higher-order approximation schemes are discussed, based upon equation \ref{eq:TrotterFormula}.
 
   \subsection{Some Cubic Order Schemes}
+  \label{subsec:QubicOrderTrotter}
 
-  The first cubic order approximation discussed is the so called Baker-Haussdorf formulae \cite{Nielsen}. By series expansion, it can be shown that
+    The first cubic order approximation discussed is the so called Baker-Haussdorf formulae \cite{Nielsen}. By series expansion, it can be shown that
 
-  \begin{align*}
-    \mathrm{e}^{-\mathrm{i}\hat{H}_1t}\mathrm{e}^{-\mathrm{i}\hat{H}_2t}\mathrm{e}^{-\mathrm{i}[\hat{H}_1,\hat{H}_2]t^2} = & \hat{1} + (-\mathrm{i}t) (\hat{H}_1 + \hat{H}_2) \\
-    & + \frac{(-\mathrm{i}t)^2}{2}(\hat{H}_1^2 + \hat{H}_2^2 + \hat{H}_1\hat{H}_2 + \hat{H}_2\hat{H}_1) + \mathcal{O}(t^3) \\
-    = & \mathrm{e}^{-\mathrm{i}(\hat{H}_1 + \hat{H}_1)t} + \mathcal{O}(t^3)
-    \label{eq:Hausdorf1}
-  \end{align*}
+    \begin{align*}
+      \mathrm{e}^{-\mathrm{i}\hat{H}_1t}\mathrm{e}^{-\mathrm{i}\hat{H}_2t}\mathrm{e}^{-\mathrm{i}[\hat{H}_1,\hat{H}_2]t^2} = & \hat{1} + (-\mathrm{i}t) (\hat{H}_1 + \hat{H}_2) \\
+      & + \frac{(-\mathrm{i}t)^2}{2}(\hat{H}_1^2 + \hat{H}_2^2 + \hat{H}_1\hat{H}_2 + \hat{H}_2\hat{H}_1) + \mathcal{O}(t^3) \\
+      = & \mathrm{e}^{-\mathrm{i}(\hat{H}_1 + \hat{H}_1)t} + \mathcal{O}(t^3).
+      \label{eq:Hausdorf1}
+    \end{align*}
 
-  Although useful in case of operators that constitute a Lie algebra, the formulae above may not be enough in other instances. A more general approximation formulae is
+    Although useful in case of operators that constitute a Lie algebra, the formulae above may not be enough in other instances. A more general approximation formulae is
 
-  \begin{equation}
-    \mathrm{e}^{-\mathrm{i}t\sum_{l = 0}^{L-1}\hat{H}_l} = \Bigg(\prod_{l = 0}^{L-1}\mathrm{e}^{-\mathrm{i}\hat{H}_l\frac{t}{2}}\Bigg)\Bigg(\prod_{l = L-1}^{0}\mathrm{e}^{-\mathrm{i}\hat{H}_l\frac{t}{2}}\Bigg) + \mathcal{O}(t^3)
-    \label{eq:Suzuki0}
-  \end{equation}
+    \begin{equation}
+      \mathrm{e}^{-\mathrm{i}t\sum_{l = 0}^{L-1}\hat{H}_l} = \Bigg(\prod_{l = 0}^{L-1}\mathrm{e}^{-\mathrm{i}\hat{H}_l\frac{t}{2}}\Bigg)\Bigg(\prod_{l = L-1}^{0}\mathrm{e}^{-\mathrm{i}\hat{H}_l\frac{t}{2}}\Bigg) + \mathcal{O}(t^3).
+      \label{eq:Suzuki0}
+    \end{equation}
 
-  This can be deduced directly from the identity
+    This formulae can be deduced directly from the identity
 
-  \begin{equation}
-    \mathrm{e}^{-\mathrm{i}\sum_{l = 0}^{2L-1} \hat{K}_l t} = \hat{1} + (-\mathrm{i}t)\sum_{l = 0}^{2L-1} \hat{K}_l + \frac{(-\mathrm{i}t)^2}{2} \Bigg[\sum_{l = 0}^{2L-1} \hat{K}_l^2 + 2 \sum_{j > l}\hat{K}_l \hat{K}_j\Bigg] + \mathcal{O}(t^3)
-    \label{eq:TrotterFormula1}
-  \end{equation}
+    \begin{equation}
+      \mathrm{e}^{-\mathrm{i}\sum_{l = 0}^{2L-1} \hat{K}_l t} = \hat{1} + (-\mathrm{i}t)\sum_{l = 0}^{2L-1} \hat{K}_l + \frac{(-\mathrm{i}t)^2}{2} \Bigg[\sum_{l = 0}^{2L-1} \hat{K}_l^2 + 2 \sum_{j > l}\hat{K}_l \hat{K}_j\Bigg] + \mathcal{O}(t^3),
+      \label{eq:TrotterFormula1}
+    \end{equation}
 
-  With the identifications
+    \noindent with the identifications
 
-  \begin{equation}
-    \hat{K}_l = \hat{K}_{2L-1-l} = \frac{\hat{H}_l}{2}
-    \label{eq:Identifications}
-  \end{equation}
+    \begin{equation}
+      \hat{K}_l = \hat{K}_{2L-1-l} = \frac{\hat{H}_l}{2},
+      \label{eq:Identifications}
+    \end{equation}
 
-  And the following observations
+    \noindent and the following observations:
 
-  \begin{equation}
-    \begin{gathered}
-      \sum_{l = 0}^{2L-1} \hat{K}_l^2 = \frac{1}{2}\sum_{l = 0}^{L-1} \hat{H}_l^2 \\
-      2\sum_{l' > l} \hat{K}_{l} \hat{K}_{l'} = \frac{1}{2}\sum_{l = 0}^{L-1} \hat{H}_l^2 + \sum_{l'> l} \Bigg( \hat{H}_{l} \hat{H}_{l'} + \hat{H}_{l'} \hat{H}_{l}\Bigg)\\
-      \Bigg(\sum_{l = 0}^{L-1} \hat{H}_l \Bigg)^2 = \sum_{l = 0}^{L-1} \hat{H}_l^2 + \sum_{l'> l} \Bigg( \hat{H}_{l} \hat{H}_{l'} + \hat{H}_{l'} \hat{H}_{l}\Bigg)\\
-    \end{gathered}
-  \end{equation}
+    \begin{equation}
+      \begin{gathered}
+        \sum_{l = 0}^{2L-1} \hat{K}_l^2 = \frac{1}{2}\sum_{l = 0}^{L-1} \hat{H}_l^2, \\
+        2\sum_{l' > l} \hat{K}_{l} \hat{K}_{l'} = \frac{1}{2}\sum_{l = 0}^{L-1} \hat{H}_l^2 + \sum_{l'> l} \Bigg( \hat{H}_{l} \hat{H}_{l'} + \hat{H}_{l'} \hat{H}_{l}\Bigg), \\
+        \Bigg(\sum_{l = 0}^{L-1} \hat{H}_l \Bigg)^2 = \sum_{l = 0}^{L-1} \hat{H}_l^2 + \sum_{l'> l} \Bigg( \hat{H}_{l} \hat{H}_{l'} + \hat{H}_{l'} \hat{H}_{l}\Bigg). \\
+      \end{gathered}
+    \end{equation}
 
   \subsection{Suzuki - Trotter Scheme}
-  This scheme is a higher order approximation to an evolution operator, that works iteratively on top of the approximation given by equation \ref{eq:Suzuki0}. Define \cite{SuzukiFormula, BerryErrorBounds}
+  \label{subsec:SuzukiTrotter}
 
-  \begin{equation}
-    \hat{S}_2(\lambda) = \prod_{l = 0}^{L-1} \mathrm{e}^{\frac{\lambda}{2}\hat{H}_l} \prod_{l = L-1}^{0} \mathrm{e}^{\frac{\lambda}{2}\hat{H}_l}
-    \label{eq:SuzukiInit}
-  \end{equation}
+    Suzuki-Trotter scheme is a higher order approximation to an evolution operator, that works iteratively on top of the approximation given by equation \ref{eq:Suzuki0}. Set \cite{SuzukiFormula, BerryErrorBounds}
 
-  Then, for $k > 1$, the following recursion relation is defined
+    \begin{equation}
+      \hat{S}_2(\lambda) = \prod_{l = 0}^{L-1} \mathrm{e}^{\frac{\lambda}{2}\hat{H}_l} \prod_{l = L-1}^{0} \mathrm{e}^{\frac{\lambda}{2}\hat{H}_l}.
+      \label{eq:SuzukiInit}
+    \end{equation}
 
-  \begin{equation}
-    \hat{S}_{2k}(\lambda) = [\hat{S}_{2k-2}(p_k\lambda)]^2 \hat{S}_{2k-2}((1 - 4 p_k)\lambda) [\hat{S}_{2k-2}(p_k\lambda)]^2
-    \label{eq:SuzukiRecursion}
-  \end{equation}
+    Then, for $k > 1$, the following recursion relation is defined
 
-  Where coefficients $p_k$ are defined as
+    \begin{equation}
+      \hat{S}_{2k}(\lambda) = [\hat{S}_{2k-2}(p_k\lambda)]^2 \hat{S}_{2k-2}((1 - 4 p_k)\lambda) [\hat{S}_{2k-2}(p_k\lambda)]^2,
+      \label{eq:SuzukiRecursion}
+    \end{equation}
 
-  \begin{equation}
-    p_k = \frac{1}{4 - 4^{\frac{1}{2k-1}}}
-    \label{eq:pk}
-  \end{equation}
+    \noindent where coefficients $p_k$ are given by
 
-  It has been shown by Suzuki that \cite{SuzukiFormula}
+    \begin{equation}
+      p_k = \frac{1}{4 - 4^{\frac{1}{2k-1}}}.
+      \label{eq:pk}
+    \end{equation}
 
-  \begin{equation}
-    \mathrm{e}^{-\mathrm{i}t \sum_{l = 0}^{L-1} \hat{H}_l} = \hat{S}_{2k}(-\mathrm{i}t) + \mathcal{O}(t^{2k+1})
-  \end{equation}
+    It has been shown by Suzuki that \cite{SuzukiFormula}
 
-  On \cite{BerryErrorBounds}, Barry et. al. show that Suzuki-Trotter schemes can efficiently simulate sparse Hamiltonians, such as the ones considered in this work. As a matter of fact, they have shown that the number of exponentials ($N_{\text{exp}}$) required to simulate time evolution of a system during a time interval $t > 0$, with error bounded by $\epsilon > 0$, is such that
+    \begin{equation}
+      \mathrm{e}^{-\mathrm{i}t \sum_{l = 0}^{L-1} \hat{H}_l} = \hat{S}_{2k}(-\mathrm{i}t) + \mathcal{O}(t^{2k+1}).
+    \end{equation}
 
-  \begin{equation}
-    N_{\text{exp}} \leq 2L5^{2k}(L\tau)^{1+1/2k}/\epsilon^{1/2k}
-  \end{equation}
+    On \cite{BerryErrorBounds}, Barry et. al. show that Suzuki-Trotter schemes can efficiently simulate sparse Hamiltonians, such as the ones considered in this work. As a matter of fact, they have shown that the number of exponentials ($N_{\text{exp}}$) required to simulate time evolution of a system during a time interval $t > 0$, with error bounded by $\epsilon > 0$, is such that
 
-  Where $\tau = \left\Vert \hat{H} \right\Vert t$, $2k$ is the order of a Suzuki-Trotter iteration, and $\epsilon \leq 1 \leq 2L5^{2k}$. Notice that by choosing a sufficiently high order, a Suzuki-Trotter scheme can emulate time evolution with almost linear complexity in time.
+    \begin{equation}
+      N_{\text{exp}} \leq 2L5^{2k}(L\tau)^{1+1/2k}/\epsilon^{1/2k},
+    \end{equation}
 
-  In most cases, simulation of a quantum system by a digital quantum computer requires mapping its Hilbert space to a $2^M$-dimensional Hilbert space. In that case, the number of qubits required for simulation would be $M$. Clearly, all quantum operators in the simulated system's space should be mapped to operators on an $M$-qubit space, which would then be approximated by a universal set of gates. In the following section, demonstrations of this approach to the study of the Hubbard Model and the Electronic structure problem are introduced.
+    \noindent where $\tau = \left\Vert \hat{H} \right\Vert t$, $2k$ is the order of a Suzuki-Trotter iteration, and $\epsilon \leq 1 \leq 2L5^{2k}$. Notice that by choosing a sufficiently high order, a Suzuki-Trotter scheme can emulate time evolution with almost linear complexity in time.
+
+    In most cases, simulation of a quantum system by a digital quantum computer requires mapping its Hilbert space to a $2^M$-dimensional Hilbert space. In that case, the number of qubits required for simulation would be $M$. Clearly, all quantum operators in the simulated system's space should be mapped to operators on an $M$-qubit space, which would then be approximated by a universal set of gates. In the following section, demonstrations of this approach to the study of the Hubbard Model and the Electronic structure problem are introduced.
 
 \section{Time Simulation of Spin 1/2 Models}
 \label{sec:hubbard}
@@ -332,71 +336,73 @@ This chapter introduces the elements of quantum computing and digital time simul
   This section introduces examples of simulation of Hamiltonians such as
 
   \begin{equation}
-    \hat{H} = \sum_{\langle i,j \rangle} J_{ij}^{(x)} \hat{X}_i \hat{X}_j + J_{ij}^{(Y)} \hat{Y}_i \hat{Y}_j + J_{ij}^{(Z)} \hat{Z}_i \hat{Z}_j + \sum_i h_i^{(X)} \hat{X}_i + h_i^{(Y)} \hat{Y}_i + h_i^{(Z)} \hat{Z}_i
+    \hat{H} = \sum_{\langle i,j \rangle} J_{ij}^{(x)} \hat{X}_i \hat{X}_j + J_{ij}^{(Y)} \hat{Y}_i \hat{Y}_j + J_{ij}^{(Z)} \hat{Z}_i \hat{Z}_j + \sum_i h_i^{(X)} \hat{X}_i + h_i^{(Y)} \hat{Y}_i + h_i^{(Z)} \hat{Z}_i,
     \label{eq:HeisenbergHamiltonian}
   \end{equation}
 
-  Defined over an arbitrary spin graph, and considering nearest neighbor interaction. Most of them are related to work from Las Heras et. al. \cite{HubbardSimul,HubbardSimulLasHeras} and Y. Salathé \cite{HeisenbergSimulLasHeras}. In this section, the importance of simulating such systems is discussed. Furthermore, the examples considered here are further generalized in following chapters to simulate any system whose Hamiltonian is of the shape of eq. \ref{eq:HeisenbergHamiltonian}, and its limitations are exemplified.
+  \noindent defined over an arbitrary spin graph, and considering nearest neighbor interaction. Most of them are related to work from Las Heras et. al. \cite{HubbardSimul,HubbardSimulLasHeras} and Y. Salathé \cite{HeisenbergSimulLasHeras}. In this section, the importance of simulating such systems is discussed. Furthermore, the examples considered here are further generalized in following chapters to simulate any system whose Hamiltonian is of the shape of eq. \ref{eq:HeisenbergHamiltonian}, and its limitations are exemplified.
 
   \subsection{Digital simulation of two-spin models}
+  \label{subsec:SalatheEtAl}
 
-  As a first example, simulation of two-spin models carried out by Y. Salathé et. al. \cite{HeisenbergSimulLasHeras} are presented. In their work, a superconducting chip with two trasmon qubits is used to simulate two-spin interaction described by the Hamiltonian
+    As a first example, simulation of two-spin models carried out by Y. Salathé et. al. \cite{HeisenbergSimulLasHeras} are presented. In their work, a superconducting chip with two trasmon qubits is used to simulate two-spin interaction described by the Hamiltonian
 
-  \begin{equation}
-    \hat{H}_{1,2}^{x,y} = \frac{J}{2} \bigg( \hat{X}_1 \hat{X}_2 + \hat{Y}_1 \hat{Y}_2 \bigg)
-    \label{eq:fundamentalSlatheGate}
-  \end{equation}
+    \begin{equation}
+      \hat{H}_{1,2}^{x,y} = \frac{J}{2} \bigg( \hat{X}_1 \hat{X}_2 + \hat{Y}_1 \hat{Y}_2 \bigg).
+      \label{eq:fundamentalSlatheGate}
+    \end{equation}
 
-  This means that they where able to evolve the qubits' state during time $t$, using microwave pulses on the chip, with unitary dynamics governed by Hamiltonian \ref{eq:fundamentalSlatheGate}. It is easy to see that by performing single qubit rotations, it is possible to emulate more complicated dynamics, for instance, an isotropic XYZ interaction
+    This means that they where able to evolve the qubits' state during time $t$, using microwave pulses on the chip, with unitary dynamics governed by Hamiltonian \ref{eq:fundamentalSlatheGate}. It is easy to see that by performing single qubit rotations, it is possible to emulate more complicated dynamics, for instance, an isotropic XYZ interaction
 
-  \begin{equation}
-    \hat{H}_{1,2}^{x,y,z} = J \bigg( \hat{X}_1 \hat{X}_2 + \hat{Y}_1 \hat{Y}_2 + \hat{Z}_1 \hat{Z}_2 \bigg)
-    \label{eq:XYZSalathe}
-  \end{equation}
+    \begin{equation}
+      \hat{H}_{1,2}^{x,y,z} = J \bigg( \hat{X}_1 \hat{X}_2 + \hat{Y}_1 \hat{Y}_2 + \hat{Z}_1 \hat{Z}_2 \bigg).
+      \label{eq:XYZSalathe}
+    \end{equation}
 
-  An algorithm for simulating time dynamics under Hamiltonian \ref{eq:XYZSalathe} is presented on fig. \ref{fig:salathe-xyz}. The reported state fidelities of the evolution process are above $82\%$. It must be noted that, since all terms of the Hamiltonian commute, the evolution of the two qubit state is exact, and only limited by hardware. In addition to that, an algorithm for simulating the Ising model with transverse homogeneous magnetic field was proposed (see fig. \ref{fig:salathe-ising}).
-  
-  \begin{equation}
-    \hat{H}_I = J \hat{X}_1 \hat{X}_2 + \frac{B}{2}\bigg(\hat{Z}_1 + \hat{Z}_2 \bigg)
-    \label{eq:IsingSlathe}
-  \end{equation}
+    An algorithm for simulating time dynamics under Hamiltonian \ref{eq:XYZSalathe} is presented on fig. \ref{fig:salathe-xyz}. The reported state fidelities of the evolution process are above $82\%$. It must be noted that, since all terms of the Hamiltonian commute, the evolution of the two qubit state is exact, and only limited by hardware. In addition to that, an algorithm for simulating the Ising model with transverse homogeneous magnetic field was proposed (see fig. \ref{fig:salathe-ising}). The target Hamiltonian is
+    
+    \begin{equation}
+      \hat{H}_I = J \hat{X}_1 \hat{X}_2 + \frac{B}{2}\bigg(\hat{Z}_1 + \hat{Z}_2 \bigg).
+      \label{eq:IsingSlathe}
+    \end{equation}
 
-  Notice that this Hamiltonian is composed of local parts that do not commute with one another (spin interaction and field interaction), thus an approximate evolution scheme is needed to simulate time evolution. In their work, Salathé et. al. \cite{HeisenbergSimulLasHeras} used a second order trotterization (see eq. \ref{eq:2ndOrderTrotter}). Furthermore, a noise model was proposed to take into account the fact that decoherence and gate errors limit the expected precision of a trotterization scheme. The results show that the main source of error is the infidelity of the two-qubit gate implementation of the XY interaction (eq. \ref{eq:fundamentalSlatheGate}).
+    Notice that this Hamiltonian is composed of local parts that do not commute with one another (spin interaction and field interaction), thus an approximate evolution scheme is needed to simulate time evolution. In their work, Salathé et. al. \cite{HeisenbergSimulLasHeras} used a second order trotterization (see eq. \ref{eq:2ndOrderTrotter}). Furthermore, a noise model was proposed to take into account the fact that decoherence and gate errors limit the expected precision of a trotterization scheme. The results show that the main source of error is the infidelity of the two-qubit gate implementation of the XY interaction (eq. \ref{eq:fundamentalSlatheGate}).
 
   \subsection{Digital simulation of Hubbard models}
+  \label{subsec:HubbardModels}
 
-  As a second example, the work of las Heras et. al. is considered\cite{HubbardSimulLasHeras}. The authors simulated instances of the quintessential Hubbard Hamiltonian
+    As a second example, the work of las Heras et. al. is considered\cite{HubbardSimulLasHeras}. The authors simulated instances of the quintessential Hubbard Hamiltonian
 
-  \begin{equation}
-    \hat{H}_H = -V \sum_{\langle i,j\rangle} (\hat{b}_i^{\dagger}\hat{b}_j + \hat{b}_j^{\dagger}\hat{b}_i) + U \sum_i \hat{n}_{i\uparrow}\hat{n}_{i\downarrow}
-    \label{eq:HubbardHamiltonian}
-  \end{equation}
+    \begin{equation}
+      \hat{H}_H = -V \sum_{\langle i,j\rangle} (\hat{b}_i^{\dagger}\hat{b}_j + \hat{b}_j^{\dagger}\hat{b}_i) + U \sum_i \hat{n}_{i\uparrow}\hat{n}_{i\downarrow},
+      \label{eq:HubbardHamiltonian}
+    \end{equation}
 
-  Where $\hat{b}_i$ represent fermionic-mode annihilation operators (for spin-up or spin-down particles), and $\hat{n}_{i\uparrow},\hat{n}_{i\uparrow}$, fermionic-mode occupation number operators. This was done using the Jordan-Wigner mapping, which transforms fermionic operators to qubit operators. The rule is that each occupation mode is mapped directly to the state of a qubit, so that its state encodes the occupation number of the mode in the computational basis. Fermionic annihilation operators are mapped directly following the rule \cite{Mastersthesis}
+    \noindent where $\hat{b}_i$ represent fermionic-mode annihilation operators (for spin-up or spin-down particles), and $\hat{n}_{i\uparrow},\hat{n}_{i\uparrow}$, fermionic-mode occupation number operators. This was done using the Jordan-Wigner mapping, which transforms fermionic operators to qubit operators. The rule is that each occupation mode is mapped directly to the state of a qubit, so that its state encodes the occupation number of the mode in the computational basis. Fermionic annihilation operators are mapped directly following the rule \cite{Mastersthesis}
 
-  \begin{equation}
-    \hat{b}_i = \hat{\sigma}_i^{+} \otimes \Bigg(\bigotimes_{k=0}^{N} \hat{Z}_k \Bigg)
-    \label{eq:JWT}
-  \end{equation}
+    \begin{equation}
+      \hat{b}_i = \hat{\sigma}_i^{+} \otimes \Bigg(\bigotimes_{k=0}^{N} \hat{Z}_k \Bigg),
+      \label{eq:JWT}
+    \end{equation}
 
-  Where it is assumed that a linear indexing of the modes is used, even for different spin values. The authors considered models with up to four modes. In particular, they showed that the mapping of a two-mode Hubbard Hamiltonian like eq. \ref{eq:HubbardHamiltonian} leads to a qubit Hamiltonian
+    \noindent where it is assumed that a linear indexing of the modes is used, even for different spin values. The authors considered models with up to four modes. In particular, they showed that the mapping of a two-mode Hubbard Hamiltonian like eq. \ref{eq:HubbardHamiltonian} leads to a qubit Hamiltonian
 
-  \begin{equation}
-    \hat{H}_H = \frac{V}{2}\big(\hat{X}_1 \hat{X}_2 + \hat{Y}_1 \hat{Y}_2\big) + \frac{U}{4} \big(\hat{Z}_1 \hat{Z}_2 + \hat{Z}_1 + \hat{Z}_2\big)
-    \label{eq:TwoModeHubbard}
-  \end{equation}
+    \begin{equation}
+      \hat{H}_H = \frac{V}{2}\big(\hat{X}_1 \hat{X}_2 + \hat{Y}_1 \hat{Y}_2\big) + \frac{U}{4} \big(\hat{Z}_1 \hat{Z}_2 + \hat{Z}_1 + \hat{Z}_2\big).
+      \label{eq:TwoModeHubbard}
+    \end{equation}
 
-  The authors used a superconducting chip for simulating time dynamics governed by Hamiltonian \ref{eq:TwoModeHubbard}. The quantum algorithm is represented on figure \ref{fig:heras-hubbard}. It was used to simulate time evolution with an initial state
-  
-  $$
-  \ket{\psi_0} = \frac{1}{\sqrt{2}}(\ket{0} + \ket{1}) \otimes \ket{0}
-  $$
+    The authors used a superconducting chip for simulating time dynamics governed by Hamiltonian \ref{eq:TwoModeHubbard}. The quantum algorithm is represented on figure \ref{fig:heras-hubbard}. It was used to simulate time evolution with an initial state
+    
+    $$
+    \ket{\psi_0} = \frac{1}{\sqrt{2}}(\ket{0} + \ket{1}) \otimes \ket{0}
+    $$
 
-  With $V=U=1$, for a time $t=5$. The results showed that process errors in the implementation of a Trotter step leads to a linear decrease in state fidelity with the number of steps. This is an important factor to consider when implementing Suzuki-Trotter schemes for simulating time evolution. However, their simulations were able to capture the overall dynamics, obtaining fidelities near $90\%$ with a small number of Trotter steps. Three and four mode anisotropic models were simulated as well, obtaining similar results \cite{HubbardSimulLasHeras}.
+    \noindent and $V=U=1$, for a time $t=5$. The results showed that process errors in the implementation of a Trotter step leads to a linear decrease in state fidelity with the number of steps. This is an important factor to consider when implementing Suzuki-Trotter schemes for simulating time evolution. However, their simulations were able to capture the overall dynamics, obtaining fidelities near $90\%$ with a small number of Trotter steps. Three and four mode anisotropic models were simulated as well, obtaining similar results \cite{HubbardSimulLasHeras}.
 
-  It has been shown by Reiner \cite{Mastersthesis} that a one dimensional Hubbard model (eq. \ref{eq:HubbardHamiltonian}) can be mapped to a qubit Hamiltonian of the type \ref{eq:HeisenbergHamiltonian}, by means of the Jordan Wigner mapping. Thus, by generalizing the quantum algorithms presented on these examples, it is possible to study correlation phenomena on metallic solids efficiently, in contrast to current classical simulation methods \cite{Mastersthesis,HubbardOriginal}. In following chapters,  general routines for simulating evolution under Hamiltonian \ref{eq:HeisenbergHamiltonian} are presented, and quantum time evolution is showcased as a tool for studying magnetic properties of solids. Moreover, a discussion of the influence of decoherence and errors in the implementation is carried out, thus presenting the limitations of Suzuki-Trotter schemes for simulating many-body systems.
+    It has been shown by Reiner \cite{Mastersthesis} that a one dimensional Hubbard model (eq. \ref{eq:HubbardHamiltonian}) can be mapped to a qubit Hamiltonian of the type \ref{eq:HeisenbergHamiltonian}, by means of the Jordan Wigner mapping. Thus, by generalizing the quantum algorithms presented on these examples, it is possible to study correlation phenomena on metallic solids efficiently, in contrast to current classical simulation methods \cite{Mastersthesis,HubbardOriginal}. In following chapters,  general routines for simulating evolution under Hamiltonian \ref{eq:HeisenbergHamiltonian} are presented, and quantum time evolution is showcased as a tool for studying magnetic properties of solids. Moreover, a discussion of the influence of decoherence and errors in the implementation is carried out, thus presenting the limitations of Suzuki-Trotter schemes for simulating many-body systems.
 
-  \include{includes/SalatheXYZ}
+    \include{includes/SalatheXYZ}
 
 \section{Pulse Efficient Circuit Implementations}
 \label{sec:pulseFunda}
@@ -413,14 +419,14 @@ This chapter introduces the elements of quantum computing and digital time simul
     IBM Quantum devices consist on a set of coupled superconducting qubits known as transmons \cite{Qiskit, quantumEngineer}. A transmon consists on a Josephson junction shunted by a capacitance. Such devices can be described by the quantum variables of charge ($\hat{Q}$) and magnetic flux ($\hat{\phi}$). This due to the collective motion of Cooper pairs in certain superconducting materials. The effective Hamiltonian of a transmon is \cite{quantumEngineer}
 
     \begin{equation}
-      \hat{H}_T = 4E_C \hat{n} - E_J \cos{\hat{\phi}}
+      \hat{H}_T = 4E_C \hat{n} - E_J \cos{\hat{\phi}},
       \label{eq:transmonHamilonian}
     \end{equation}
 
-    Where $\hat{n} = \hat{Q}/2e$ is the reduced charge of the transmon. The constants $E_C$ and $E_J$ represent the capacitive and junction energy, respectively. In the transmon regime, the junction energy is much larger than the capacitive energy, and the Hamiltonian \ref{eq:transmonHamilonian} can be simplified to a Duffing oscillator Hamiltonian \cite{quantumEngineer}. The key insight is that the energy levels of the system are separated by different amounts from their immediate neighboring levels. Hence, engineering techniques can be devised for constraining the transmon to the subspace spanned by its first two levels, where the effective Hamiltonian is simply
+    \noindent where $\hat{n} = \hat{Q}/2e$ is the reduced charge of the transmon. The constants $E_C$ and $E_J$ represent the capacitive and junction energy, respectively. In the transmon regime, the junction energy is much larger than the capacitive energy, and the Hamiltonian \ref{eq:transmonHamilonian} can be simplified to a Duffing oscillator Hamiltonian \cite{quantumEngineer}. The key insight is that the energy levels of the system are separated by different amounts from their immediate neighboring levels. Hence, engineering techniques can be devised for constraining the transmon to the subspace spanned by its first two levels, where the effective Hamiltonian is simply
 
     \begin{equation}
-      \hat{H}_{efe} = -\frac{\omega_0}{2} \hat{Z}
+      \hat{H}_{efe} = -\frac{\omega_0}{2} \hat{Z}.
       \label{eq:qubitHamiltonian}
     \end{equation}
 
@@ -430,7 +436,7 @@ This chapter introduces the elements of quantum computing and digital time simul
       \hat{U}(\theta, \phi, \lambda) = \begin{bmatrix}
         \cos{\frac{\theta}{2}} & -\mathrm{e}^{\mathrm{i}\lambda}\sin{\frac{\theta}{2}} \\
         \mathrm{e}^{\mathrm{i}\phi}\sin{\frac{\theta}{2}} & \mathrm{e}^{\mathrm{i}(\phi+\lambda)}\cos{\frac{\theta}{2}}
-      \end{bmatrix}= \hat{R}_{z, \phi-\pi/2} \sqrt{X} \hat{R}_{z, \pi-\theta} \sqrt{X} \hat{R}_{z, \lambda-\pi/2} 
+      \end{bmatrix}= \hat{R}_{z, \phi-\pi/2} \sqrt{X} \hat{R}_{z, \pi-\theta} \sqrt{X} \hat{R}_{z, \lambda-\pi/2}. 
       \label{eq:qiskitGateImplement}
     \end{equation}
 
@@ -442,20 +448,20 @@ This chapter introduces the elements of quantum computing and digital time simul
     Transmon qubit pairs usually are coupled to one another by a quantum bus whose frequency is different that the resonance frequency of either qubit \cite{quantumEngineer, 2016RZXCalibration}. In most practical applications, the frequency difference of the two qubits is much larger than the coupling strength to the bus. Mathematical modelling of this system uses a Jaynes-Cummings coupling to the bus electromagnetic modes. The details of the study of circuit QED for modelling qubit-qubit interaction can be found on \cite{2020RZXHamiltonianModels}. In general, entangling operations are performed using so called \textit{cross resonance pulses}, in which a target qubit is driven at the \textit{dressed} \footnote{In this context, \textit{dressed} reference the effective qubit frequencies when projecting the Hamiltonian to the subspace of zero excitations of the quantum bus \cite{2020RZXHamiltonianModels}} resonance frequency of the other. For the purpose of this work, it is sufficient to know that the effective interaction between the qubits can be modelled by the \textbf{cross resonance Hamiltonian} \cite{DuplicatedRXZPulse, 2016RZXCalibration}
 
     \begin{equation}
-      \hat{H}_{CR}(\Omega) = \nu_{ZX} \frac{\hat{Z}_1\hat{X}_2}{2} + \nu_{IZ} \frac{\hat{Z}_2}{2} + \nu_{ZI} \frac{\hat{Z}_1}{2} + \nu_{IX} \frac{\hat{X}_2}{2} + \nu_{ZZ} \frac{\hat{Z}_1\hat{Z}_2}{2}
+      \hat{H}_{CR}(\Omega) = \nu_{ZX} \frac{\hat{Z}_1\hat{X}_2}{2} + \nu_{IZ} \frac{\hat{Z}_2}{2} + \nu_{ZI} \frac{\hat{Z}_1}{2} + \nu_{IX} \frac{\hat{X}_2}{2} + \nu_{ZZ} \frac{\hat{Z}_1\hat{Z}_2}{2},
       \label{eq:CRHamiltonian}
     \end{equation}
 
-    Where 1 denotes the control qubit, 2, the target, and the coefficients depend on the driving pulse amplitude $\Omega$. The cross resonance interaction is used on fixed-frequency transmons to implement entangling gates, specifically, highly calibrated CNOT gates. Ideally, cross resonance interaction would only have a $ZX$ interaction, thus generating a controlled rotation gate
+    \noindent where 1 denotes the control qubit, 2, the target, and the coefficients depend on the driving pulse amplitude $\Omega$. The cross resonance interaction is used on fixed-frequency transmons to implement entangling gates, specifically, highly calibrated CNOT gates. Ideally, cross resonance interaction would only have a $ZX$ interaction, thus generating a controlled rotation gate
 
     \begin{equation}
-      CR(\theta) = \mathrm{e}^{-\mathrm{i}\frac{\theta}{2}\hat{Z}_1\hat{X}_2}
+      CR(\theta) = \mathrm{e}^{-\mathrm{i}\frac{\theta}{2}\hat{Z}_1\hat{X}_2}.
     \end{equation}
 
     In that case, it would be possible to implement CNOT gates using the decomposition \cite{quantumEngineer}
 
     \begin{equation}
-      \text{CNOT} = \hat{R}_{z_1, \pi/2} \otimes \hat{R}_{x_2, \pi/2} \cdot CR(\theta)
+      \text{CNOT} = \hat{R}_{z_1, \pi/2} \otimes \hat{R}_{x_2, \pi/2} \cdot CR(\theta).
     \end{equation}
 
     However, experiments show that, in general, all coefficients on Hamiltonian \ref{eq:CRHamiltonian} are non zero \cite{DuplicatedRXZPulse, 2016RZXCalibration}. As a result, undesired terms must be suppressed so that the evolution Hamiltonian is consistent with the target $ZX$ interaction that generates CNOT gates.
@@ -466,14 +472,14 @@ This chapter introduces the elements of quantum computing and digital time simul
     The current approach towards implementing high fidelity cross resonance gates is outlined on \cite{DuplicatedRXZPulse}. The key insight is that the coefficients of the diagonal terms in the Hamiltonian \ref{eq:CRHamiltonian} are even functions of the pulse amplitude, while the off-diagonal terms are odd functions of this quantity. As a result, by reversing the sign of the driving pulse amplitude, it is possible to mitigate the undesired diagonal terms by evolving the qubits by the operator
 
     \begin{equation}
-      \hat{U} = \mathrm{e}^{-\mathrm{i}\hat{H}_{CR}^{efe}(\Omega)t} = \mathrm{e}^{-\mathrm{i}\hat{H}_{CR}(\Omega)t} \mathrm{e}^{-\mathrm{i}\hat{X}_1\hat{H}_{CR}(-\Omega)\hat{X}_1t}
+      \hat{U} = \mathrm{e}^{-\mathrm{i}\hat{H}_{CR}^{efe}(\Omega)t} = \mathrm{e}^{-\mathrm{i}\hat{H}_{CR}(\Omega)t} \mathrm{e}^{-\mathrm{i}\hat{X}_1\hat{H}_{CR}(-\Omega)\hat{X}_1t}.
       \label{eq:pulseCREvolution}
     \end{equation}
 
     This scheme leads to an effective interaction Hamiltonian \cite{DuplicatedRXZPulse}
 
     \begin{equation}
-      \hat{H}_{CR}^{efe}(\Omega) = \bar{\nu}_{ZX} \frac{\hat{Z}_1\hat{X}_2}{2} + \bar{\nu_{IZ}} \frac{\hat{Z}_2}{2} + \bar{\nu_{IY}} \frac{\hat{Y}_2}{2}
+      \hat{H}_{CR}^{efe}(\Omega) = \bar{\nu}_{ZX} \frac{\hat{Z}_1\hat{X}_2}{2} + \bar{\nu_{IZ}} \frac{\hat{Z}_2}{2} + \bar{\nu_{IY}} \frac{\hat{Y}_2}{2}.
       \label{eq:effectiveHamiltonian}
     \end{equation}
 
@@ -494,7 +500,7 @@ This chapter introduces the elements of quantum computing and digital time simul
     As pointed out on \cite{RXZPulseEfficient}, with calibrated cross resonance gates, it is possible to implement two qubit gates of the group
 
     \begin{equation}
-      \hat{U}(\alpha, \beta, \gamma) = \mathrm{e}^{-\mathrm{i}(\alpha\hat{X}\hat{X} + \beta\hat{Y}\hat{Y} + \gamma\hat{Z}\hat{Z})}
+      \hat{U}(\alpha, \beta, \gamma) = \mathrm{e}^{-\mathrm{i}(\alpha\hat{X}\hat{X} + \beta\hat{Y}\hat{Y} + \gamma\hat{Z}\hat{Z})}.
       \label{eq:CartanDecomp}
     \end{equation}
 
