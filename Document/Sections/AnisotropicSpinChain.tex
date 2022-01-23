@@ -306,10 +306,80 @@ This chapter introduces time simulation algorithms for Hamiltonian \ref{eq:Heise
     Measuring the probability density is quite straightforward using Qiskit SDK. As mentioned before, the results of the execution of most quantum algorithms produce a single outcome of measuring the register on the computational basis, which can be mapped to a binary string. Approximate reconstruction of the pdf can be carried out by repeating the experiment several times and building an histogram. This is done by Qiskit methods. Once the pdf is reconstructed, the expected value of the operator $\otimes^{N} \hat{Z}$ can be reconstructed by examining the parity of the outcome string, i.e., by the formula
     
     \begin{equation}
-      \expval{\otimes^{N}} \hat{Z} = \sum_{s \in \{0,1\}^{N}\}} p(s) \prod_{i \in s} (-1)^{i},
+      \expval{\otimes^{N} \hat{Z}} = \sum_{s \in \{0,1\}^{N}\}} p(s) \prod_{i \in s} (-1)^{i},
       \label{eq:expValPauliZ}
     \end{equation}
 
     \noindent where $p(s)$ denots the probability density of the outcomes, and $(-1)^{i}$ is the parity of the characters in the string. By applying local rotations, it is possible to rotate any state from the eigenbasis of any Pauli tensor operator to the computational basis. As a result, the procedure yields the expected value of any Pauli tensor. Linearity does the rest.
+
+    \subsubsection{Readout Error Correction}
+    \label{subsubsec:readoutErrorCorrection}
+
+      It must be noted that actual quantum device experience readout errors after measurement. This readout errors are typically modeled like random bit flip channels \cite{Nielsen, Strini}. Suppose that prior to measurement, a quantum state has an associated pdf $p_i$ of measurement on the computational basis. Due to bit flip noise, the actual measured probability is
+
+      \begin{equation}
+        p_i' = M_{ij} p_j,
+        \label{eq:MarkovMatrix}
+      \end{equation}
+
+      \noindent where $M_{ij}$ is the \textit{transition matrix} of the process. To correct readout errors, the transition matrix is measured by preparing the states of the computational basis and performing several measurements in order to get an approximate noisy pdf. Then, the corrected pdf is obtained by inverting the transition matrix as follows:
+
+      \begin{equation}
+        p_i = M_{ij}^{-1} p_j'.
+        \label{eq:MarkovMatrix}
+      \end{equation}
+
+      This procedure is applied any time a pdf is computed from a series of experiments on actual quantum devices. The predefined Qiskit interfaces for this task is used on the implementations.
+
+    \subsubsection{Measuring probability density fidelity}
+    \label{subsubsec:PdfFidelityMeasurement}
+
+      In this work, probability density fidelity is used as a quantitative measure of the precision of the evolution. Consider two states $\ket{\psi}$ and $\ket{\psi'}$, that yield two probability densities of measurement in the computational basis, $p_i$ and $p_i'$, respectively. The probability density fidelity of those two distributions is defined \cite{HubbardSimulLasHeras} by the equation
+
+      \begin{equation}
+        F_{p_i, p_i'} = \big(\sum_i \sqrt{p_i p_i'}\big)^2.
+        \label{eq:PdfFidelityDefinition}
+      \end{equation}
+
+      To assess the precision of a time evolution scheme, a target evolution time is fixed, as well as a fixed number of integration steps. The initial state
+
+      \begin{equation}
+        \ket{\psi} = \ket{110}
+        \label{eq:initialStateBenchmark}
+      \end{equation}
+
+      \noindent is evolved using the evolution scheme (by running experiments on \textit{ibmq jakarta}), thus yielding a pdf ($p_i'$) as described in this subsection. The exact pdf ($p_i$) is computed by exact time evolution using numerical diagonalization of the Hamiltonian. The probability density fidelity, for given time and number of integration steps is computed according to equation \ref{eq:PdfFidelityDefinition}.
+
+  \subsection{Device specifications}
+  \label{subsec:ibmq_jakartaSpecs}
+
+    All experiments are run on \textit{ibmq jakarta}, a backend with a processor Falcon r5.1H, at the time of development of this work. This processor has seven physical qubits. It has a connectivity as depicted on figure \ref{fig:JakartaConnectivity}. It supports pulse control as on \cite{RXZPulseEfficient}, only on qubits 1, 3, and 5. Like all IBM Quantum devices, its basis set is $\{\hat{S}_x = \sqrt{\hat{X}}, \hat{X}, \hat{R}_{z,\phi} \}$. Those are logical gates, and most of the time, actual execution requires performing swap operations between some qubits due to limited connectivity.
+
+    \begin{figure}
+      \centering
+      \includegraphics[scale=0.6]{ibmqJakarta.png}
+      \caption{Connectivity of \textit{ibmq jakarta} processor. Taken from the official IBM Quantum site.}
+      \label{fig:JakartaConnectivity}
+    \end{figure}
+
+    Experiments involving direct transpilation and gate-efficient schemes, are performed using qubits 0, 1, and 2. While experiments involving pulse-efficient schemes are performed on qubits 1, 3, and 5. Quantum devices are calibrated each day, and may vary. However, typical parameter values are reported on table \ref{tab:jakartaParams}.
+
+    \begin{table}{H}
+      \begin{center}
+        \begin{tabular}{| c | c |}
+          \hline 
+          $T_1$ & 130 $\mu$s \\
+          \hline
+          $T_2$ & 34 $\mu$s \\
+          \hline
+          $\epsilon_{\text{CNOT}}$ & 1\% \\
+          \hline
+          $\epsilon_{\text{Read}}$ & 2\% \\
+          \hline
+        \end{tabular}
+      \end{center}
+      \caption{Typical parameter values for \textit{ibmq jakarta}. The coherence times are discussed on the previous chapter. $\epsilon_O$ denotes the error on performing an operation $O$. In this case, CNOT gates and readout.}
+      \label{tab:jakartaParams}
+    \end{table}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

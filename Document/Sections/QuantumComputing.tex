@@ -85,6 +85,7 @@ This chapter introduces the elements of quantum computing and digital time simul
   These operators allow measurement of the expected value of $\hat{Z}$ operator. By performing rotations to the sign and y basis, it is possible to measure expected values of $\hat{X}$ and $\hat{Y}$, respectively. Since Pauli operators span the space of qubit operators, any qubit observable can be measured by applying suitable rotations and forming linear combinations of expected values of Pauli operators.
 
   \subsection{Quantum registers and multi-qubit gates}
+  \label{subsec:MultiQubit}
 
     In general, more than one qubit is needed to perform meaningful computations. A system of several qubits is called \textit{quantum register}. A quantum register's Hilbert space is nothing more than the tensor product space of each of its constituent qubits. Thus, a $N$-qubit register has a $2^N$-dimensional Hilbert space. A basis for this space is built by all possible tensor products of computational basis states for each qubit. This would be the \textit{computational basis} of the register. A member of this set may be denoted by
 
@@ -115,6 +116,7 @@ This chapter introduces the elements of quantum computing and digital time simul
     \noindent where the subscript $t$ denotes the \textit{target} qubit, and the subscript $c$, the control qubit. Hence, CNOT corresponds to a controlled-$\hat{X}$ operation. This gate can entangle separable two-qubit states. This is of vital importance for universal quantum computing, and can be readily seen from the definition.
 
   \subsection{Circuit representation}
+  \label{subsec:CiruitGraphics}
 
     This model of computation can be represented graphically by a \textit{circuit}, in which every wire represents a quantum bit, and a gate corresponds to a unitary operator acting on the register's Hilbert space (possibly a Hilbert subspace). For instance, an algorithm for producing a Bell basis state can be represented as in fig. \ref{fig:bell-pair-circuit}
 
@@ -123,6 +125,7 @@ This chapter introduces the elements of quantum computing and digital time simul
     The figure presents an prescription for producing state $\ket{\Phi^{+}}$. In this circuit representation, the algorithm consists on an application of a Hadamard operator to a control qubit, followed by a CNOT operation, to a two qubit register, initialized on state $\ket{00}$. In general, quantum gates are represented by boxes, labeled properly by the operation that they represent. These boxes cover the subspace over which the corresponding quantum operator acts. For instance, in the case of the algorithm depicted on fig. \ref{fig:bell-pair-circuit}, the Hadamard gate acts on a single-qubit subspace, while the CNOT gate acts on the whole two-qubit register's space. Operations are executed from left to right in a quantum algorithm.
 
   \subsection{Universal quantum computing}
+  \label{subsec:UniversalQC}
     
     As was stated before, all quantum gates correspond to unitary operations (or measurements), acting on a quantum register. It is desirable to find a set of elementary quantum gates, that act on a small number of qubits, that can generate all possible unitary operations on an $N$-qubit register. This is the question of universal quantum computing. It can be shown that CNOT and the set of single-qubit unitary operations are enough for producing all possible $N$-qubit register gates \cite{Nielsen}. For instance, it is possible to perform the three-qubit \textit{Controlled CNOT} operation
 
@@ -163,6 +166,7 @@ This chapter introduces the elements of quantum computing and digital time simul
     \input{includes/cartanThreeCnot.tex}
 
   \subsection{Quantum computational advantage}
+  \label{subsec:QuantumAdvantage}
     
     It is expected that quantum computing paradigms challenge the strong Church-Turing thesis, which claims that the ultimate reference for computational complexity is the probabilistic Turing Machine Model \cite{Nielsen, Strini}. In principle, a quantum processor could solve problems that are thought to be hard for probabilistic Turing Machines. Such problems include simulation of chemical systems \cite{QuantumChem1, QuantumChem2}, and multi-particle quantum systems in general \cite{Nielsen, LloydFermSim, BerryErrorBounds}. Regarding the quantum circuit model of computation, this usually means that the total gate count of a circuit that implements an algorithm that solves a hard problem is bounded asymptotically by a polynomial function in the size of the input \cite{Nielsen, Strini}. In general, however, a more accurate measurement of the complexity of a quantum algorithm is the \textit{circuit depth}, which measures the maximum number of operations a qubit has to undergo to complete a computation. One of the goals of this work is to show that it is possible to simulate arbitrarily large spin systems efficiently using quantum digital algorithms, something impossible with the standard methods of computational quantum physics.
 
