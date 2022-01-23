@@ -364,7 +364,7 @@ This chapter introduces time simulation algorithms for Hamiltonian \ref{eq:Heise
 
     Experiments involving direct transpilation and gate-efficient schemes, are performed using qubits 0, 1, and 2. While experiments involving pulse-efficient schemes are performed on qubits 1, 3, and 5. Quantum devices are calibrated each day, and may vary. However, typical parameter values are reported on table \ref{tab:jakartaParams}.
 
-    \begin{table}{H}
+    \begin{table}[!htbp]
       \begin{center}
         \begin{tabular}{| c | c |}
           \hline 
@@ -381,5 +381,36 @@ This chapter introduces time simulation algorithms for Hamiltonian \ref{eq:Heise
       \caption{Typical parameter values for \textit{ibmq jakarta}. The coherence times are discussed on the previous chapter. $\epsilon_O$ denotes the error on performing an operation $O$. In this case, CNOT gates and readout.}
       \label{tab:jakartaParams}
     \end{table}
+  
+  \subsection{Control case: QASM Simulation Results}
+  \label{subsec:QASMResults}
+
+    To establish a control case for evaluating results of quantum evolution on real devices, the benchmark system is simulated over a time $t = 1$ using an integration step $dt = 1/8$. In a more quantitative test, the probability density fidelity is computed for times $t = 1, 2, 3$, with up to $8$ integration steps. Units of time are normalized to $\hbar = 1$, so that energy has units of inverse time. These results represent the outcome of executing the direct evolution scheme introduced on section \ref{sec:MainCircuits}, on a fault tolerant device. In figures \ref{fig:QASMpdf} and \ref{fig:QASMpaulis}, the results of evolution with direct diagonalization of the Hamiltonian are presented as dotted lines.
+
+    A small number of integration steps is used since the finite coherence times of the qubits in the device limit the depth of the circuit that can be executed on real devices. If the gate execution times approach the coherence times, the state coherence is irreversibly lost, and thus the final state does not resemble at all the target final state. As may be seen on figure \ref{fig:QASMfidelity}, there is a sort of transient stage during which the Trotter approximation does not converge. As seen before, there exists a critical integration time step $\Delta t$, below which the state fidelity has a predictable approximation error. It may be also noted that high fidelities can be achieved by using a relatively small number of integration steps. Furthermore, observables resemble quite well the theoretical values. This indicates that as long as the integration time step $\Delta t = t / N$ is below the convergence threshold, the trotter error can be controlled.
+
+    \begin{figure}
+      \centering
+      \begin{subfigure}[b]{1.0\textwidth}
+        \centering
+        \includegraphics[scale=0.5]{QASMData/qasm_control_pdf_evol.pdf}
+        \caption{Time evolution of probability density (pdf) of the benchmark system initialized on the state $\ket{\psi_0} = \ket{110}$, for a time $t=1$. The numbers in the convention are those whose binary representation corresponds to $\ket{k}$.}
+        \label{fig:QASMpdf}
+      \end{subfigure}
+      \begin{subfigure}[b]{1.0\textwidth}
+        \centering
+        \includegraphics[scale=0.5]{QASMData/qasm_control_pauli_exps.pdf}
+        \caption{Time evolution of single qubit Pauli operators of the benchmark system initialized on the state $\ket{110}$, for a time $t=1$. The first qubit observables correspond to color red data, the second qubit's, to blue data, and the third qubit's, to black data}
+        \label{fig:QASMpaulis}
+      \end{subfigure}
+      \begin{subfigure}[b]{1.0\textwidth}
+        \centering
+        \includegraphics[scale=0.5]{QASMData/qasm_control_pdf_fidelity.pdf}
+        \caption{Probability density fidelity for several number of integration steps and $t = 1, 2, 3$. Each point corresponds to the average of five sets of experiments. Notice that the transient behavior mentioned lasts up to about $N = 4$.}
+        \label{fig:QASMfidelity}
+      \end{subfigure}
+      \caption{QASM Simulation results.}
+      \label{fig:QASMResults}
+    \end{figure}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
