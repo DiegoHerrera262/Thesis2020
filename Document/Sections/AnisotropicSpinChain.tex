@@ -426,6 +426,8 @@ This chapter introduces time simulation algorithms for Hamiltonian \ref{eq:Heise
 
     To establish a control case for evaluating results of quantum evolution on real devices, the benchmark system is simulated over a time $t = 1$ using an integration step $dt = 1/8$. In a more quantitative test, the probability density fidelity is computed for times $t = 1, 2, 3$, with up to $8$ integration steps. Units of time are normalized to $\hbar = 1$, so that energy has units of inverse time. These results represent the outcome of executing the direct evolution scheme introduced on section \ref{sec:MainCircuits}, on a fault tolerant device. In figures \ref{fig:QASMpdf} and \ref{fig:QASMpaulis}, the results of evolution with direct diagonalization of the Hamiltonian are presented as dotted lines.
 
+    Probability density of measuring a 3-bit string is evolved over time. The convention is that the string is represented by its associated number in decimal system. Expected values of single qubit Pauli operators $\hat{X}_i, \hat{Y}_i, \hat{Z}_i$ are measured for each of the qubits. The first qubit observables correspond to color red data, the second qubit's, to blue data, and the third qubit's, to black data. This convention holds on all graphics of this type. Probaility density fidelity es computed for several number of integration steps $N$ (up to eight), and each point correspond to the average of five sets of 2048 experiment repetitions.
+
     A small number of integration steps is used since the finite coherence times of the qubits in the device limit the depth of the circuit that can be executed on real devices. If the gate execution times approach the coherence times, the state coherence is irreversibly lost, and thus the final state does not resemble at all the target final state. As may be seen on figure \ref{fig:QASMfidelity}, there is a sort of transient stage during which the Trotter approximation does not converge. As seen before, there exists a critical integration time step $\Delta t$, below which the state fidelity has a predictable approximation error. It may be also noted that high fidelities can be achieved by using a relatively small number of integration steps. Furthermore, observables resemble quite well the theoretical values. This indicates that as long as the integration time step $\Delta t = t / N$ is below the convergence threshold, the trotter error can be controlled.
 
     \begin{figure}
@@ -451,5 +453,97 @@ This chapter introduces time simulation algorithms for Hamiltonian \ref{eq:Heise
       \caption{QASM Simulation results.}
       \label{fig:QASMResults}
     \end{figure}
+
+\section{Comparison and Benchmark: Results}
+\label{sec:Results}
+
+    Now that the main metrics, and the way they are measured using \textit{ibmq jakarta}, results of simulation using the schemes proposed on section \ref{sec:MainCircuits} are presented. Results are compared to fault-tolerant simulation outcome in figure \ref{fig:QASMResults}.
+
+    \subsection{Expected value of observables}
+    \label{subsec:PauliResults}
+
+      Expected values of single qubit observables is measured following conventions established on section \ref{subsec:QASMResults}. 
+
+      \begin{figure}
+        \centering
+        \begin{subfigure}[b]{1.0 \textwidth}
+          \centering
+          \includegraphics[scale=0.5]{DirectTranspilationData/direct_pauli_exps.pdf}
+          \caption{Direct transpilation expected values}
+          \label{fig:PauliDirectTransp}
+        \end{subfigure}
+        \begin{subfigure}[b]{1.0 \textwidth}
+          \centering
+          \includegraphics[scale=0.5]{BasisEfficientData/basis_efficient_pauli_exps.pdf}
+          \caption{Basis efficient expected values}
+          \label{fig:PauliBasis}
+        \end{subfigure}
+        \begin{subfigure}[b]{1.0 \textwidth}
+          \centering
+          \includegraphics[scale=0.5]{PulseEfficientData/pulse_efficient_pauli_exps.pdf}
+          \caption{Basis efficient expected values}
+          \label{fig:PauliPulse}
+        \end{subfigure}
+        \caption{Time evolution of single qubit expected values on \textit{ibmq jakarta}.}
+        \label{fig:PauliExpectedValues}
+      \end{figure}
+
+    \subsection{Probability density evolution}
+    \label{subsec:PdfResults}
+
+      Expected values of single qubit observables is measured following conventions established on section \ref{subsec:QASMResults}. 
+
+      \begin{figure}
+        \centering
+        \begin{subfigure}[b]{1.0 \textwidth}
+          \centering
+          \includegraphics[scale=0.5]{DirectTranspilationData/direct_pdf_evol.pdf}
+          \caption{Direct transpilation pdf.}
+          \label{fig:PdfDirectTransp}
+        \end{subfigure}
+        \begin{subfigure}[b]{1.0 \textwidth}
+          \centering
+          \includegraphics[scale=0.5]{BasisEfficientData/basis_efficient_pdf_evol.pdf}
+          \caption{Basis efficient pdf.}
+          \label{fig:PdfBasis}
+        \end{subfigure}
+        \begin{subfigure}[b]{1.0 \textwidth}
+          \centering
+          \includegraphics[scale=0.5]{PulseEfficientData/pulse_efficient_pdf_evol.pdf}
+          \caption{Basis efficient pdf.}
+          \label{fig:PdfPulse}
+        \end{subfigure}
+        \caption{Time evolution of benchmark system probability density on \textit{ibmq jakarta}.}
+        \label{fig:PdfExpectedValues}
+      \end{figure}
+
+    \subsection{Probability density fidelity}
+    \label{subsec:PdfResults}
+
+      Expected values of single qubit observables is measured following conventions established on section \ref{subsec:QASMResults}. 
+
+      \begin{figure}
+        \centering
+        \begin{subfigure}[b]{1.0 \textwidth}
+          \centering
+          \includegraphics[scale=0.5]{DirectTranspilationData/direct_pdf_fidelity.pdf}
+          \caption{Direct transpilation pdf fidelity.}
+          \label{fig:PdfDirectTransp}
+        \end{subfigure}
+        \begin{subfigure}[b]{1.0 \textwidth}
+          \centering
+          \includegraphics[scale=0.5]{BasisEfficientData/basis_efficient_pdf_fidelity.pdf}
+          \caption{Basis efficient pdf fidelity.}
+          \label{fig:PdfBasis}
+        \end{subfigure}
+        \begin{subfigure}[b]{1.0 \textwidth}
+          \centering
+          \includegraphics[scale=0.5]{PulseEfficientData/pulse_efficient_pdf_fidelity.pdf}
+          \caption{Basis efficient pdf fidelity.}
+          \label{fig:PdfPulse}
+        \end{subfigure}
+        \caption{Fidelity of benchmark system probability density, w. r. t. ideal state fidelity, when simulated on \textit{ibmq jakarta}.}
+        \label{fig:PdfExpectedValues}
+      \end{figure}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

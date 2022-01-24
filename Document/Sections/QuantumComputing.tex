@@ -487,7 +487,14 @@ This chapter introduces the elements of quantum computing and digital time simul
       \label{eq:effectiveHamiltonian}
     \end{equation}
 
-    Undesired unitary error terms can be mitigated by applying appropriate pulses on the target qubit. The general scheme for implementing cross resonance gates on IBM Quantum systems can be seen on figure \ref{fig:echoedPulseQiskit}. The cross resonance drive is carried out by gaussian square pulses, and the $\hat{X}$ pulses are implemented using a Gaussian drive as discussed before in this section. Mathematical details and experimental demonstrations can be found on \cite{DuplicatedRXZPulse, 2016RZXCalibration}.
+    Undesired unitary error terms can be mitigated by applying appropriate pulses on the target qubit. The general scheme for implementing cross resonance gates on IBM Quantum systems can be seen on figure \ref{fig:echoedPulseQiskit}. The cross resonance drive is carried out by gaussian square (flat top) pulses, and the $\hat{X}$ pulses are implemented using a Gaussian drive as discussed before in this section. Those pulses are defined by the parameters: width ($w$), amplitude ($A$), standard deviation of the rise/fall ($\sigma$), and number of standard deviations in the rise/fall ($n_\sigma$). The area of a gaussian flat top pulse is
+
+    \begin{equation}
+      \alpha = |A|(w + \sigma\sqrt{2\pi}\erf{n_\sigma}),
+      \label{eq:StandardPulse}
+    \end{equation}
+    
+    \noindent where $\erf{\cdot}$ is the error function gaussian integral. Experiments are carried ut for finding the optimal value of the parameters for implementing a CNOT gate. In general, if a rotation angle of $\theta$ is desired, the area must be scaled in direct proportion to this angle. More mathematical details and experimental demonstrations can be found on \cite{DuplicatedRXZPulse, 2016RZXCalibration, MajoranaSimulation}.
 
     \begin{figure}
       \centering
@@ -499,7 +506,18 @@ This chapter introduces the elements of quantum computing and digital time simul
   \subsection{Cross-resonance based transpilation of quantum includes}
   \label{subsec:CrossResonanceTranspilation}
 
-    As mentioned before, IBM Quantum exposes a highly calibrated CNOT gates as entangling operations. However, in some instances, CNOT based circuit transpilation to microwave pulse schedules lead to execution times that are impossible to execute with high fidelity on current quantum devices. An example is time simulation of Majorana fermionic systems \cite{MajoranaSimulation}. A key insight towards performing pulse efficient implementation of quantum algorithms is to use the highly calibrated CNOT schedule exposed by IBM Quantum backends to perform cross resonance gates discussed on the previous section \cite{MajoranaSimulation, RXZPulseEfficient}. The details on the gaussian pulse scaling can be found on \cite{MajoranaSimulation}. The idea is to scale the area of the pulses in direct proportion to the angle of rotation of the cross resonance gate. Then, adjust the width, amplitude, and duration of the pulse accordingly. Through Qiskit SDK, it is possible to perform this calibration as discussed in the appendix of \cite{RXZPulseEfficient}.
+    As mentioned before, IBM Quantum exposes a highly calibrated CNOT gates as entangling operations. However, in some instances, CNOT based circuit transpilation to microwave pulse schedules lead to execution times that are impossible to execute with high fidelity on current quantum devices. An example is time simulation of Majorana fermionic systems \cite{MajoranaSimulation}. A key insight towards performing pulse efficient implementation of quantum algorithms is to use the highly calibrated CNOT schedule exposed by IBM Quantum backends to perform cross resonance gates discussed on the previous section \cite{MajoranaSimulation, RXZPulseEfficient}. 
+    
+    The details on the gaussian pulse scaling can be found on \cite{MajoranaSimulation}. The idea is to scale the area of the pulses in direct proportion to the angle of rotation of the cross resonance gate
+
+    \begin{equation}
+      \alpha(\theta) = \frac{\theta}{\pi/2} \alpha^{*},
+      \label{eq:SacaleingArea}
+    \end{equation}
+    
+    \noindent where $\alpha^{*}$ is the optimal area calibrated for a CNOT gate. Then, adjust the width, amplitude, and duration of the pulse according to equation \ref{eq:StandardPulse}. Since the technique uses CNOT calibration, it is more efficient than running calibration experiments each time an algorithm wants to be executed \cite{MajoranaSimulation}.
+    
+    Through Qiskit SDK, it is possible to perform this calibration as discussed in the appendix of \cite{RXZPulseEfficient}.
 
     As pointed out on \cite{RXZPulseEfficient}, with calibrated cross resonance gates, it is possible to implement two qubit gates of the group
 
