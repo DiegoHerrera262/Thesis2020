@@ -249,36 +249,40 @@ class HeisenbergGraph:
         # See thesis document for more information
         # on the nature of the implementation
 
+        # Go to computational basis
         qcEdge.cx(spinChain[start], spinChain[end])
-
         qcEdge.h(spinChain[start])
+        # Append x and z phases
         qcEdge.rz(J[0], spinChain[start])
         qcEdge.rz(J[2], spinChain[end])
-
-        # qcEdge.rz(np.pi/2, spinChain[start])
-        # qcEdge.sx(spinChain[start])
-        # qcEdge.rz(J[0], spinChain[start])
-        # qcEdge.rz(J[2], spinChain[end])
-
+        # Shuffle and append y phase
         qcEdge.cx(spinChain[start], spinChain[end])
-        
         qcEdge.rz(-J[1], spinChain[end])
+        # Return to ordered Bell basis
+        # qcEdge.cx(spinChain[start], spinChain[end])
+        # qcEdge.h(spinChain[start])
+        # qcEdge.cx(spinChain[start], spinChain[end])
+        qcEdge.u3(np.pi/2, np.pi/2, -np.pi/2, spinChain[start])
+        qcEdge.u3(0, -np.pi/2, -np.pi/2, spinChain[end])
+        qcEdge.cx(spinChain[start], spinChain[end])
+        qcEdge.u3(np.pi/2, np.pi/2, 0, spinChain[start])
+        qcEdge.u3(np.pi/2, -np.pi/2, -np.pi/2, spinChain[end])
 
-        # qcEdge.rz(np.pi/2, spinChain[start])
+        # qcEdge.cx(spinChain[start], spinChain[end])
+        # # Append u(1,a)
+        # qcEdge.rz(J[0], spinChain[start])
         # qcEdge.sx(spinChain[start])
         # qcEdge.rz(np.pi/2, spinChain[start])
-        # qcEdge.rz(J[1], spinChain[end])
-
-        qcEdge.cx(spinChain[start], spinChain[end])
-
-        qcEdge.h(spinChain[start])
-
-        # qcEdge.sx(spinChain[start])
-        # qcEdge.rz(np.pi, spinChain[end])
-        # qcEdge.sx(spinChain[end])
-        # qcEdge.rz(np.pi, spinChain[end])
-
-        qcEdge.cx(spinChain[start], spinChain[end])
+        # # Append gamma phase
+        # qcEdge.rz(J[2], spinChain[end])
+        # qcEdge.cx(spinChain[start], spinChain[end])
+        # # Append beta phase
+        # qcEdge.rz(-J[1], spinChain[end])
+        # # Return to Bell basis
+        # qcEdge.h(spinChain[start])
+        # qcEdge.cx(spinChain[start], spinChain[end])
+        # qcEdge.rx(np.pi/2, spinChain[start])
+        # qcEdge.rx(-np.pi/2, spinChain[end])
 
         return qcEdge
 
