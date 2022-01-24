@@ -84,6 +84,45 @@ This chapter introduces time simulation algorithms for Hamiltonian \ref{eq:Heise
   
   \include{includes/spinChainCircuit}
 
+  \subsection{Limitations of The Scheme for Time Evolution}
+  \label{subsec:TrotterDynamics}
+
+    There are some intrinsic limitations to quantum time simulation using Trotter schemes. To exemplify this, consider an isotropic $N$-spin chain Hamiltonian, with only two-spin interaction given by
+
+    \begin{equation}
+      \hat{H}_{ij} = \frac{1}{2} \hat{X}_i \hat{X}_j + \hat{Y}_i \hat{Y}_j + \frac{1}{4} \hat{Z}_i \hat{Z}_j.
+      \label{eq:FloquetHamiltonian}
+    \end{equation}
+
+    Consider an initial state $\ket{\psi_0} = \ket{11} \otimes \ket{0}^{\otimes N-2}$. Evolution over a time $t$ would yield an output (target) state
+
+    \begin{equation}
+      \ket{\psi_t} = \mathrm{e}^{-\mathrm{i}\hat{H}t} \ket{\psi_0}
+      \label{eq:TargetState}.
+    \end{equation}
+
+    On the other hand, this target state may be approximated by the unitary evolution
+
+    \begin{equation}
+      \ket{\psi_t(\Delta t)} = \hat{U}(\Delta t)^{\lfloor \frac{t}{\Delta t} \rfloor} \ket{0}.
+      \label{eq:ApproxTargetState}
+    \end{equation}
+
+    The long time average state fidelity $\mathcal{F}_\infty$ can be defined as follows:
+
+    \begin{equation}
+      \mathcal{F}_\infty(\Delta t) = \lim_{M \rightarrow \infty} \frac{1}{M} \sum_{m = 1}^{M} |\braket{\psi_{M\Delta t}}{\psi_{M\Delta t}(\Delta t)}|^2.
+    \end{equation}
+
+    In figure \ref{fig:FloquetDynamics}, a plot of long time average state infidelity $1-\mathcal{F}_\infty$ can be seen, for different system sizes. It can be seen that there are two clearly separated regimes. For large integration time step $\Delta t$, the average fidelity is almost zero, which means that the evolution does not converge in general. However, below certain threshold $\Delta t_c$, the average fidelity increases deterministically, following a power law. The results suggest that there may be a limit of large systems (i.e., a possible thermodynamic limit). This results have been observed on previous work by \cite{FloquetTrotter}. In that work, it is claimed that the low fidelity regime experience a quantum chaotic dynamics, while the deterministic fidelity regime experiences quantum localization of the system's state. Evidence is provided for the transverse field Ising model. However, due to time constraints, those claims are not demonstrated in this work for the example interaction \ref{eq:FloquetHamiltonian}.
+
+    \begin{figure}
+      \centering
+      \includegraphics[scale=0.6]{longTimeFloquetFidelity.pdf}
+      \caption{Long time state infidelity as a function of integration time step $\Delta t$.}
+      \label{fig:FloquetDynamics}
+    \end{figure}
+
 \section{Circuit implementations}
 \label{sec:MainCircuits}
   
