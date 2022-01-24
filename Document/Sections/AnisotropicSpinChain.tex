@@ -459,91 +459,84 @@ This chapter introduces time simulation algorithms for Hamiltonian \ref{eq:Heise
 
     Now that the main metrics, and the way they are measured using \textit{ibmq jakarta}, results of simulation using the schemes proposed on section \ref{sec:MainCircuits} are presented. Results are compared to fault-tolerant simulation outcome in figure \ref{fig:QASMResults}.
 
-    \subsection{Expected value of observables}
-    \label{subsec:PauliResults}
+    Expected values of single qubit observables is measured following conventions established on section \ref{subsec:QASMResults}. From figure \ref{fig:PauliExpectedValues}, it can be seen that the scheme that produces the largest resemblance to the ideal values (dotted lines) is the pulse efficient implementation, followed by the basis efficient and the direct transpilation. Qualitatively, the difference in performance is overwhelming. While the base efficient and direct transpilation approaches struggle to converge for four steps, the pulse efficient scheme is able to converge surprisingly well for the entire set of eight steps. Since the calibration of entangling gates is the same for all cases (except for a parameter scaling on pulse efficient experiments) it can be inferred that the use of shorter entangling pulses, which improves the usage of the finite coherence times of the system, is the most determinant factor when simulating this kind of Hamiltonians.
 
-      Expected values of single qubit observables is measured following conventions established on section \ref{subsec:QASMResults}. 
+    % Here I can compare pulse length of the different trotter steps to support this sentence
 
-      \begin{figure}
+    Those features can be seen more clearly on figure \ref{fig:PdfExpectedValues}. From the ideal results on figure \ref{fig:QASMResults}, it can be seen that the probability density only presents oscillations for states $\ket{3}$, $\ket{6}$, and $\ket{5}$. Figures \ref{fig:PdfDirectTransp} and \ref{fig:PdfBasis} suggest that the state coherence is lost very fast (qubits depolarize fairly quickly), and the probability density fidelity decays very rapidly as the circuit depth of simulation increases, using both direct and basis efficient schemes. On the other hand, pulse efficient schemes seem to better maintain state coherence since the execution time of each trotter step is shorter. As a result, the state fidelity is larger.
+
+    On figure \ref{fig:PdfExpectedFidelity}, this observations are made more quantitative. After the transient stage in which the Trotter approximation does not converge in general, it can be seen that the probability density fidelity decays consistently for direct transpilation and basis efficient schemes, as the number of integration steps increase. On the other hand, pulse efficient schemes have an increasing fidelity with the number of integration steps. While the first two schemes produce fidelities near 30\% - 40\%, direct pulse control yields fidelities near 70\% in some cases. There is a caveat, though. As the integration time step increases, the benefits of pulse schemes is reduced, since the actual execution time increases proportionally. This can be seen on figure \ref{fig:PdfPulseFidelity}. As the target simulation time increases, the fidelity remains below 50\%. Since the circuit depth does not change with respect to shorter times, it can be concluded that this reduction in the fidelity is due to the larger execution time of the experiments. In consequence, simulating anisotropic Heisenberg Hamiltonians on quantum computers imply optimizing the tradeoff between short Trotter steps with pulse control, and a large number of repetitions required to simulate large times. As may be inferred from figure \ref{fig:FloquetDynamics}, it must be procured that the integration time step $\Delta t$ is below the threshold for predictable Trotter error control, though.
+
+    \begin{figure}
+      \centering
+      \begin{subfigure}[b]{1.0 \textwidth}
         \centering
-        \begin{subfigure}[b]{1.0 \textwidth}
-          \centering
-          \includegraphics[scale=0.5]{DirectTranspilationData/direct_pauli_exps.pdf}
-          \caption{Direct transpilation expected values}
-          \label{fig:PauliDirectTransp}
-        \end{subfigure}
-        \begin{subfigure}[b]{1.0 \textwidth}
-          \centering
-          \includegraphics[scale=0.5]{BasisEfficientData/basis_efficient_pauli_exps.pdf}
-          \caption{Basis efficient expected values}
-          \label{fig:PauliBasis}
-        \end{subfigure}
-        \begin{subfigure}[b]{1.0 \textwidth}
-          \centering
-          \includegraphics[scale=0.5]{PulseEfficientData/pulse_efficient_pauli_exps.pdf}
-          \caption{Basis efficient expected values}
-          \label{fig:PauliPulse}
-        \end{subfigure}
-        \caption{Time evolution of single qubit expected values on \textit{ibmq jakarta}.}
-        \label{fig:PauliExpectedValues}
-      \end{figure}
-
-    \subsection{Probability density evolution}
-    \label{subsec:PdfResults}
-
-      Expected values of single qubit observables is measured following conventions established on section \ref{subsec:QASMResults}. 
-
-      \begin{figure}
+        \includegraphics[scale=0.5]{DirectTranspilationData/direct_pauli_exps.pdf}
+        \caption{Direct transpilation expected values}
+        \label{fig:PauliDirectTransp}
+      \end{subfigure}
+      \begin{subfigure}[b]{1.0 \textwidth}
         \centering
-        \begin{subfigure}[b]{1.0 \textwidth}
-          \centering
-          \includegraphics[scale=0.5]{DirectTranspilationData/direct_pdf_evol.pdf}
-          \caption{Direct transpilation pdf.}
-          \label{fig:PdfDirectTransp}
-        \end{subfigure}
-        \begin{subfigure}[b]{1.0 \textwidth}
-          \centering
-          \includegraphics[scale=0.5]{BasisEfficientData/basis_efficient_pdf_evol.pdf}
-          \caption{Basis efficient pdf.}
-          \label{fig:PdfBasis}
-        \end{subfigure}
-        \begin{subfigure}[b]{1.0 \textwidth}
-          \centering
-          \includegraphics[scale=0.5]{PulseEfficientData/pulse_efficient_pdf_evol.pdf}
-          \caption{Basis efficient pdf.}
-          \label{fig:PdfPulse}
-        \end{subfigure}
-        \caption{Time evolution of benchmark system probability density on \textit{ibmq jakarta}.}
-        \label{fig:PdfExpectedValues}
-      \end{figure}
-
-    \subsection{Probability density fidelity}
-    \label{subsec:PdfResults}
-
-      Expected values of single qubit observables is measured following conventions established on section \ref{subsec:QASMResults}.
-
-      \begin{figure}
+        \includegraphics[scale=0.5]{BasisEfficientData/basis_efficient_pauli_exps.pdf}
+        \caption{Basis efficient expected values}
+        \label{fig:PauliBasis}
+      \end{subfigure}
+      \begin{subfigure}[b]{1.0 \textwidth}
         \centering
-        \begin{subfigure}[b]{1.0 \textwidth}
-          \centering
-          \includegraphics[scale=0.5]{DirectTranspilationData/direct_pdf_fidelity.pdf}
-          \caption{Direct transpilation pdf fidelity.}
-          \label{fig:PdfDirectTransp}
-        \end{subfigure}
-        \begin{subfigure}[b]{1.0 \textwidth}
-          \centering
-          \includegraphics[scale=0.5]{BasisEfficientData/basis_efficient_pdf_fidelity.pdf}
-          \caption{Basis efficient pdf fidelity.}
-          \label{fig:PdfBasis}
-        \end{subfigure}
-        \begin{subfigure}[b]{1.0 \textwidth}
-          \centering
-          \includegraphics[scale=0.5]{PulseEfficientData/pulse_efficient_pdf_fidelity.pdf}
-          \caption{Basis efficient pdf fidelity.}
-          \label{fig:PdfPulse}
-        \end{subfigure}
-        \caption{Fidelity of benchmark system probability density, w. r. t. ideal state fidelity, when simulated on \textit{ibmq jakarta}.}
-        \label{fig:PdfExpectedValues}
-      \end{figure}
+        \includegraphics[scale=0.5]{PulseEfficientData/pulse_efficient_pauli_exps.pdf}
+        \caption{Basis efficient expected values}
+        \label{fig:PauliPulse}
+      \end{subfigure}
+      \caption{Time evolution of single qubit expected values on \textit{ibmq jakarta}.}
+      \label{fig:PauliExpectedValues}
+    \end{figure}
+
+    \begin{figure}
+      \centering
+      \begin{subfigure}[b]{1.0 \textwidth}
+        \centering
+        \includegraphics[scale=0.5]{DirectTranspilationData/direct_pdf_evol.pdf}
+        \caption{Direct transpilation pdf.}
+        \label{fig:PdfDirectTransp}
+      \end{subfigure}
+      \begin{subfigure}[b]{1.0 \textwidth}
+        \centering
+        \includegraphics[scale=0.5]{BasisEfficientData/basis_efficient_pdf_evol.pdf}
+        \caption{Basis efficient pdf.}
+        \label{fig:PdfBasis}
+      \end{subfigure}
+      \begin{subfigure}[b]{1.0 \textwidth}
+        \centering
+        \includegraphics[scale=0.5]{PulseEfficientData/pulse_efficient_pdf_evol.pdf}
+        \caption{Basis efficient pdf.}
+        \label{fig:PdfPulse}
+      \end{subfigure}
+      \caption{Time evolution of benchmark system probability density on \textit{ibmq jakarta}.}
+      \label{fig:PdfExpectedValues}
+    \end{figure}
+
+    \begin{figure}
+      \centering
+      \begin{subfigure}[b]{1.0 \textwidth}
+        \centering
+        \includegraphics[scale=0.6]{DirectTranspilationData/direct_pdf_fidelity.pdf}
+        \caption{Direct transpilation pdf fidelity.}
+        \label{fig:PdfDirectTranspFidelity}
+      \end{subfigure}
+      \begin{subfigure}[b]{1.0 \textwidth}
+        \centering
+        \includegraphics[scale=0.6]{BasisEfficientData/basis_efficient_pdf_fidelity.pdf}
+        \caption{Basis efficient pdf fidelity.}
+        \label{fig:PdfBasisFidelity}
+      \end{subfigure}
+      \begin{subfigure}[b]{1.0 \textwidth}
+        \centering
+        \includegraphics[scale=0.6]{PulseEfficientData/pulse_efficient_pdf_fidelity.pdf}
+        \caption{Basis efficient pdf fidelity.}
+        \label{fig:PdfPulseFidelity}
+      \end{subfigure}
+      \caption{Fidelity of benchmark system probability density, w. r. t. ideal state fidelity, when simulated on \textit{ibmq jakarta}.}
+      \label{fig:PdfExpectedFidelity}
+    \end{figure}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
