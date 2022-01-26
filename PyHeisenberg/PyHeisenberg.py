@@ -11,8 +11,7 @@ import graphRoutines as gr
 import numpy as np
 from scipy.linalg import expm
 from scipy.stats import linregress
-from scipy.optimize import curve_fit, minimize
-# from scipy import optimize
+from scipy.optimize import curve_fit
 import matplotlib.pyplot as plt
 from matplotlib import cm
 import auxiliaryRoutines as aux
@@ -2096,11 +2095,13 @@ class DataAnalyzer:
         H = self.spinGraph.HamiltonianMatrix()
         eigs, _ = np.linalg.eig(H)
         Emin = round(np.min(eigs).real, 2)
-        plt.xlabel(r'$T$')
-        plt.ylabel(r'$E_0$')
-        plt.scatter(periods, energies)
-        plt.hlines(Emin, 0, maxPeriod+1,
-                   colors=['r'], label=f"$E = {Emin} u. a.$")
-        plt.legend()
+        fig, ax = plt.subplots(1,1)
+        ax.set_xlabel(r'$T$')
+        ax.set_ylabel(r'$E_0$')
+        ax.scatter(periods, energies)
+        ax.axhline(Emin, 0, maxPeriod+1,
+                   color='r', label=f"$E = {Emin} u. a.$")
+        ax.legend()
+        fig.savefig('AnnihilationDemo.pdf')
         plt.show()
         return periods, energies
