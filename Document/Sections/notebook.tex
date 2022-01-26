@@ -1,0 +1,1254 @@
+\hypertarget{algorithm-benchmarking-with-qasm-simulations}{%
+\section{Algorithm Benchmarking with QASM
+Simulations}\label{algorithm-benchmarking-with-qasm-simulations}}
+
+The purpose of this notebook is to evaluate the performance of the
+implemented quantum time evolution algorithm. The common evaluated
+criteria are circuit depth and state fidelity. For QASM simulations, the
+metrics to be evaluated are
+
+\begin{quote}
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  \textbf{Circuit depth}
+\item
+  \textbf{Trace distance}
+\end{enumerate}
+\end{quote}
+
+In this notebooks, data is generated using Qiskit, and analyzed to find
+an expected relation between \emph{evolution time}, \emph{expected
+fidelity} and \emph{number of integration steps}. So first, It is wise
+to start with a little summary about the general results of quantum time
+evolution as presented by {[}1{]}, then proceed to demonstrate how to
+use the devised routines for simulating a generic spin graph, and
+finally, produce some plots that show the actual performance of the
+programmed algorithm.
+
+    \hypertarget{general-quantum-time-simulation-theory}{%
+\subsection{General Quantum Time Simulation
+Theory}\label{general-quantum-time-simulation-theory}}
+
+In this project, a second order Trotter scheme is proposed to estimate
+evolution of a spin system. Consider a Hamiltonian that can be written
+as the sum of \emph{local Hamiltonians} (acting on a small subsystem at
+a time).
+
+\[
+\hat{H} = \sum_{i=1}^{l} \hat{H}_i
+\]
+
+By direct computation, it is possible to show that
+
+\[
+\mathrm{e}^{-\mathrm{i}t\hat{H}} = \prod_{i=1}^{l} \mathrm{e}^{-\mathrm{i}t\hat{H}_i} + \mathcal{O}(t^2)
+\]
+
+Now, if evolution is carried out over a small enough period of time,
+then the difference between the right hand side and the left hand side
+is small. This leads to an integration scheme that relies on the
+implementation of local evolution operators, that is capable of simulate
+complex correlation in a quantum system, as long as it arises from
+small-subsystem interactions.
+
+    \hypertarget{efficiency-of-quantum-time-simulation-algorithms}{%
+\subsubsection{Efficiency of Quantum Time Simulation
+Algorithms}\label{efficiency-of-quantum-time-simulation-algorithms}}
+
+Berry et. atl. {[}1{]} have already considered the general error theory
+of Suzuki-Trotter schemes, and te minimal amount of resources required
+to simulate a quantum system. First, let's discuss the expected number
+of operations required to obtain a desired error bound, for a given
+simulation time, and then, the minimal amount of resources required to
+simulate a given quantum system.
+
+In their paper, Berry et. al.~demonstrate that the expected number of
+steps (as measured by the number of exponentials required to implement a
+\(k\)-th order Suzuki-Trotter scheme) is bounded by a power law
+
+\[
+N \leq A_k \frac{t^{1+1/2k}}{\epsilon^{1/2k}}
+\]
+
+It is interesting, as they point out, that there is an optimal order for
+the integration scheme. However, the main takeaway here, at least by
+now, is that
+
+\begin{quote}
+There exists a power law that relates the number of steps, integration
+time and error bound, or a given quantum system.
+\end{quote}
+
+And so, this is what will be sought when benchmarking the proposed
+algorithm.
+
+Finally, Berry et. al.~point out that any Hamiltonian (at least of
+practical interest) may be simulated by a quantum algorithm using at
+least a linear amount of steps. Now, the remarkable part, at least for
+the purpose of this project is that
+
+\begin{quote}
+If a simulation algorithm uses an amount of steps that scales linearly
+with time for given precision, then it is almost optimal. At least
+within a constant factor that can be optimized.
+\end{quote}
+
+    \hypertarget{structure-of-the-notebook}{%
+\subsection{Structure of the Notebook}\label{structure-of-the-notebook}}
+
+This notebook is structured as follows. First, results obtained by
+Salathé et. al.~and Las Heras et. al.~are reproduced to show the
+correctness of the algorithms proposed. Simulations are carried out on
+\texttt{ibmq\_jakarta}, and measurement error mitigation is implemented
+as well. After that, basis efficient and pulse efficient implementation
+of the routines are compared in terms of: 1) expected value of single
+qubit observables and 2) pdf evolution. Then pulse schedules are revised
+as well. Also, an study of the inherent limitations of Trotterization is
+carried out. Finally, an annihilation process s carried out to
+illustrate applications of quantum time evolution.
+
+Let's start by importing the necessary packages
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{1}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{k+kn}{from} \PY{n+nn}{PyHeisenberg} \PY{k+kn}{import} \PY{n}{HeisenbergGraph}\PY{p}{,} \PY{n}{DataAnalyzer}\PY{p}{,} \PY{n}{PulseSpinGraph}\PY{p}{,} \PY{n}{DirectSpinGraph}
+\PY{k+kn}{import} \PY{n+nn}{numpy} \PY{k}{as} \PY{n+nn}{np}
+\PY{k+kn}{import} \PY{n+nn}{matplotlib}\PY{n+nn}{.}\PY{n+nn}{pyplot} \PY{k}{as} \PY{n+nn}{plt}
+\PY{k+kn}{import} \PY{n+nn}{warnings}
+\PY{k+kn}{from} \PY{n+nn}{operator} \PY{k+kn}{import} \PY{n}{itemgetter}
+\PY{n}{warnings}\PY{o}{.}\PY{n}{filterwarnings}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{ignore}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
+\PY{n}{plt}\PY{o}{.}\PY{n}{style}\PY{o}{.}\PY{n}{use}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{FigureStyle.mplstyle}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
+\end{Verbatim}
+\end{tcolorbox}
+
+    \hypertarget{reproduction-of-results-obtained-by-salathuxe9-et.-al.}{%
+\subsection{Reproduction of results obtained by Salathé et.
+al.}\label{reproduction-of-results-obtained-by-salathuxe9-et.-al.}}
+
+In this section, a two-spin isotropic Heisenberg model is simulated
+using the networks proposed in the main document. This Hamiltonian
+corresponds to
+
+\[
+\hat{H} = J(\hat{X}_1\hat{X}_2 + \hat{Y}_1\hat{Y}_2 + \hat{Z}_1\hat{Z}_2)
+\]
+
+Following the group's work, the initial state
+
+\[
+|\psi_0\rangle = |+\rangle\otimes|0\rangle
+\]
+
+Is evolved for a time \(t=3 \pi /4\), when \(J = 1\). Time series of the
+expected values of single-qubit Pauli operators are generated and
+compared to results obtained by direct diagonalization of the
+Hamiltonian. The time interval is partitioned on \(12\) equally spaced
+intervals.
+
+    \hypertarget{definition-of-the-graph-object}{%
+\subsubsection{Definition of the Graph
+Object}\label{definition-of-the-graph-object}}
+
+As mentioned on the main text, the Hamiltonian gives rise to a graph
+that is used to store the information of the spin-spin and field-spin
+interactions. More parameters such as the execution backend, initial
+state and noise activation are included as well.
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{10}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{n}{testGraph} \PY{o}{=} \PY{n}{HeisenbergGraph}\PY{p}{(}
+    \PY{n}{spinInteractions}\PY{o}{=}\PY{p}{\PYZob{}}
+        \PY{p}{(}\PY{l+m+mi}{0}\PY{p}{,} \PY{l+m+mi}{1}\PY{p}{)}\PY{p}{:} \PY{p}{[}\PY{l+m+mi}{1}\PY{p}{,} \PY{l+m+mi}{1}\PY{p}{,} \PY{l+m+mi}{1}\PY{p}{]}\PY{p}{,}
+    \PY{p}{\PYZcb{}}\PY{p}{,}
+    \PY{n}{externalField}\PY{o}{=}\PY{p}{\PYZob{}}
+        \PY{l+m+mi}{0}\PY{p}{:} \PY{p}{[}\PY{l+m+mf}{0.0}\PY{p}{,} \PY{l+m+mf}{0.0}\PY{p}{,} \PY{l+m+mf}{0.0}\PY{p}{]}\PY{p}{,}
+        \PY{l+m+mi}{1}\PY{p}{:} \PY{p}{[}\PY{l+m+mf}{0.0}\PY{p}{,} \PY{l+m+mf}{0.0}\PY{p}{,} \PY{l+m+mf}{0.0}\PY{p}{]}\PY{p}{,}
+    \PY{p}{\PYZcb{}}\PY{p}{,}
+    \PY{n}{localSimulation}\PY{o}{=}\PY{k+kc}{False}\PY{p}{,}
+    \PY{n}{backendName}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{ibmq\PYZus{}jakarta}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,}
+    \PY{n}{noisySimulation}\PY{o}{=}\PY{k+kc}{False}\PY{p}{,}
+    \PY{n}{initialState}\PY{o}{=}\PY{l+m+mi}{1}\PY{o}{/}\PY{n}{np}\PY{o}{.}\PY{n}{sqrt}\PY{p}{(}\PY{l+m+mi}{2}\PY{p}{)} \PY{o}{*} \PY{n}{np}\PY{o}{.}\PY{n}{array}\PY{p}{(}\PY{p}{[}\PY{l+m+mi}{1}\PY{p}{,} \PY{l+m+mi}{0}\PY{p}{,} \PY{l+m+mi}{1}\PY{p}{,} \PY{l+m+mi}{0}\PY{p}{]}\PY{p}{)}
+\PY{p}{)}
+\PY{n}{testAnalyzer} \PY{o}{=} \PY{n}{DataAnalyzer}\PY{p}{(}\PY{n}{spinGraph}\PY{o}{=}\PY{n}{testGraph}\PY{p}{)}
+\end{Verbatim}
+\end{tcolorbox}
+
+    \hypertarget{computation-of-exact-evolution-time-series}{%
+\subsubsection{Computation of Exact Evolution Time
+Series}\label{computation-of-exact-evolution-time-series}}
+
+These correspond to direct diagonalization using Numpy. By default, 200
+steps are used for producing a somewhat smooth theoretical curve of the
+evolution of expected values of a Pauli string operator.
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{22}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{n}{pauliStrings} \PY{o}{=} \PY{p}{[}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{XI}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{IX}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{YI}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{IY}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{ZI}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{IZ}\PY{l+s+s1}{\PYZsq{}}\PY{p}{]}
+\PY{n}{timesEx}\PY{p}{,} \PY{n}{resultSeriesExact} \PY{o}{=} \PY{n}{testGraph}\PY{o}{.}\PY{n}{exactPauliExpValSeries}\PY{p}{(}
+    \PY{n}{pauliStrings}\PY{p}{,}
+    \PY{n}{t} \PY{o}{=} \PY{l+m+mi}{3}\PY{o}{*}\PY{n}{np}\PY{o}{.}\PY{n}{pi}\PY{o}{/}\PY{l+m+mi}{4}
+\PY{p}{)}
+\PY{n}{ExX1}\PY{p}{,} \PY{n}{ExX2}\PY{p}{,} \PY{n}{ExY1}\PY{p}{,} \PY{n}{ExY2}\PY{p}{,} \PY{n}{ExZ1}\PY{p}{,} \PY{n}{ExZ2} \PY{o}{=} \PY{n}{itemgetter}\PY{p}{(}\PY{o}{*}\PY{n}{pauliStrings}\PY{p}{)}\PY{p}{(}\PY{n}{resultSeriesExact}\PY{p}{)}
+\end{Verbatim}
+\end{tcolorbox}
+
+    \hypertarget{computation-of-experimental-evolution-time-series}{%
+\subsubsection{Computation of Experimental Evolution Time
+Series}\label{computation-of-experimental-evolution-time-series}}
+
+These correspond to quantum time simulation using algorithms descried on
+the main text. By default, 200 steps are used for producing a somewhat
+smooth experimental curve of the evolution of expected values of a Pauli
+string operator. Due to decoherence and gate errors, it is suggested
+that no more than 20 steps for simulating time evolution on real quantum
+devices.
+
+To mitigate readout errors, a special technique is used. It uses a
+markovian model for correcting possible bit filp errors on readout. It
+is implemented on this notebook using \texttt{qiskit.ignis}.
+
+    \hypertarget{measurement-error-mitigation}{%
+\paragraph{Measurement error
+mitigation}\label{measurement-error-mitigation}}
+
+To apply measurement error mitigation, generate a sequence of quantum
+circuits to measure the readout errors when preparing states of the
+computational basis. Then fit an evolution matrix for assessing the
+transition probabilities, and define a filter for correction results of
+future algorithm's execution. This is done by \texttt{qiskit.ignis}.
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{8}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{n}{measurementFitter} \PY{o}{=} \PY{n}{testGraph}\PY{o}{.}\PY{n}{getCalibrationFitter}\PY{p}{(}\PY{p}{)}
+\end{Verbatim}
+\end{tcolorbox}
+
+    \begin{Verbatim}[commandchars=\\\{\}]
+Job Status: job has successfully run
+    \end{Verbatim}
+
+    \hypertarget{computation-of-time-series-on-ibm-quantum}{%
+\paragraph{Computation of Time Series on IBM
+Quantum}\label{computation-of-time-series-on-ibm-quantum}}
+
+Due to current limitations of cloud-based quantum computing, the
+\texttt{HeisenbergGraph} class optimizes the process of running quantum
+circuits on real quantum deices. It is recommended that the following
+routine be used for computing time series of expected value of Pauli
+string observables. The function returns \texttt{ndarray}s, which can be
+linearly combined to compute time series of generic quantum operators.
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{19}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{n}{times}\PY{p}{,} \PY{n}{resultSeries} \PY{o}{=} \PY{n}{testGraph}\PY{o}{.}\PY{n}{pauliExpValSeries}\PY{p}{(}
+    \PY{n}{pauliStrings}\PY{p}{,}
+    \PY{n}{MAX\PYZus{}STEPS} \PY{o}{=} \PY{l+m+mi}{12}\PY{p}{,}
+    \PY{n}{t} \PY{o}{=} \PY{l+m+mi}{3}\PY{o}{*}\PY{n}{np}\PY{o}{.}\PY{n}{pi}\PY{o}{/}\PY{l+m+mi}{4}\PY{p}{,}
+    \PY{n}{measurementFitter}\PY{o}{=} \PY{n}{measurementFitter}
+\PY{p}{)}
+\PY{n}{X1}\PY{p}{,} \PY{n}{X2}\PY{p}{,} \PY{n}{Y1}\PY{p}{,} \PY{n}{Y2}\PY{p}{,} \PY{n}{Z1}\PY{p}{,} \PY{n}{Z2} \PY{o}{=} \PY{n}{itemgetter}\PY{p}{(}\PY{o}{*}\PY{n}{pauliStrings}\PY{p}{)}\PY{p}{(}\PY{n}{resultSeries}\PY{p}{)}
+\end{Verbatim}
+\end{tcolorbox}
+
+    \begin{Verbatim}[commandchars=\\\{\}]
+Job Status: job has successfully run
+    \end{Verbatim}
+
+    What follows is to plot the experimental results. A comparative plot of
+theoretical values an experimental values is presented on this cell.
+Since time evolution of this system is exact, the experimental points
+(scatter plots) resemble quite well the theoretical curves (dashed
+lines). Red datasets corresponds to the second spin's observables,
+whereas the blu datasets corresponds to the first spin's observables.
+
+\textbf{Important:} During simulations, the specifications of the QPU
+were
+
+\begin{longtable}[]{@{}cccc@{}}
+\toprule
+\(T_1\) & \(T_2\) & CNOT err. & Readout err. \\
+\midrule
+\endhead
+103.34 us & 124.79 us & 1.931e-2 & 3.070e-2 \\
+\bottomrule
+\end{longtable}
+
+Measurement error mitigation is optional. However, it is highly
+recommended. Since \texttt{Qiskit\ Runtime} is still on beta, this
+project doesn't rely on that architecture.
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{20}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{n}{fig}\PY{p}{,} \PY{p}{(}\PY{n}{axX}\PY{p}{,} \PY{n}{axY}\PY{p}{,} \PY{n}{axZ}\PY{p}{)} \PY{o}{=} \PY{n}{plt}\PY{o}{.}\PY{n}{subplots}\PY{p}{(}\PY{l+m+mi}{1}\PY{p}{,}\PY{l+m+mi}{3}\PY{p}{)}
+\PY{n}{axX}\PY{o}{.}\PY{n}{plot}\PY{p}{(}\PY{n}{times}\PY{p}{,} \PY{n}{X1}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{ro}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{times}\PY{p}{,} \PY{n}{X2}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{bo}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
+\PY{n}{axX}\PY{o}{.}\PY{n}{plot}\PY{p}{(}\PY{n}{timesEx}\PY{p}{,} \PY{n}{ExX1}\PY{p}{,} \PY{n}{color}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{red}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{linewidth}\PY{o}{=}\PY{l+m+mi}{2}\PY{p}{,} \PY{n}{linestyle}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{dashed}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
+\PY{n}{axX}\PY{o}{.}\PY{n}{plot}\PY{p}{(}\PY{n}{timesEx}\PY{p}{,} \PY{n}{ExX2}\PY{p}{,} \PY{n}{color}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{blue}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{linewidth}\PY{o}{=}\PY{l+m+mi}{2}\PY{p}{,} \PY{n}{linestyle}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{dashed}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
+\PY{n}{axX}\PY{o}{.}\PY{n}{set\PYZus{}title}\PY{p}{(}\PY{l+s+sa}{r}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{\PYZdl{}}\PY{l+s+s2}{\PYZbs{}}\PY{l+s+s2}{langle}\PY{l+s+s2}{\PYZbs{}}\PY{l+s+s2}{hat}\PY{l+s+si}{\PYZob{}X\PYZcb{}}\PY{l+s+s2}{\PYZus{}i}\PY{l+s+s2}{\PYZbs{}}\PY{l+s+s2}{rangle\PYZdl{}}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+\PY{n}{axX}\PY{o}{.}\PY{n}{set\PYZus{}xlabel}\PY{p}{(}\PY{l+s+sa}{r}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{\PYZdl{}t\PYZdl{} (u. a.)}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+\PY{n}{axX}\PY{o}{.}\PY{n}{set\PYZus{}aspect}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{equal}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
+\PY{n}{axX}\PY{o}{.}\PY{n}{set\PYZus{}ylim}\PY{p}{(}\PY{p}{[}\PY{o}{\PYZhy{}}\PY{l+m+mf}{1.1}\PY{p}{,} \PY{l+m+mf}{1.1}\PY{p}{]}\PY{p}{)}
+\PY{n}{axY}\PY{o}{.}\PY{n}{plot}\PY{p}{(}\PY{n}{times}\PY{p}{,} \PY{n}{Y1}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{ro}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{times}\PY{p}{,} \PY{n}{Y2}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{bo}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
+\PY{n}{axY}\PY{o}{.}\PY{n}{plot}\PY{p}{(}\PY{n}{timesEx}\PY{p}{,} \PY{n}{ExY1}\PY{p}{,} \PY{n}{color}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{red}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{linewidth}\PY{o}{=}\PY{l+m+mi}{2}\PY{p}{,} \PY{n}{linestyle}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{dashed}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
+\PY{n}{axY}\PY{o}{.}\PY{n}{plot}\PY{p}{(}\PY{n}{timesEx}\PY{p}{,} \PY{n}{ExY2}\PY{p}{,} \PY{n}{color}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{blue}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{linewidth}\PY{o}{=}\PY{l+m+mi}{2}\PY{p}{,} \PY{n}{linestyle}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{dashed}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
+\PY{n}{axY}\PY{o}{.}\PY{n}{set\PYZus{}title}\PY{p}{(}\PY{l+s+sa}{r}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{\PYZdl{}}\PY{l+s+s2}{\PYZbs{}}\PY{l+s+s2}{langle}\PY{l+s+s2}{\PYZbs{}}\PY{l+s+s2}{hat}\PY{l+s+si}{\PYZob{}Y\PYZcb{}}\PY{l+s+s2}{\PYZus{}i}\PY{l+s+s2}{\PYZbs{}}\PY{l+s+s2}{rangle\PYZdl{}}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+\PY{n}{axY}\PY{o}{.}\PY{n}{set\PYZus{}xlabel}\PY{p}{(}\PY{l+s+sa}{r}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{\PYZdl{}t\PYZdl{} (u. a.)}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+\PY{n}{axY}\PY{o}{.}\PY{n}{set\PYZus{}aspect}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{equal}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
+\PY{n}{axY}\PY{o}{.}\PY{n}{set\PYZus{}ylim}\PY{p}{(}\PY{p}{[}\PY{o}{\PYZhy{}}\PY{l+m+mf}{1.1}\PY{p}{,} \PY{l+m+mf}{1.1}\PY{p}{]}\PY{p}{)}
+\PY{n}{axZ}\PY{o}{.}\PY{n}{plot}\PY{p}{(}\PY{n}{times}\PY{p}{,} \PY{n}{Z1}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{ro}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{times}\PY{p}{,} \PY{n}{Z2}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{bo}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
+\PY{n}{axZ}\PY{o}{.}\PY{n}{plot}\PY{p}{(}\PY{n}{timesEx}\PY{p}{,} \PY{n}{ExZ1}\PY{p}{,} \PY{n}{color}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{red}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{linewidth}\PY{o}{=}\PY{l+m+mi}{2}\PY{p}{,} \PY{n}{linestyle}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{dashed}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
+\PY{n}{axZ}\PY{o}{.}\PY{n}{plot}\PY{p}{(}\PY{n}{timesEx}\PY{p}{,} \PY{n}{ExZ2}\PY{p}{,} \PY{n}{color}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{blue}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{linewidth}\PY{o}{=}\PY{l+m+mi}{2}\PY{p}{,} \PY{n}{linestyle}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{dashed}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
+\PY{n}{axZ}\PY{o}{.}\PY{n}{set\PYZus{}title}\PY{p}{(}\PY{l+s+sa}{r}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{\PYZdl{}}\PY{l+s+s2}{\PYZbs{}}\PY{l+s+s2}{langle}\PY{l+s+s2}{\PYZbs{}}\PY{l+s+s2}{hat}\PY{l+s+si}{\PYZob{}Z\PYZcb{}}\PY{l+s+s2}{\PYZus{}i}\PY{l+s+s2}{\PYZbs{}}\PY{l+s+s2}{rangle\PYZdl{}}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+\PY{n}{axZ}\PY{o}{.}\PY{n}{set\PYZus{}xlabel}\PY{p}{(}\PY{l+s+sa}{r}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{\PYZdl{}t\PYZdl{} (u. a.)}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+\PY{n}{axZ}\PY{o}{.}\PY{n}{set\PYZus{}aspect}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{equal}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
+\PY{n}{axZ}\PY{o}{.}\PY{n}{set\PYZus{}ylim}\PY{p}{(}\PY{p}{[}\PY{o}{\PYZhy{}}\PY{l+m+mf}{1.1}\PY{p}{,} \PY{l+m+mf}{1.1}\PY{p}{]}\PY{p}{)}
+\PY{n}{fig}\PY{o}{.}\PY{n}{savefig}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{XYZModel\PYZus{}HerasEtAl.pdf}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
+\PY{n}{plt}\PY{o}{.}\PY{n}{show}\PY{p}{(}\PY{p}{)}
+\end{Verbatim}
+\end{tcolorbox}
+
+    \begin{center}
+    \adjustimage{max size={0.9\linewidth}{0.9\paperheight}}{Benchmarking_files/Benchmarking_16_0.png}
+    \end{center}
+    { \hspace*{\fill} \\}
+    
+    \hypertarget{reproduction-of-results-of-las-heras-et.-al.-and-salathuxe9-et.-al.}{%
+\subsection{Reproduction of results of Las Heras et. al.~and Salathé et.
+al.}\label{reproduction-of-results-of-las-heras-et.-al.-and-salathuxe9-et.-al.}}
+
+In this section, the two-spin transverse field Ising model,
+
+\[
+\hat{H} = \frac{V}{2}(\hat{X}_1\hat{X}_2 + \hat{Y}_1\hat{Y}_2 + \hat{Z}_1\hat{Z}_2) + \frac{U}{4}(\hat{Z}_1 + \hat{Z}_2)
+\]
+
+with \(V = U = 1\), is simulated over a time \(\tau = 5\). The initial
+state is set to
+
+\[
+|\psi_0\rangle = |+\rangle\otimes|0\rangle
+\]
+
+Simulations are carried out using \texttt{ibmq\_quito}, and error
+correction. First, a graph object is instantiated with the desired
+parameter values (\(J=1\)). Spin interactions are defined as a
+dictionary with a tuple key that points the index of the involved sites,
+and a value that has the interaction parameters as defined on the main
+document. Filed interactions are described y a dictionary whose key is
+the site index, and its value is an iterable that has the cartesian
+components of the local field, as defined on the main text.
+
+    A comparative evolution plot is generated using the
+\texttt{dataAnalyzer} object. The number of Trotter steps is taken to be
+\(N = 8\). However, this can be changed at will.
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{2}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{n}{isingGraph} \PY{o}{=} \PY{n}{HeisenbergGraph}\PY{p}{(}
+    \PY{n}{spinInteractions}\PY{o}{=}\PY{p}{\PYZob{}}
+        \PY{p}{(}\PY{l+m+mi}{0}\PY{p}{,} \PY{l+m+mi}{1}\PY{p}{)}\PY{p}{:} \PY{p}{[}\PY{l+m+mf}{0.5}\PY{p}{,} \PY{l+m+mf}{0.5}\PY{p}{,} \PY{l+m+mf}{0.5}\PY{p}{]}\PY{p}{,}
+    \PY{p}{\PYZcb{}}\PY{p}{,}
+    \PY{n}{externalField}\PY{o}{=}\PY{p}{\PYZob{}}
+        \PY{l+m+mi}{0}\PY{p}{:} \PY{p}{[}\PY{l+m+mf}{0.0}\PY{p}{,} \PY{l+m+mf}{0.0}\PY{p}{,} \PY{l+m+mf}{0.25}\PY{p}{]}\PY{p}{,}
+        \PY{l+m+mi}{1}\PY{p}{:} \PY{p}{[}\PY{l+m+mf}{0.0}\PY{p}{,} \PY{l+m+mf}{0.0}\PY{p}{,} \PY{l+m+mf}{0.25}\PY{p}{]}\PY{p}{,}
+    \PY{p}{\PYZcb{}}\PY{p}{,}
+    \PY{n}{localSimulation}\PY{o}{=}\PY{k+kc}{False}\PY{p}{,}
+    \PY{n}{backendName}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{ibmq\PYZus{}jakarta}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,}
+    \PY{n}{noisySimulation}\PY{o}{=}\PY{k+kc}{False}\PY{p}{,}
+    \PY{n}{initialState}\PY{o}{=}\PY{l+m+mi}{1}\PY{o}{/}\PY{n}{np}\PY{o}{.}\PY{n}{sqrt}\PY{p}{(}\PY{l+m+mi}{2}\PY{p}{)} \PY{o}{*} \PY{n}{np}\PY{o}{.}\PY{n}{array}\PY{p}{(}\PY{p}{[}\PY{l+m+mi}{1}\PY{p}{,} \PY{l+m+mi}{0}\PY{p}{,} \PY{l+m+mi}{1}\PY{p}{,} \PY{l+m+mi}{0}\PY{p}{]}\PY{p}{)}
+\PY{p}{)}
+\PY{n}{isingAnalyzer} \PY{o}{=} \PY{n}{DataAnalyzer}\PY{p}{(}\PY{n}{spinGraph}\PY{o}{=}\PY{n}{isingGraph}\PY{p}{)}
+\end{Verbatim}
+\end{tcolorbox}
+
+    \hypertarget{evolution-of-occupation-number}{%
+\subsubsection{Evolution of occupation
+number}\label{evolution-of-occupation-number}}
+
+Remember that each computational basis state can be mapped to an
+integer. This integer is shown on the plot legends. An excited fermionic
+mode is mapped to the ground state of a qubit \(|1\rangle\), and the
+ground fermionic mode to the excited state of a qubit \(|0\rangle\).
+Simulations were carried out on \texttt{ibmq\_bogota}. Notice that, in
+this case, the occupation numbers are not so close to the theoretical
+values. This is due to many sources of errors. This will be addressed
+bellow. By now, those are stated
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  Readout error
+\item
+  Gate error (CNOT and \(\pi/2\)-pulses)
+\item
+  Qubit relaxation
+\item
+  Decoherence nd thermal relaxation
+\end{enumerate}
+
+\textbf{Important:} During simulations, the specifications of the QPU
+were
+
+\begin{longtable}[]{@{}cccc@{}}
+\toprule
+\(T_1\) & \(T_2\) & CNOT err. & Readout err. \\
+\midrule
+\endhead
+103.34 us & 124.79 us & 1.931e-2 & 3.070e-2 \\
+\bottomrule
+\end{longtable}
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{9}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{n}{isingAnalyzer}\PY{o}{.}\PY{n}{comparativeEvolution}\PY{p}{(}
+    \PY{n}{STEPS}\PY{o}{=}\PY{l+m+mi}{8}\PY{p}{,} 
+    \PY{n}{t}\PY{o}{=}\PY{l+m+mf}{5.0}\PY{p}{,}
+    \PY{n}{measurementFitter}\PY{o}{=}\PY{n}{measurementFitter}\PY{p}{,}
+    \PY{n}{figureFile}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{HubbardTwoMode\PYZus{}LasHeras.pdf}\PY{l+s+s1}{\PYZsq{}}
+\PY{p}{)}
+\end{Verbatim}
+\end{tcolorbox}
+
+    \begin{Verbatim}[commandchars=\\\{\}]
+Job Status: job has successfully run
+    \end{Verbatim}
+
+    \begin{center}
+    \adjustimage{max size={0.9\linewidth}{0.9\paperheight}}{Benchmarking_files/Benchmarking_21_1.png}
+    \end{center}
+    { \hspace*{\fill} \\}
+    
+    \hypertarget{simulation-of-a-3-spin-xxx-model}{%
+\subsection{\texorpdfstring{Simulation of a 3-Spin \(XXX\)
+model}{Simulation of a 3-Spin XXX model}}\label{simulation-of-a-3-spin-xxx-model}}
+
+As another way to demonstrate the utility of the trotterization scheme
+proposed, a three spin Hamiltonian
+
+\[
+\hat{H} = \sum_{i=0}^{1} \bigg(\hat{X}^{(i)}\hat{X}^{(i+1)} + \hat{Y}^{(i)}\hat{Y}^{(i+1)} + \hat{Z}^{(i)}\hat{Z}^{(i+1)} \bigg)
+\]
+
+Which is a generalization of the Hamiltonian simulated by Salathé et.
+al.~Pretty much the same observables are measured. As before, a graph is
+instantiated, with the desired two-qubit interactions. SIMulations are
+carried out on \texttt{ibmq\_jakarta}.
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{6}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{n}{xGraph} \PY{o}{=} \PY{n}{HeisenbergGraph}\PY{p}{(}
+    \PY{n}{spinInteractions}\PY{o}{=}\PY{p}{\PYZob{}}
+        \PY{p}{(}\PY{l+m+mi}{0}\PY{p}{,} \PY{l+m+mi}{1}\PY{p}{)}\PY{p}{:} \PY{p}{[}\PY{l+m+mi}{1}\PY{p}{,} \PY{l+m+mi}{1}\PY{p}{,} \PY{l+m+mi}{1}\PY{p}{]}\PY{p}{,}
+        \PY{p}{(}\PY{l+m+mi}{1}\PY{p}{,} \PY{l+m+mi}{2}\PY{p}{)}\PY{p}{:} \PY{p}{[}\PY{l+m+mi}{1}\PY{p}{,} \PY{l+m+mi}{1}\PY{p}{,} \PY{l+m+mi}{1}\PY{p}{]}\PY{p}{,}
+    \PY{p}{\PYZcb{}}\PY{p}{,}
+    \PY{n}{externalField}\PY{o}{=}\PY{p}{\PYZob{}}
+        \PY{l+m+mi}{0}\PY{p}{:} \PY{p}{[}\PY{l+m+mf}{0.0}\PY{p}{,} \PY{l+m+mf}{0.0}\PY{p}{,} \PY{l+m+mf}{0.0}\PY{p}{]}\PY{p}{,}
+        \PY{l+m+mi}{1}\PY{p}{:} \PY{p}{[}\PY{l+m+mf}{0.0}\PY{p}{,} \PY{l+m+mf}{0.0}\PY{p}{,} \PY{l+m+mf}{0.0}\PY{p}{]}\PY{p}{,}
+        \PY{l+m+mi}{2}\PY{p}{:} \PY{p}{[}\PY{l+m+mf}{0.0}\PY{p}{,} \PY{l+m+mf}{0.0}\PY{p}{,} \PY{l+m+mf}{0.0}\PY{p}{]}\PY{p}{,}
+    \PY{p}{\PYZcb{}}\PY{p}{,}
+    \PY{n}{localSimulation}\PY{o}{=}\PY{k+kc}{True}\PY{p}{,}
+    \PY{n}{backendName}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{qasm\PYZus{}simulator}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,}
+    \PY{n}{noisySimulation}\PY{o}{=}\PY{k+kc}{False}\PY{p}{,}
+    \PY{n}{initializeList}\PY{o}{=}\PY{p}{[}\PY{l+m+mi}{1}\PY{p}{,} \PY{l+m+mi}{2}\PY{p}{]}
+\PY{p}{)}
+\PY{n}{xAnalyzer} \PY{o}{=} \PY{n}{DataAnalyzer}\PY{p}{(}\PY{n}{spinGraph}\PY{o}{=}\PY{n}{xGraph}\PY{p}{)}
+\end{Verbatim}
+\end{tcolorbox}
+
+    After, the exact evolution of the expected value of single qubit Pauli
+operators is computed
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{3}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{n}{pauliStrings} \PY{o}{=} \PY{p}{[}
+    \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{XII}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{IXI}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{IIX}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} 
+    \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{YII}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{IYI}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{IIY}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,}
+    \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{ZII}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{IZI}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{IIZ}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,}
+\PY{p}{]}
+\PY{n}{timesEx}\PY{p}{,} \PY{n}{resultSeriesExact} \PY{o}{=} \PY{n}{xGraph}\PY{o}{.}\PY{n}{exactPauliExpValSeries}\PY{p}{(}
+    \PY{n}{pauliStrings}\PY{p}{,}
+    \PY{n}{t}\PY{o}{=}\PY{l+m+mi}{1}
+\PY{p}{)}
+\PY{n}{ExX1}\PY{p}{,} \PY{n}{ExX2}\PY{p}{,} \PY{n}{ExX3}\PY{p}{,} \PY{n}{ExY1}\PY{p}{,} \PY{n}{ExY2}\PY{p}{,} \PY{n}{ExY3}\PY{p}{,} \PY{n}{ExZ1}\PY{p}{,} \PY{n}{ExZ2}\PY{p}{,} \PY{n}{ExZ3} \PY{o}{=} \PY{n}{itemgetter}\PY{p}{(}
+    \PY{o}{*}\PY{n}{pauliStrings}\PY{p}{)}\PY{p}{(}\PY{n}{resultSeriesExact}\PY{p}{)}
+\end{Verbatim}
+\end{tcolorbox}
+
+    And a measurement error mitigation fitter is devised suited to the
+conditions of the backend.
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{4}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{n}{measurementFitter} \PY{o}{=} \PY{n}{xGraph}\PY{o}{.}\PY{n}{getCalibrationFitter}\PY{p}{(}\PY{p}{)} 
+\end{Verbatim}
+\end{tcolorbox}
+
+    \begin{Verbatim}[commandchars=\\\{\}]
+Job Status: job has successfully run
+    \end{Verbatim}
+
+    Finally, experimental data is captured on IBM Quantum's backend.
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{5}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{n}{times}\PY{p}{,} \PY{n}{resultSeries} \PY{o}{=} \PY{n}{xGraph}\PY{o}{.}\PY{n}{pauliExpValSeries}\PY{p}{(}
+    \PY{n}{pauliStrings}\PY{p}{,}
+    \PY{n}{MAX\PYZus{}STEPS}\PY{o}{=}\PY{l+m+mi}{8}\PY{p}{,}
+    \PY{n}{t}\PY{o}{=}\PY{l+m+mi}{1}\PY{p}{,}
+    \PY{n}{measurementFitter}\PY{o}{=}\PY{n}{measurementFitter}
+\PY{p}{)}
+\PY{n}{X1}\PY{p}{,} \PY{n}{X2}\PY{p}{,} \PY{n}{X3}\PY{p}{,} \PY{n}{Y1}\PY{p}{,} \PY{n}{Y2}\PY{p}{,} \PY{n}{Y3}\PY{p}{,} \PY{n}{Z1}\PY{p}{,} \PY{n}{Z2}\PY{p}{,} \PY{n}{Z3} \PY{o}{=} \PY{n}{itemgetter}\PY{p}{(}\PY{o}{*}\PY{n}{pauliStrings}\PY{p}{)}\PY{p}{(}\PY{n}{resultSeries}\PY{p}{)}
+\end{Verbatim}
+\end{tcolorbox}
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{6}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{n}{fig}\PY{p}{,} \PY{p}{(}\PY{n}{axX}\PY{p}{,} \PY{n}{axY}\PY{p}{,} \PY{n}{axZ}\PY{p}{)} \PY{o}{=} \PY{n}{plt}\PY{o}{.}\PY{n}{subplots}\PY{p}{(}\PY{l+m+mi}{1}\PY{p}{,} \PY{l+m+mi}{3}\PY{p}{)}
+\PY{n}{fig}\PY{o}{.}\PY{n}{tight\PYZus{}layout}\PY{p}{(}\PY{n}{pad}\PY{o}{=}\PY{l+m+mf}{1.0}\PY{p}{)}
+\PY{n}{axX}\PY{o}{.}\PY{n}{plot}\PY{p}{(}\PY{n}{times}\PY{p}{,} \PY{n}{X1}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{ro}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{times}\PY{p}{,} \PY{n}{X2}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{bo}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{times}\PY{p}{,} \PY{n}{X3}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{ko}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
+\PY{n}{axX}\PY{o}{.}\PY{n}{plot}\PY{p}{(}\PY{n}{timesEx}\PY{p}{,} \PY{n}{ExX1}\PY{p}{,} \PY{n}{color}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{red}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{linewidth}\PY{o}{=}\PY{l+m+mi}{2}\PY{p}{,} \PY{n}{linestyle}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{dashed}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
+\PY{n}{axX}\PY{o}{.}\PY{n}{plot}\PY{p}{(}\PY{n}{timesEx}\PY{p}{,} \PY{n}{ExX2}\PY{p}{,} \PY{n}{color}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{blue}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{linewidth}\PY{o}{=}\PY{l+m+mi}{2}\PY{p}{,} \PY{n}{linestyle}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{dashed}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
+\PY{n}{axX}\PY{o}{.}\PY{n}{plot}\PY{p}{(}\PY{n}{timesEx}\PY{p}{,} \PY{n}{ExX3}\PY{p}{,} \PY{n}{color}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{black}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{linewidth}\PY{o}{=}\PY{l+m+mi}{2}\PY{p}{,} \PY{n}{linestyle}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{dashed}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
+\PY{n}{axX}\PY{o}{.}\PY{n}{set\PYZus{}title}\PY{p}{(}\PY{l+s+sa}{r}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{\PYZdl{}}\PY{l+s+s2}{\PYZbs{}}\PY{l+s+s2}{langle}\PY{l+s+s2}{\PYZbs{}}\PY{l+s+s2}{hat}\PY{l+s+si}{\PYZob{}X\PYZcb{}}\PY{l+s+s2}{\PYZus{}i}\PY{l+s+s2}{\PYZbs{}}\PY{l+s+s2}{rangle\PYZdl{}}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+\PY{n}{axX}\PY{o}{.}\PY{n}{set\PYZus{}xlabel}\PY{p}{(}\PY{l+s+sa}{r}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{\PYZdl{}t\PYZdl{} (u. a.)}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+\PY{n}{axX}\PY{o}{.}\PY{n}{set\PYZus{}aspect}\PY{p}{(}\PY{n}{aspect}\PY{o}{=}\PY{l+m+mf}{0.5}\PY{p}{)}
+\PY{n}{axX}\PY{o}{.}\PY{n}{set\PYZus{}ylim}\PY{p}{(}\PY{p}{[}\PY{o}{\PYZhy{}}\PY{l+m+mf}{1.1}\PY{p}{,} \PY{l+m+mf}{1.1}\PY{p}{]}\PY{p}{)}
+\PY{n}{axY}\PY{o}{.}\PY{n}{plot}\PY{p}{(}\PY{n}{times}\PY{p}{,} \PY{n}{Y1}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{ro}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{times}\PY{p}{,} \PY{n}{Y2}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{bo}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{times}\PY{p}{,} \PY{n}{Y3}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{ko}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
+\PY{n}{axY}\PY{o}{.}\PY{n}{plot}\PY{p}{(}\PY{n}{timesEx}\PY{p}{,} \PY{n}{ExY1}\PY{p}{,} \PY{n}{color}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{red}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{linewidth}\PY{o}{=}\PY{l+m+mi}{2}\PY{p}{,} \PY{n}{linestyle}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{dashed}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
+\PY{n}{axY}\PY{o}{.}\PY{n}{plot}\PY{p}{(}\PY{n}{timesEx}\PY{p}{,} \PY{n}{ExY2}\PY{p}{,} \PY{n}{color}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{blue}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{linewidth}\PY{o}{=}\PY{l+m+mi}{2}\PY{p}{,} \PY{n}{linestyle}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{dashed}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
+\PY{n}{axY}\PY{o}{.}\PY{n}{plot}\PY{p}{(}\PY{n}{timesEx}\PY{p}{,} \PY{n}{ExY3}\PY{p}{,} \PY{n}{color}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{black}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{linewidth}\PY{o}{=}\PY{l+m+mi}{2}\PY{p}{,} \PY{n}{linestyle}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{dashed}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
+\PY{n}{axY}\PY{o}{.}\PY{n}{set\PYZus{}title}\PY{p}{(}\PY{l+s+sa}{r}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{\PYZdl{}}\PY{l+s+s2}{\PYZbs{}}\PY{l+s+s2}{langle}\PY{l+s+s2}{\PYZbs{}}\PY{l+s+s2}{hat}\PY{l+s+si}{\PYZob{}Y\PYZcb{}}\PY{l+s+s2}{\PYZus{}i}\PY{l+s+s2}{\PYZbs{}}\PY{l+s+s2}{rangle\PYZdl{}}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+\PY{n}{axY}\PY{o}{.}\PY{n}{set\PYZus{}xlabel}\PY{p}{(}\PY{l+s+sa}{r}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{\PYZdl{}t\PYZdl{} (u. a.)}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+\PY{n}{axY}\PY{o}{.}\PY{n}{set\PYZus{}aspect}\PY{p}{(}\PY{n}{aspect}\PY{o}{=}\PY{l+m+mf}{0.5}\PY{p}{)}
+\PY{n}{axY}\PY{o}{.}\PY{n}{set\PYZus{}ylim}\PY{p}{(}\PY{p}{[}\PY{o}{\PYZhy{}}\PY{l+m+mf}{1.1}\PY{p}{,} \PY{l+m+mf}{1.1}\PY{p}{]}\PY{p}{)}
+\PY{n}{axZ}\PY{o}{.}\PY{n}{plot}\PY{p}{(}\PY{n}{times}\PY{p}{,} \PY{n}{Z1}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{ro}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{times}\PY{p}{,} \PY{n}{Z2}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{bo}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{times}\PY{p}{,} \PY{n}{Z3}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{ko}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
+\PY{n}{axZ}\PY{o}{.}\PY{n}{plot}\PY{p}{(}\PY{n}{timesEx}\PY{p}{,} \PY{n}{ExZ1}\PY{p}{,} \PY{n}{color}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{red}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{linewidth}\PY{o}{=}\PY{l+m+mi}{2}\PY{p}{,} \PY{n}{linestyle}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{dashed}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
+\PY{n}{axZ}\PY{o}{.}\PY{n}{plot}\PY{p}{(}\PY{n}{timesEx}\PY{p}{,} \PY{n}{ExZ2}\PY{p}{,} \PY{n}{color}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{blue}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{linewidth}\PY{o}{=}\PY{l+m+mi}{2}\PY{p}{,} \PY{n}{linestyle}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{dashed}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
+\PY{n}{axZ}\PY{o}{.}\PY{n}{plot}\PY{p}{(}\PY{n}{timesEx}\PY{p}{,} \PY{n}{ExZ3}\PY{p}{,} \PY{n}{color}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{black}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{linewidth}\PY{o}{=}\PY{l+m+mi}{2}\PY{p}{,} \PY{n}{linestyle}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{dashed}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
+\PY{n}{axZ}\PY{o}{.}\PY{n}{set\PYZus{}title}\PY{p}{(}\PY{l+s+sa}{r}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{\PYZdl{}}\PY{l+s+s2}{\PYZbs{}}\PY{l+s+s2}{langle}\PY{l+s+s2}{\PYZbs{}}\PY{l+s+s2}{hat}\PY{l+s+si}{\PYZob{}Z\PYZcb{}}\PY{l+s+s2}{\PYZus{}i}\PY{l+s+s2}{\PYZbs{}}\PY{l+s+s2}{rangle\PYZdl{}}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+\PY{n}{axZ}\PY{o}{.}\PY{n}{set\PYZus{}xlabel}\PY{p}{(}\PY{l+s+sa}{r}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{\PYZdl{}t\PYZdl{} (u. a.)}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+\PY{n}{axZ}\PY{o}{.}\PY{n}{set\PYZus{}aspect}\PY{p}{(}\PY{n}{aspect}\PY{o}{=}\PY{l+m+mf}{0.5}\PY{p}{)}
+\PY{n}{axZ}\PY{o}{.}\PY{n}{set\PYZus{}ylim}\PY{p}{(}\PY{p}{[}\PY{o}{\PYZhy{}}\PY{l+m+mf}{1.1}\PY{p}{,} \PY{l+m+mf}{1.1}\PY{p}{]}\PY{p}{)}
+\PY{n}{fig}\PY{o}{.}\PY{n}{savefig}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{XYZModel\PYZus{}BasisEfficient.pdf}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
+\PY{n}{plt}\PY{o}{.}\PY{n}{show}\PY{p}{(}\PY{p}{)}
+\end{Verbatim}
+\end{tcolorbox}
+
+    \begin{center}
+    \adjustimage{max size={0.9\linewidth}{0.9\paperheight}}{Benchmarking_files/Benchmarking_30_0.png}
+    \end{center}
+    { \hspace*{\fill} \\}
+    
+    As is readily seen, the results are poor. Specially for a large number
+of integration steps. The reason for this is decoherence and qubit
+relaxation. To the lowest level, quantum algorithms are implemented via
+microwave pulses acting on a superconducting chip. The duration of hose
+pulses, and its relation to coherence and qubit relaxation times,
+determines the fidelity of the evolution. The longer the pulse schedule
+that implements the algorithm, the worse the fidelity. Although the
+evolution algorithm here implemented is \emph{basis efficient}, i. e.
+uses a small number of CNOT gates and single qubit rotations per
+integration step, it is not \emph{pulse efficient}, i. e. the actual
+sequence of microwave pulses implemented on hardware is simply to long
+and decoherence and qubit relaxation prevent high fidelities.
+
+A more intelligent approach relies on implementations that not only are
+simple in the high level circuit model abstraction, but also imply a
+reduced the duration of its associated pulse schedule. IBM Quantum
+devices implement standard single qubit rotations with relatively high
+precision, and the bottleneck is mostly due to two-qubit gates. Such
+interactions are performed on hardware via \textbf{Cross-Resonance
+gates}
+
+\[
+\hat{R}_{zx}(\phi) = \mathrm{e}^{-\mathrm{i}\phi\hat{Z}\otimes\hat{X}}
+\]
+
+\begin{quote}
+Although IBM Quantum devices have a universal set that uses CNOT as
+entangling gate, on hardware, actual hardware, two-qubit interactions
+are performed via cross-resonance
+\end{quote}
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{8}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{n}{xAnalyzer}\PY{o}{.}\PY{n}{comparativeEvolution}\PY{p}{(}
+    \PY{n}{STEPS}\PY{o}{=}\PY{l+m+mi}{8}\PY{p}{,} 
+    \PY{n}{t}\PY{o}{=}\PY{l+m+mf}{1.0}\PY{p}{,}
+    \PY{n}{measurementFitter}\PY{o}{=}\PY{n}{measurementFitter}\PY{p}{,}
+    \PY{n}{figureFile}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{XYZModel\PYZus{}evol\PYZus{}DirectTranspilation.pdf}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,}
+    \PY{n}{showLegend}\PY{o}{=}\PY{k+kc}{True}\PY{p}{,}
+    \PY{n}{showPlot}\PY{o}{=}\PY{k+kc}{True}
+\PY{p}{)}
+\end{Verbatim}
+\end{tcolorbox}
+
+    \begin{center}
+    \adjustimage{max size={0.9\linewidth}{0.9\paperheight}}{Benchmarking_files/Benchmarking_32_0.png}
+    \end{center}
+    { \hspace*{\fill} \\}
+    
+    Notice that cross-resonance is very similar to the terms in the
+Hamiltonian, up to single qubit rotations. So, this seems to be the key
+for simulating spin systems with higher fidelity. This approach will be
+explored further in the future. By now, the limits of the proposed
+Trotterization scheme, and its relation with the target dynamics is
+discussed further.
+
+    \hypertarget{simulation-using-cross-resonance-gates}{%
+\subsubsection{Simulation using Cross Resonance
+gates}\label{simulation-using-cross-resonance-gates}}
+
+In this section, an evolution algorithm based on the cross resonance
+gate described above is tested. This is part of the Open Science
+Challenge from IBM. The first approach consists on using the
+\texttt{PassManager} object for preventing transpilation of RZX gates to
+basis gates, thus implementing them directly on hardware using microwave
+pulses. From trotterization benchmark, I have seen that at least a time
+step \(dt \approx 0.2 \text{ u. a.}\) should be used for simulations to
+produce decent outcome. This is related to the particular Floquet
+dynamics at large time step.
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{5}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{n}{pGraph} \PY{o}{=} \PY{n}{PulseSpinGraph}\PY{p}{(}
+    \PY{n}{spinInteractions}\PY{o}{=}\PY{p}{\PYZob{}}
+        \PY{p}{(}\PY{l+m+mi}{0}\PY{p}{,} \PY{l+m+mi}{1}\PY{p}{)}\PY{p}{:} \PY{p}{[}\PY{l+m+mi}{0}\PY{p}{,} \PY{l+m+mi}{0}\PY{p}{,} \PY{l+m+mi}{0}\PY{p}{]}\PY{p}{,}
+        \PY{p}{(}\PY{l+m+mi}{1}\PY{p}{,} \PY{l+m+mi}{2}\PY{p}{)}\PY{p}{:} \PY{p}{[}\PY{l+m+mi}{0}\PY{p}{,} \PY{l+m+mi}{0}\PY{p}{,} \PY{l+m+mi}{0}\PY{p}{]}\PY{p}{,}
+        \PY{p}{(}\PY{l+m+mi}{1}\PY{p}{,} \PY{l+m+mi}{3}\PY{p}{)}\PY{p}{:} \PY{p}{[}\PY{l+m+mi}{1}\PY{p}{,} \PY{l+m+mi}{1}\PY{p}{,} \PY{l+m+mi}{1}\PY{p}{]}\PY{p}{,}
+        \PY{p}{(}\PY{l+m+mi}{3}\PY{p}{,} \PY{l+m+mi}{5}\PY{p}{)}\PY{p}{:} \PY{p}{[}\PY{l+m+mi}{1}\PY{p}{,} \PY{l+m+mi}{1}\PY{p}{,} \PY{l+m+mi}{1}\PY{p}{]}\PY{p}{,}
+        \PY{p}{(}\PY{l+m+mi}{4}\PY{p}{,} \PY{l+m+mi}{5}\PY{p}{)}\PY{p}{:} \PY{p}{[}\PY{l+m+mi}{0}\PY{p}{,} \PY{l+m+mi}{0}\PY{p}{,} \PY{l+m+mi}{0}\PY{p}{]}\PY{p}{,}
+        \PY{p}{(}\PY{l+m+mi}{5}\PY{p}{,} \PY{l+m+mi}{6}\PY{p}{)}\PY{p}{:} \PY{p}{[}\PY{l+m+mi}{0}\PY{p}{,} \PY{l+m+mi}{0}\PY{p}{,} \PY{l+m+mi}{0}\PY{p}{]}\PY{p}{,}
+    \PY{p}{\PYZcb{}}\PY{p}{,}
+    \PY{n}{externalField}\PY{o}{=}\PY{p}{\PYZob{}}
+        \PY{l+m+mi}{0}\PY{p}{:} \PY{p}{[}\PY{l+m+mf}{0.0}\PY{p}{,} \PY{l+m+mf}{0.0}\PY{p}{,} \PY{l+m+mf}{0.0}\PY{p}{]}\PY{p}{,}
+        \PY{l+m+mi}{1}\PY{p}{:} \PY{p}{[}\PY{l+m+mf}{0.0}\PY{p}{,} \PY{l+m+mf}{0.0}\PY{p}{,} \PY{l+m+mf}{0.0}\PY{p}{]}\PY{p}{,}
+        \PY{l+m+mi}{2}\PY{p}{:} \PY{p}{[}\PY{l+m+mf}{0.0}\PY{p}{,} \PY{l+m+mf}{0.0}\PY{p}{,} \PY{l+m+mf}{0.0}\PY{p}{]}\PY{p}{,}
+        \PY{l+m+mi}{3}\PY{p}{:} \PY{p}{[}\PY{l+m+mf}{0.0}\PY{p}{,} \PY{l+m+mf}{0.0}\PY{p}{,} \PY{l+m+mf}{0.0}\PY{p}{]}\PY{p}{,}
+        \PY{l+m+mi}{4}\PY{p}{:} \PY{p}{[}\PY{l+m+mf}{0.0}\PY{p}{,} \PY{l+m+mf}{0.0}\PY{p}{,} \PY{l+m+mf}{0.0}\PY{p}{]}\PY{p}{,}
+        \PY{l+m+mi}{5}\PY{p}{:} \PY{p}{[}\PY{l+m+mf}{0.0}\PY{p}{,} \PY{l+m+mf}{0.0}\PY{p}{,} \PY{l+m+mf}{0.0}\PY{p}{]}\PY{p}{,}
+        \PY{l+m+mi}{6}\PY{p}{:} \PY{p}{[}\PY{l+m+mf}{0.0}\PY{p}{,} \PY{l+m+mf}{0.0}\PY{p}{,} \PY{l+m+mf}{0.0}\PY{p}{]}\PY{p}{,}
+    \PY{p}{\PYZcb{}}\PY{p}{,}
+    \PY{n}{localSimulation}\PY{o}{=}\PY{k+kc}{False}\PY{p}{,}
+    \PY{n}{backendName}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{ibmq\PYZus{}jakarta}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,}
+    \PY{n}{noisySimulation}\PY{o}{=}\PY{k+kc}{False}\PY{p}{,}
+    \PY{n}{initializeList}\PY{o}{=}\PY{p}{[}\PY{l+m+mi}{3}\PY{p}{,}\PY{l+m+mi}{5}\PY{p}{]}
+\PY{p}{)}
+\PY{n}{pAnalyzer} \PY{o}{=} \PY{n}{DataAnalyzer}\PY{p}{(}\PY{n}{spinGraph}\PY{o}{=}\PY{n}{pGraph}\PY{p}{)}
+\end{Verbatim}
+\end{tcolorbox}
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{20}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{n}{pauliStrings} \PY{o}{=} \PY{p}{[}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{IXIIIII}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{IIIXIII}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{IIIIIXI}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{IYIIIII}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,}
+                \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{IIIYIII}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{IIIIIYI}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{IZIIIII}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{IIIZIII}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{IIIIIZI}\PY{l+s+s1}{\PYZsq{}}\PY{p}{]}
+\PY{n}{timesEx}\PY{p}{,} \PY{n}{resultSeriesExact} \PY{o}{=} \PY{n}{pGraph}\PY{o}{.}\PY{n}{exactPauliExpValSeries}\PY{p}{(}
+    \PY{n}{pauliStrings}\PY{p}{,}
+    \PY{n}{t}\PY{o}{=}\PY{l+m+mi}{1}
+\PY{p}{)}
+\PY{n}{ExX1}\PY{p}{,} \PY{n}{ExX2}\PY{p}{,} \PY{n}{ExX3}\PY{p}{,} \PY{n}{ExY1}\PY{p}{,} \PY{n}{ExY2}\PY{p}{,} \PY{n}{ExY3}\PY{p}{,} \PY{n}{ExZ1}\PY{p}{,} \PY{n}{ExZ2}\PY{p}{,} \PY{n}{ExZ3} \PY{o}{=} \PY{n}{itemgetter}\PY{p}{(}
+    \PY{o}{*}\PY{n}{pauliStrings}\PY{p}{)}\PY{p}{(}\PY{n}{resultSeriesExact}\PY{p}{)}
+\end{Verbatim}
+\end{tcolorbox}
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{28}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{n}{measurementFitter} \PY{o}{=} \PY{n}{pGraph}\PY{o}{.}\PY{n}{getCalibrationFitter}\PY{p}{(}\PY{p}{)}
+\end{Verbatim}
+\end{tcolorbox}
+
+    \begin{Verbatim}[commandchars=\\\{\}]
+Job Status: job has successfully run
+    \end{Verbatim}
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{22}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{n}{times}\PY{p}{,} \PY{n}{resultSeries} \PY{o}{=} \PY{n}{pGraph}\PY{o}{.}\PY{n}{pauliExpValSeries}\PY{p}{(}
+    \PY{n}{pauliStrings}\PY{p}{,}
+    \PY{n}{MAX\PYZus{}STEPS}\PY{o}{=}\PY{l+m+mi}{8}\PY{p}{,}
+    \PY{n}{t}\PY{o}{=}\PY{l+m+mi}{1}\PY{p}{,}
+    \PY{n}{measurementFitter}\PY{o}{=}\PY{n}{measurementFitter}
+\PY{p}{)}
+\PY{n}{X1}\PY{p}{,} \PY{n}{X2}\PY{p}{,} \PY{n}{X3}\PY{p}{,} \PY{n}{Y1}\PY{p}{,} \PY{n}{Y2}\PY{p}{,} \PY{n}{Y3}\PY{p}{,} \PY{n}{Z1}\PY{p}{,} \PY{n}{Z2}\PY{p}{,} \PY{n}{Z3} \PY{o}{=} \PY{n}{itemgetter}\PY{p}{(}\PY{o}{*}\PY{n}{pauliStrings}\PY{p}{)}\PY{p}{(}\PY{n}{resultSeries}\PY{p}{)}
+\end{Verbatim}
+\end{tcolorbox}
+
+    \begin{Verbatim}[commandchars=\\\{\}]
+Job Status: job has successfully run
+    \end{Verbatim}
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{24}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{n}{fig}\PY{p}{,} \PY{p}{(}\PY{n}{axX}\PY{p}{,} \PY{n}{axY}\PY{p}{,} \PY{n}{axZ}\PY{p}{)} \PY{o}{=} \PY{n}{plt}\PY{o}{.}\PY{n}{subplots}\PY{p}{(}\PY{l+m+mi}{1}\PY{p}{,} \PY{l+m+mi}{3}\PY{p}{)}
+\PY{n}{axX}\PY{o}{.}\PY{n}{plot}\PY{p}{(}\PY{n}{times}\PY{p}{,} \PY{n}{X1}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{ro}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{times}\PY{p}{,} \PY{n}{X2}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{bo}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{times}\PY{p}{,} \PY{n}{X3}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{ko}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
+\PY{n}{axX}\PY{o}{.}\PY{n}{plot}\PY{p}{(}\PY{n}{timesEx}\PY{p}{,} \PY{n}{ExX1}\PY{p}{,} \PY{n}{color}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{red}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{linewidth}\PY{o}{=}\PY{l+m+mi}{2}\PY{p}{,} \PY{n}{linestyle}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{dashed}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
+\PY{n}{axX}\PY{o}{.}\PY{n}{plot}\PY{p}{(}\PY{n}{timesEx}\PY{p}{,} \PY{n}{ExX2}\PY{p}{,} \PY{n}{color}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{blue}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{linewidth}\PY{o}{=}\PY{l+m+mi}{2}\PY{p}{,} \PY{n}{linestyle}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{dashed}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
+\PY{n}{axX}\PY{o}{.}\PY{n}{plot}\PY{p}{(}\PY{n}{timesEx}\PY{p}{,} \PY{n}{ExX3}\PY{p}{,} \PY{n}{color}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{black}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{linewidth}\PY{o}{=}\PY{l+m+mi}{2}\PY{p}{,} \PY{n}{linestyle}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{dashed}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
+\PY{n}{axX}\PY{o}{.}\PY{n}{set\PYZus{}title}\PY{p}{(}\PY{l+s+sa}{r}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{\PYZdl{}}\PY{l+s+s2}{\PYZbs{}}\PY{l+s+s2}{langle}\PY{l+s+s2}{\PYZbs{}}\PY{l+s+s2}{hat}\PY{l+s+si}{\PYZob{}X\PYZcb{}}\PY{l+s+s2}{\PYZus{}i}\PY{l+s+s2}{\PYZbs{}}\PY{l+s+s2}{rangle\PYZdl{}}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+\PY{n}{axX}\PY{o}{.}\PY{n}{set\PYZus{}xlabel}\PY{p}{(}\PY{l+s+sa}{r}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{\PYZdl{}t\PYZdl{} (u. a.)}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+\PY{n}{axX}\PY{o}{.}\PY{n}{set\PYZus{}aspect}\PY{p}{(}\PY{n}{aspect}\PY{o}{=}\PY{l+m+mf}{0.5}\PY{p}{)}
+\PY{n}{axX}\PY{o}{.}\PY{n}{set\PYZus{}ylim}\PY{p}{(}\PY{p}{[}\PY{o}{\PYZhy{}}\PY{l+m+mf}{1.1}\PY{p}{,} \PY{l+m+mf}{1.1}\PY{p}{]}\PY{p}{)}
+\PY{n}{axY}\PY{o}{.}\PY{n}{plot}\PY{p}{(}\PY{n}{times}\PY{p}{,} \PY{n}{Y1}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{ro}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{times}\PY{p}{,} \PY{n}{Y2}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{bo}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{times}\PY{p}{,} \PY{n}{Y3}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{ko}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
+\PY{n}{axY}\PY{o}{.}\PY{n}{plot}\PY{p}{(}\PY{n}{timesEx}\PY{p}{,} \PY{n}{ExY1}\PY{p}{,} \PY{n}{color}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{red}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{linewidth}\PY{o}{=}\PY{l+m+mi}{2}\PY{p}{,} \PY{n}{linestyle}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{dashed}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
+\PY{n}{axY}\PY{o}{.}\PY{n}{plot}\PY{p}{(}\PY{n}{timesEx}\PY{p}{,} \PY{n}{ExY2}\PY{p}{,} \PY{n}{color}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{blue}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{linewidth}\PY{o}{=}\PY{l+m+mi}{2}\PY{p}{,} \PY{n}{linestyle}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{dashed}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
+\PY{n}{axY}\PY{o}{.}\PY{n}{plot}\PY{p}{(}\PY{n}{timesEx}\PY{p}{,} \PY{n}{ExY3}\PY{p}{,} \PY{n}{color}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{black}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{linewidth}\PY{o}{=}\PY{l+m+mi}{2}\PY{p}{,} \PY{n}{linestyle}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{dashed}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
+\PY{n}{axY}\PY{o}{.}\PY{n}{set\PYZus{}title}\PY{p}{(}\PY{l+s+sa}{r}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{\PYZdl{}}\PY{l+s+s2}{\PYZbs{}}\PY{l+s+s2}{langle}\PY{l+s+s2}{\PYZbs{}}\PY{l+s+s2}{hat}\PY{l+s+si}{\PYZob{}Y\PYZcb{}}\PY{l+s+s2}{\PYZus{}i}\PY{l+s+s2}{\PYZbs{}}\PY{l+s+s2}{rangle\PYZdl{}}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+\PY{n}{axY}\PY{o}{.}\PY{n}{set\PYZus{}xlabel}\PY{p}{(}\PY{l+s+sa}{r}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{\PYZdl{}t\PYZdl{} (u. a.)}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+\PY{n}{axY}\PY{o}{.}\PY{n}{set\PYZus{}aspect}\PY{p}{(}\PY{n}{aspect}\PY{o}{=}\PY{l+m+mf}{0.5}\PY{p}{)}
+\PY{n}{axY}\PY{o}{.}\PY{n}{set\PYZus{}ylim}\PY{p}{(}\PY{p}{[}\PY{o}{\PYZhy{}}\PY{l+m+mf}{1.1}\PY{p}{,} \PY{l+m+mf}{1.1}\PY{p}{]}\PY{p}{)}
+\PY{n}{axZ}\PY{o}{.}\PY{n}{plot}\PY{p}{(}\PY{n}{times}\PY{p}{,} \PY{n}{Z1}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{ro}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{times}\PY{p}{,} \PY{n}{Z2}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{bo}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{times}\PY{p}{,} \PY{n}{Z3}\PY{p}{,} \PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{ko}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
+\PY{n}{axZ}\PY{o}{.}\PY{n}{plot}\PY{p}{(}\PY{n}{timesEx}\PY{p}{,} \PY{n}{ExZ1}\PY{p}{,} \PY{n}{color}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{red}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{linewidth}\PY{o}{=}\PY{l+m+mi}{2}\PY{p}{,} \PY{n}{linestyle}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{dashed}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
+\PY{n}{axZ}\PY{o}{.}\PY{n}{plot}\PY{p}{(}\PY{n}{timesEx}\PY{p}{,} \PY{n}{ExZ2}\PY{p}{,} \PY{n}{color}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{blue}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{linewidth}\PY{o}{=}\PY{l+m+mi}{2}\PY{p}{,} \PY{n}{linestyle}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{dashed}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
+\PY{n}{axZ}\PY{o}{.}\PY{n}{plot}\PY{p}{(}\PY{n}{timesEx}\PY{p}{,} \PY{n}{ExZ3}\PY{p}{,} \PY{n}{color}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{black}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{linewidth}\PY{o}{=}\PY{l+m+mi}{2}\PY{p}{,} \PY{n}{linestyle}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{dashed}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
+\PY{n}{axZ}\PY{o}{.}\PY{n}{set\PYZus{}title}\PY{p}{(}\PY{l+s+sa}{r}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{\PYZdl{}}\PY{l+s+s2}{\PYZbs{}}\PY{l+s+s2}{langle}\PY{l+s+s2}{\PYZbs{}}\PY{l+s+s2}{hat}\PY{l+s+si}{\PYZob{}Z\PYZcb{}}\PY{l+s+s2}{\PYZus{}i}\PY{l+s+s2}{\PYZbs{}}\PY{l+s+s2}{rangle\PYZdl{}}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+\PY{n}{axZ}\PY{o}{.}\PY{n}{set\PYZus{}xlabel}\PY{p}{(}\PY{l+s+sa}{r}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{\PYZdl{}t\PYZdl{} (u. a.)}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+\PY{n}{axZ}\PY{o}{.}\PY{n}{set\PYZus{}aspect}\PY{p}{(}\PY{n}{aspect}\PY{o}{=}\PY{l+m+mf}{0.5}\PY{p}{)}
+\PY{n}{axZ}\PY{o}{.}\PY{n}{set\PYZus{}ylim}\PY{p}{(}\PY{p}{[}\PY{o}{\PYZhy{}}\PY{l+m+mf}{1.1}\PY{p}{,} \PY{l+m+mf}{1.1}\PY{p}{]}\PY{p}{)}
+\PY{n}{fig}\PY{o}{.}\PY{n}{savefig}\PY{p}{(}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{XYZModel\PYZus{}PulseEfficient.pdf}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
+\PY{n}{plt}\PY{o}{.}\PY{n}{show}\PY{p}{(}\PY{p}{)}
+\end{Verbatim}
+\end{tcolorbox}
+
+    \begin{center}
+    \adjustimage{max size={0.9\linewidth}{0.9\paperheight}}{Benchmarking_files/Benchmarking_39_0.png}
+    \end{center}
+    { \hspace*{\fill} \\}
+    
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{29}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{n}{pAnalyzer}\PY{o}{.}\PY{n}{comparativeEvolution}\PY{p}{(}
+    \PY{n}{STEPS}\PY{o}{=}\PY{l+m+mi}{8}\PY{p}{,} 
+    \PY{n}{t}\PY{o}{=}\PY{l+m+mf}{1.0}\PY{p}{,}
+    \PY{n}{measurementFitter}\PY{o}{=}\PY{n}{measurementFitter}\PY{p}{,}
+    \PY{n}{figureFile}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{XYZModel\PYZus{}evol\PYZus{}PulseEfficient.pdf}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,}
+    \PY{n}{showLegend}\PY{o}{=}\PY{k+kc}{False}\PY{p}{,}
+    \PY{n}{showPlot}\PY{o}{=}\PY{k+kc}{True}
+\PY{p}{)}
+\end{Verbatim}
+\end{tcolorbox}
+
+    \begin{Verbatim}[commandchars=\\\{\}]
+Job Status: job has successfully run
+    \end{Verbatim}
+
+    \begin{center}
+    \adjustimage{max size={0.9\linewidth}{0.9\paperheight}}{Benchmarking_files/Benchmarking_40_1.png}
+    \end{center}
+    { \hspace*{\fill} \\}
+    
+    \hypertarget{pulse-duration-comparison}{%
+\subsection{Pulse duration comparison}\label{pulse-duration-comparison}}
+
+In the following cells, the pulse schedules of each trotter step for the
+three methods are compared
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{12}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{k+kn}{from} \PY{n+nn}{qiskit}\PY{n+nn}{.}\PY{n+nn}{transpiler} \PY{k+kn}{import} \PY{n}{PassManager}
+\PY{k+kn}{from} \PY{n+nn}{qiskit}\PY{n+nn}{.}\PY{n+nn}{transpiler}\PY{n+nn}{.}\PY{n+nn}{passes} \PY{k+kn}{import} \PY{n}{RZXCalibrationBuilderNoEcho}
+\PY{k+kn}{from} \PY{n+nn}{qiskit} \PY{k+kn}{import} \PY{n}{schedule}\PY{p}{,} \PY{n}{transpile}
+\end{Verbatim}
+\end{tcolorbox}
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{39}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{n}{t} \PY{o}{=} \PY{n}{np}\PY{o}{.}\PY{n}{arange}\PY{p}{(}\PY{l+m+mf}{0.1}\PY{p}{,} \PY{l+m+mf}{1.0}\PY{p}{,} \PY{n}{step}\PY{o}{=}\PY{l+m+mf}{0.1}\PY{p}{)}
+\PY{n}{pulseSchedTimes} \PY{o}{=} \PY{p}{[}\PY{p}{]}
+\PY{n}{basisSchedTimes} \PY{o}{=} \PY{p}{[}\PY{p}{]}
+\end{Verbatim}
+\end{tcolorbox}
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{41}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{n}{pm} \PY{o}{=} \PY{n}{PassManager}\PY{p}{(}\PY{p}{[}\PY{n}{RZXCalibrationBuilderNoEcho}\PY{p}{(}\PY{n}{pGraph}\PY{o}{.}\PY{n}{backend}\PY{p}{)}\PY{p}{]}\PY{p}{)}
+\PY{k}{for} \PY{n}{dt} \PY{o+ow}{in} \PY{n}{t}\PY{p}{:}
+    \PY{n}{xGraphStep} \PY{o}{=} \PY{n}{xGraph}\PY{o}{.}\PY{n}{rawEvolutionCircuit}\PY{p}{(}\PY{n}{STEPS}\PY{o}{=}\PY{l+m+mi}{1}\PY{p}{,} \PY{n}{t}\PY{o}{=}\PY{n}{dt}\PY{p}{)}
+    \PY{n}{pGraphStep} \PY{o}{=} \PY{n}{pGraph}\PY{o}{.}\PY{n}{rawEvolutionCircuit}\PY{p}{(}\PY{n}{STEPS}\PY{o}{=}\PY{l+m+mi}{1}\PY{p}{,} \PY{n}{t}\PY{o}{=}\PY{n}{dt}\PY{p}{)}
+    \PY{n}{pGraphPulseEfficientStep} \PY{o}{=} \PY{n}{transpile}\PY{p}{(}\PY{n}{pm}\PY{o}{.}\PY{n}{run}\PY{p}{(}\PY{n}{pGraphStep}\PY{p}{)}\PY{p}{,} \PY{n}{pGraph}\PY{o}{.}\PY{n}{backend}\PY{p}{)}
+    \PY{n}{pulseSchedTimes}\PY{o}{.}\PY{n}{append}\PY{p}{(}\PY{n}{schedule}\PY{p}{(}\PY{n}{pGraphPulseEfficientStep}\PY{p}{,} \PY{n}{pGraph}\PY{o}{.}\PY{n}{backend}\PY{p}{)}\PY{o}{.}\PY{n}{duration}\PY{p}{)}
+    \PY{n}{xGraphTranspiledStep} \PY{o}{=} \PY{n}{transpile}\PY{p}{(}\PY{n}{xGraphStep}\PY{p}{,} \PY{n}{pGraph}\PY{o}{.}\PY{n}{backend}\PY{p}{)}
+    \PY{n}{basisSchedTimes}\PY{o}{.}\PY{n}{append}\PY{p}{(}\PY{n}{schedule}\PY{p}{(}\PY{n}{xGraphTranspiledStep}\PY{p}{,} \PY{n}{pGraph}\PY{o}{.}\PY{n}{backend}\PY{p}{)}\PY{o}{.}\PY{n}{duration}\PY{p}{)}
+\end{Verbatim}
+\end{tcolorbox}
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{46}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{n}{fig}\PY{p}{,} \PY{n}{ax} \PY{o}{=} \PY{n}{plt}\PY{o}{.}\PY{n}{subplots}\PY{p}{(}\PY{l+m+mi}{1}\PY{p}{,}\PY{l+m+mi}{1}\PY{p}{)}
+\PY{n}{ax}\PY{o}{.}\PY{n}{set\PYZus{}xlabel}\PY{p}{(}\PY{l+s+sa}{r}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{\PYZdl{}dt\PYZdl{} (u. a.)}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+\PY{n}{ax}\PY{o}{.}\PY{n}{set\PYZus{}ylabel}\PY{p}{(}\PY{l+s+sa}{r}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{\PYZdl{}dt\PYZdl{} (u. a.)}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+\PY{n}{ax}\PY{o}{.}\PY{n}{scatter}\PY{p}{(}\PY{n}{t}\PY{p}{,} \PY{n}{pulseSchedTimes}\PY{p}{,} \PY{n}{color}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{r}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{label}\PY{o}{=}\PY{l+s+sa}{r}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{Pulse}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+\PY{n}{ax}\PY{o}{.}\PY{n}{scatter}\PY{p}{(}\PY{n}{t}\PY{p}{,} \PY{n}{basisSchedTimes}\PY{p}{,} \PY{n}{color}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{k}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,} \PY{n}{label}\PY{o}{=}\PY{l+s+sa}{r}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{Basis}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+\PY{n}{ax}\PY{o}{.}\PY{n}{legend}\PY{p}{(}\PY{p}{)}
+\PY{n}{fig}\PY{o}{.}\PY{n}{savefig}\PY{p}{(}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{schedTimeDurationPlot.pdf}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+\PY{n}{plt}\PY{o}{.}\PY{n}{show}\PY{p}{(}\PY{p}{)}
+\end{Verbatim}
+\end{tcolorbox}
+
+    \begin{center}
+    \adjustimage{max size={0.9\linewidth}{0.9\paperheight}}{Benchmarking_files/Benchmarking_45_0.png}
+    \end{center}
+    { \hspace*{\fill} \\}
+    
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{47}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{n}{xGraphStep} \PY{o}{=} \PY{n}{xGraph}\PY{o}{.}\PY{n}{rawEvolutionCircuit}\PY{p}{(}\PY{n}{STEPS}\PY{o}{=}\PY{l+m+mi}{1}\PY{p}{,} \PY{n}{t}\PY{o}{=}\PY{l+m+mi}{1}\PY{o}{/}\PY{l+m+mi}{8}\PY{p}{)}
+\PY{n}{pGraphStep} \PY{o}{=} \PY{n}{pGraph}\PY{o}{.}\PY{n}{rawEvolutionCircuit}\PY{p}{(}\PY{n}{STEPS}\PY{o}{=}\PY{l+m+mi}{1}\PY{p}{,} \PY{n}{t}\PY{o}{=}\PY{l+m+mi}{1}\PY{o}{/}\PY{l+m+mi}{8}\PY{p}{)}
+\end{Verbatim}
+\end{tcolorbox}
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{53}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{n}{pGraphPulseEfficientStep} \PY{o}{=} \PY{n}{transpile}\PY{p}{(}\PY{n}{pm}\PY{o}{.}\PY{n}{run}\PY{p}{(}\PY{n}{pGraphStep}\PY{p}{)}\PY{p}{,} \PY{n}{pGraph}\PY{o}{.}\PY{n}{backend}\PY{p}{)}
+\PY{n}{schedule}\PY{p}{(}\PY{n}{pGraphPulseEfficientStep}\PY{p}{,} \PY{n}{pGraph}\PY{o}{.}\PY{n}{backend}\PY{p}{)}\PY{o}{.}\PY{n}{draw}\PY{p}{(}\PY{n}{time\PYZus{}unit}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{ns}\PY{l+s+s1}{\PYZsq{}}\PY{p}{)}
+\end{Verbatim}
+\end{tcolorbox}
+ 
+            
+\prompt{Out}{outcolor}{53}{}
+    
+    \begin{center}
+    \adjustimage{max size={0.9\linewidth}{0.9\paperheight}}{Benchmarking_files/Benchmarking_47_0.png}
+    \end{center}
+    { \hspace*{\fill} \\}
+    
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{54}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{n}{xGraphTranspiledStep} \PY{o}{=} \PY{n}{transpile}\PY{p}{(}\PY{n}{xGraphStep}\PY{p}{,} \PY{n}{pGraph}\PY{o}{.}\PY{n}{backend}\PY{p}{)}
+\PY{n}{schedule}\PY{p}{(}\PY{n}{xGraphTranspiledStep}\PY{p}{,} \PY{n}{pGraph}\PY{o}{.}\PY{n}{backend}\PY{p}{)}\PY{o}{.}\PY{n}{draw}\PY{p}{(}\PY{p}{)}\PY{n}{ca}
+\end{Verbatim}
+\end{tcolorbox}
+ 
+            
+\prompt{Out}{outcolor}{54}{}
+    
+    \begin{center}
+    \adjustimage{max size={0.9\linewidth}{0.9\paperheight}}{Benchmarking_files/Benchmarking_48_0.png}
+    \end{center}
+    { \hspace*{\fill} \\}
+    
+
+    \hypertarget{trotterization-benchmark}{%
+\subsection{Trotterization Benchmark}\label{trotterization-benchmark}}
+
+What follows is a benchmark that is designed to assess the quality of
+the evolution algorithm. On a first stage, the asymptotic behavior is
+studied in terms of the actual unitary. In particular, the actual
+relation between evolution error, total time evolution, and number of
+integration steps is computed for a representative benchmark
+Hamiltonian. After that, the dynamics induced by trotterization scheme
+is compared to the actual dynamics, for a particular initial state, as a
+function of the integration step \(dt = t/N\). Long time evolution
+averages are used to illustrate possible differences. The size of the
+system is varied so as to characterize the erformance of the algorithm
+as a function of this parameter.
+
+\hypertarget{benchmark-hamiltonian}{%
+\subsubsection{Benchmark Hamiltonian}\label{benchmark-hamiltonian}}
+
+The benchmark Hamiltonian is of the shape
+
+\[
+\hat{H} = \sum_{i=0}^{\mathcal{N}-2} \bigg(\frac{1}{2}\hat{X}^{(i)}\hat{X}^{(i+1)} + \hat{Y}^{(i)}\hat{Y}^{(i+1)} + \frac{1}{4}\hat{Z}^{(i)}\hat{Z}^{(i+1)} \bigg) + \sum_{i=0}^{\mathcal{N}-1} \bigg(\hat{X}^{(i)} + \frac{1}{4} \hat{Y}^{(i)} + \frac{1}{2} \hat{Z}^{(i)} \bigg)
+\]
+
+This corresponds to an \(XYZ\) Model, with an external field constant
+across the chain, and with non-periodic boundary conditions. The size of
+the system \(\mathcal{N}\) may be varied arbitrarily. However, it is
+suggested that sizes no larger than \(\mathcal{N} = 8\) be used on
+standard machines. Evolution of large systems is qte resource demanding
+(obviously). Although this exact notebook was used for data generation
+throughout the project, execution times tend to be quite large, and thus
+unless they are sought to be reproduced exactly, it is advised that the
+reader restricts the system's size for simple demos.
+
+    \hypertarget{asymptotic-analysis-of-evolution-precision}{%
+\subsection{Asymptotic Analysis of Evolution
+Precision}\label{asymptotic-analysis-of-evolution-precision}}
+
+In this section, a benchmark model is used for studying the
+Trotterization scheme performance at very small step sizes. Previous
+work predict a power law that relates
+
+\begin{enumerate}
+\def\labelenumi{\arabic{enumi}.}
+\tightlist
+\item
+  Evolution unitary error (\(\epsilon\))
+\item
+  Number of integration steps (\(N\))
+\item
+  Total simulation time (\(t\))
+\end{enumerate}
+
+The Trotterization scheme proposed in this project produces a unitary
+\(\hat{U}_N(t)\), that approximates the exact evolution unitary
+
+\[
+\hat{U}(t) = \mathrm{e}^{-\mathrm{i}\hat{H}t}
+\]
+
+    \hypertarget{studying-a-sample}{%
+\subsubsection{Studying a sample}\label{studying-a-sample}}
+
+In this section a 5 spin system is used to evaluate the evolution error
+as a function of both \(t\) and \(N\). Here
+
+\[
+\epsilon = ||\hat{U}_N(t) - \hat{U}(t)||
+\]
+
+Where the distance is simply the Frobenius norm. The results are
+evaluated using QASM simulator. Both time and number of integration
+steps are varied to determine a power law that predicts the asymptotic
+error for large times .
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{4}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{n}{numSpins} \PY{o}{=} \PY{l+m+mi}{6}
+\PY{n}{benchmarkGraph} \PY{o}{=} \PY{n}{HeisenbergGraph}\PY{p}{(}
+    \PY{n}{spinInteractions}\PY{o}{=}\PY{p}{\PYZob{}}
+        \PY{p}{(}\PY{n}{idx}\PY{p}{,} \PY{n}{idx}\PY{o}{+}\PY{l+m+mi}{1}\PY{p}{)}\PY{p}{:} \PY{p}{[}\PY{l+m+mf}{0.5}\PY{p}{,} \PY{l+m+mf}{1.0}\PY{p}{,} \PY{l+m+mf}{0.25}\PY{p}{]}
+        \PY{k}{for} \PY{n}{idx} \PY{o+ow}{in} \PY{n+nb}{range}\PY{p}{(}\PY{n}{numSpins}\PY{o}{\PYZhy{}}\PY{l+m+mi}{1}\PY{p}{)}
+    \PY{p}{\PYZcb{}}\PY{p}{,}
+    \PY{n}{externalField}\PY{o}{=}\PY{p}{\PYZob{}}
+        \PY{n}{idx}\PY{p}{:} \PY{p}{[}\PY{l+m+mf}{1.0}\PY{p}{,} \PY{l+m+mf}{0.25}\PY{p}{,} \PY{l+m+mf}{0.5}\PY{p}{]}
+        \PY{k}{for} \PY{n}{idx} \PY{o+ow}{in} \PY{n+nb}{range}\PY{p}{(}\PY{n}{numSpins}\PY{p}{)}
+    \PY{p}{\PYZcb{}}\PY{p}{,}
+    \PY{n}{localSimulation}\PY{o}{=}\PY{k+kc}{True}\PY{p}{,}
+    \PY{n}{backendName}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{qasm\PYZus{}simulator}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,}
+    \PY{n}{noisySimulation}\PY{o}{=}\PY{k+kc}{False}\PY{p}{,}
+    \PY{n}{initialState}\PY{o}{=}\PY{n}{np}\PY{o}{.}\PY{n}{array}\PY{p}{(}\PY{p}{[}\PY{l+m+mi}{1} \PY{k}{if} \PY{n}{idx} \PY{o}{==} \PY{l+m+mi}{1} \PY{k}{else} \PY{l+m+mi}{0} \PY{k}{for} \PY{n}{idx} \PY{o+ow}{in} \PY{n+nb}{range}\PY{p}{(}\PY{l+m+mi}{2}\PY{o}{*}\PY{o}{*}\PY{n}{numSpins}\PY{p}{)}\PY{p}{]}\PY{p}{)}
+\PY{p}{)}
+\PY{n}{benchmarkAnalyzer} \PY{o}{=} \PY{n}{DataAnalyzer}\PY{p}{(}\PY{n}{spinGraph}\PY{o}{=}\PY{n}{benchmarkGraph}\PY{p}{)}
+\end{Verbatim}
+\end{tcolorbox}
+
+    \hypertarget{results-and-dscussion}{%
+\paragraph{Results and dscussion}\label{results-and-dscussion}}
+
+After computing errors, for this sample system, it is noticed that there
+is in fact a power law that describes the asymptotic error. In fact,
+linear regressions are performed to determine the exponents. Bellow, a
+plot confirming this fact is presented.
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{ }{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{n}{sim} \PY{o}{=} \PY{n}{benchmarkAnalyzer}\PY{o}{.}\PY{n}{unitaryErrorMixedPlot}\PY{p}{(}
+    \PY{n}{STEPS} \PY{o}{=} \PY{n}{np}\PY{o}{.}\PY{n}{array}\PY{p}{(}\PY{p}{[}\PY{n}{idx} \PY{k}{for} \PY{n}{idx} \PY{o+ow}{in} \PY{n+nb}{range}\PY{p}{(}\PY{l+m+mi}{200}\PY{p}{,} \PY{l+m+mi}{232}\PY{p}{)}\PY{p}{]}\PY{p}{)}\PY{p}{,}
+    \PY{n}{times} \PY{o}{=} \PY{p}{[}\PY{l+m+mi}{1}\PY{p}{,}\PY{l+m+mi}{2}\PY{p}{,}\PY{l+m+mi}{4}\PY{p}{,}\PY{l+m+mi}{8}\PY{p}{,}\PY{l+m+mi}{16}\PY{p}{,}\PY{l+m+mi}{32}\PY{p}{]}
+\PY{p}{)}
+\end{Verbatim}
+\end{tcolorbox}
+
+    In the following cells, linear regressions are performed, and exponents
+can be seen for different times and number of steps. The data suggests
+that
+
+\[
+\epsilon \approx A \frac{t^{\frac{6}{5}}}{N}
+\]
+
+In this asymptotic regime. This shows that although Berry et.
+al.~produce a relatively tight bound for the Trotterization error, the
+actual computational complexity is better than the predicted by those
+computations, at least for the type of systems considered in this work.
+Since circuit depth scales linearly with the number of integration
+steps. However, this behavior is only asymptotic. It will be shown in
+following cells that the dynamics for a small number of integration
+steps and large times is fairly erratic, and there is a clear
+convergence radius that marks the onset of the asymptotic behavior.
+
+\textbf{Note:} The following cells contain the results of the
+regressions.
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{7}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{k+kn}{from} \PY{n+nn}{scipy}\PY{n+nn}{.}\PY{n+nn}{stats} \PY{k+kn}{import} \PY{n}{linregress}
+\PY{k+kn}{import} \PY{n+nn}{pandas} \PY{k}{as} \PY{n+nn}{pd}
+\PY{k+kn}{from} \PY{n+nn}{IPython}\PY{n+nn}{.}\PY{n+nn}{display} \PY{k+kn}{import} \PY{n}{display}
+\PY{n}{STEPS} \PY{o}{=} \PY{n}{np}\PY{o}{.}\PY{n}{array}\PY{p}{(}\PY{p}{[}\PY{n}{idx} \PY{k}{for} \PY{n}{idx} \PY{o+ow}{in} \PY{n+nb}{range}\PY{p}{(}\PY{l+m+mi}{200}\PY{p}{,} \PY{l+m+mi}{232}\PY{p}{)}\PY{p}{]}\PY{p}{)}
+\PY{n}{times} \PY{o}{=} \PY{p}{[}\PY{l+m+mi}{1}\PY{p}{,} \PY{l+m+mi}{2}\PY{p}{,} \PY{l+m+mi}{4}\PY{p}{,} \PY{l+m+mi}{8}\PY{p}{,} \PY{l+m+mi}{16}\PY{p}{,} \PY{l+m+mi}{32}\PY{p}{]}
+\PY{n}{columns} \PY{o}{=} \PY{p}{[}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{slope}\PY{l+s+s2}{\PYZdq{}}\PY{p}{,} \PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{intercept}\PY{l+s+s2}{\PYZdq{}}\PY{p}{,} \PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{r\PYZhy{}value}\PY{l+s+s2}{\PYZdq{}}\PY{p}{,} \PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{p\PYZhy{}value}\PY{l+s+s2}{\PYZdq{}}\PY{p}{,} \PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{std\PYZhy{}err}\PY{l+s+s2}{\PYZdq{}}\PY{p}{]}
+\PY{n}{stepRows} \PY{o}{=} \PY{p}{[}\PY{l+s+sa}{f}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{t=}\PY{l+s+si}{\PYZob{}}\PY{n}{t}\PY{l+s+si}{\PYZcb{}}\PY{l+s+s2}{\PYZdq{}} \PY{k}{for} \PY{n}{t} \PY{o+ow}{in} \PY{n}{times}\PY{p}{]}
+\PY{n}{timeRows} \PY{o}{=} \PY{p}{[}\PY{l+s+sa}{f}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{N=}\PY{l+s+si}{\PYZob{}}\PY{n}{n}\PY{l+s+si}{\PYZcb{}}\PY{l+s+s2}{\PYZdq{}} \PY{k}{for} \PY{n}{n} \PY{o+ow}{in} \PY{n}{STEPS}\PY{p}{]}
+\end{Verbatim}
+\end{tcolorbox}
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{8}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{n}{stepsLinregress} \PY{o}{=} \PY{p}{[}
+    \PY{p}{[}
+        \PY{n}{item}
+        \PY{k}{for} \PY{n}{item} \PY{o+ow}{in} \PY{n}{linregress}\PY{p}{(}
+            \PY{n}{np}\PY{o}{.}\PY{n}{log}\PY{p}{(}\PY{n}{STEPS}\PY{p}{)}\PY{p}{,}
+            \PY{n}{np}\PY{o}{.}\PY{n}{log}\PY{p}{(}\PY{n}{sim}\PY{p}{[}\PY{n}{idx}\PY{p}{,} \PY{p}{:}\PY{p}{]}\PY{p}{)}
+        \PY{p}{)}
+    \PY{p}{]}
+    \PY{k}{for} \PY{n}{idx} \PY{o+ow}{in} \PY{n+nb}{range}\PY{p}{(}\PY{n+nb}{len}\PY{p}{(}\PY{n}{times}\PY{p}{)}\PY{p}{)}
+\PY{p}{]}
+\PY{n}{stepDf} \PY{o}{=} \PY{n}{pd}\PY{o}{.}\PY{n}{DataFrame}\PY{p}{(}
+    \PY{n}{data}\PY{o}{=}\PY{n}{stepsLinregress}\PY{p}{,}
+    \PY{n}{index}\PY{o}{=}\PY{n}{stepRows}\PY{p}{,}
+    \PY{n}{columns}\PY{o}{=}\PY{n}{columns}
+\PY{p}{)}
+\PY{n}{display}\PY{p}{(}\PY{n}{stepDf}\PY{p}{)}
+\end{Verbatim}
+\end{tcolorbox}
+
+    
+    \begin{Verbatim}[commandchars=\\\{\}]
+         slope  intercept   r-value        p-value       std-err
+t=1  -1.000033   2.415382 -1.000000  8.642650e-189  1.048778e-07
+t=2  -0.999982   3.260707 -1.000000  2.989916e-187  1.180216e-07
+t=4  -1.000372   3.971356 -1.000000  7.748542e-150  2.085690e-06
+t=8  -1.005337   4.742891 -1.000000  2.448726e-113  3.451890e-05
+t=16 -1.066622   5.872705 -0.999998   1.547176e-81  4.205103e-04
+t=32 -1.364227   8.624357 -0.999990   4.768404e-72  1.114168e-03
+    \end{Verbatim}
+
+    
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{10}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{n}{timesLinregress} \PY{o}{=} \PY{p}{[}
+    \PY{p}{[}
+        \PY{n}{item}
+        \PY{k}{for} \PY{n}{item} \PY{o+ow}{in} \PY{n}{linregress}\PY{p}{(}
+            \PY{n}{np}\PY{o}{.}\PY{n}{log}\PY{p}{(}\PY{n}{times}\PY{p}{)}\PY{p}{,}
+            \PY{n}{np}\PY{o}{.}\PY{n}{log}\PY{p}{(}\PY{n}{sim}\PY{p}{[}\PY{p}{:}\PY{p}{,} \PY{n}{idx}\PY{p}{]}\PY{p}{)}
+        \PY{p}{)}
+    \PY{p}{]}
+    \PY{k}{for} \PY{n}{idx} \PY{o+ow}{in} \PY{n+nb}{range}\PY{p}{(}\PY{n+nb}{len}\PY{p}{(}\PY{n}{STEPS}\PY{p}{)}\PY{p}{)}
+\PY{p}{]}
+\PY{n}{timesDf} \PY{o}{=} \PY{n}{pd}\PY{o}{.}\PY{n}{DataFrame}\PY{p}{(}
+    \PY{n}{data}\PY{o}{=}\PY{n}{timesLinregress}\PY{p}{,}
+    \PY{n}{index}\PY{o}{=}\PY{n}{timeRows}\PY{p}{,}
+    \PY{n}{columns}\PY{o}{=}\PY{n}{columns}
+\PY{p}{)}
+\PY{n}{display}\PY{p}{(}\PY{n}{timesDf}\PY{o}{.}\PY{n}{head}\PY{p}{(}\PY{l+m+mi}{6}\PY{p}{)}\PY{p}{)}
+\end{Verbatim}
+\end{tcolorbox}
+
+    
+    \begin{Verbatim}[commandchars=\\\{\}]
+          slope  intercept   r-value   p-value   std-err
+N=200  1.192165  -2.935006  0.996322  0.000020  0.051267
+N=201  1.191721  -2.939612  0.996346  0.000020  0.051078
+N=202  1.191281  -2.944198  0.996370  0.000020  0.050891
+N=203  1.190845  -2.948762  0.996394  0.000019  0.050706
+N=204  1.190413  -2.953305  0.996417  0.000019  0.050522
+N=205  1.189985  -2.957828  0.996440  0.000019  0.050340
+    \end{Verbatim}
+
+    
+    \hypertarget{trotter-dynamics}{%
+\subsubsection{Trotter dynamics}\label{trotter-dynamics}}
+
+As mentioned before, the asymptotic behavior is preceded by a more
+erratic dynamics. In this section, this is characterized by two metrics:
+\textbf{Long time average fidelity} and \textbf{Inverse participation
+ration}, defined as follows
+
+\[
+\mathcal{F}_{\infty} = \lim_{n \rightarrow \infty} \sum_{i = 1}^N |\langle\psi_0|\hat{U}(t)^\dagger\hat{U}_N(t)|\psi_0\rangle|^2
+\]
+
+\[
+\text{IPR} = \sum_{n} |\langle\phi_n|\psi_0\rangle|^4
+\]
+
+Where \(|\psi_0\rangle\) is the initial state of the system, and
+
+\[
+\hat{U}_N(t)|\phi_n\rangle = \mathrm{e}^{-\mathrm{i}E_n t}|\phi_n\rangle
+\]
+
+These quantities are studied as a function of the \emph{integration
+step} \(dt = t/N\).
+
+    \hypertarget{study-of-long-time-average-fidelity}{%
+\paragraph{Study of Long Time Average
+Fidelity}\label{study-of-long-time-average-fidelity}}
+
+Data has been generated using \texttt{floquetDataGeneration.py}. The
+algorithm is based upon diagonalization with NumPy. This may not be the
+best algorithm, however, this was the best option given my knowledge of
+scientific computing on python. The datasets are computed for chains of
+sizes \(2\), \(4\), \(6\), and \(8\). Data can be found on
+\texttt{../datafiles/FloquetData}.
+
+In the following cell, ndarrays are generated with the simulation
+results
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{3}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{n}{spinVals} \PY{o}{=} \PY{p}{[}\PY{l+m+mi}{2}\PY{p}{,} \PY{l+m+mi}{4}\PY{p}{,} \PY{l+m+mi}{6}\PY{p}{,} \PY{l+m+mi}{8}\PY{p}{]}
+\PY{n}{datasets} \PY{o}{=} \PY{p}{[}
+    \PY{n}{np}\PY{o}{.}\PY{n}{genfromtxt}\PY{p}{(}
+        \PY{l+s+sa}{f}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{../datafiles/FloquetData/sampleData\PYZus{}}\PY{l+s+si}{\PYZob{}}\PY{n}{spins}\PY{l+s+si}{\PYZcb{}}\PY{l+s+s2}{spins.csv}\PY{l+s+s2}{\PYZdq{}}\PY{p}{,}
+        \PY{n}{delimiter}\PY{o}{=}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{,}\PY{l+s+s2}{\PYZdq{}}
+    \PY{p}{)}
+    \PY{k}{for} \PY{n}{spins} \PY{o+ow}{in} \PY{n}{spinVals}
+\PY{p}{]}
+\end{Verbatim}
+\end{tcolorbox}
+
+    Mow, plots for different spin values are generated
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{8}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{n}{figFloq}\PY{p}{,} \PY{n}{axFid} \PY{o}{=} \PY{n}{plt}\PY{o}{.}\PY{n}{subplots}\PY{p}{(}\PY{l+m+mi}{1}\PY{p}{,}\PY{l+m+mi}{1}\PY{p}{)}
+\PY{n}{axFid}\PY{o}{.}\PY{n}{set\PYZus{}xlabel}\PY{p}{(}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{dt (u. a.)}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+\PY{n}{axFid}\PY{o}{.}\PY{n}{set\PYZus{}xscale}\PY{p}{(}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{log}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+\PY{n}{axFid}\PY{o}{.}\PY{n}{set\PYZus{}yscale}\PY{p}{(}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{log}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+\PY{c+c1}{\PYZsh{} axFid.set\PYZus{}title(\PYZdq{}Long time average fidelity\PYZdq{})}
+\PY{n}{axFid}\PY{o}{.}\PY{n}{set\PYZus{}ylabel}\PY{p}{(}\PY{l+s+sa}{r}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{1\PYZhy{}\PYZdl{}}\PY{l+s+s2}{\PYZbs{}}\PY{l+s+s2}{mathcal}\PY{l+s+si}{\PYZob{}F\PYZcb{}}\PY{l+s+s2}{\PYZus{}}\PY{l+s+s2}{\PYZob{}}\PY{l+s+s2}{\PYZbs{}}\PY{l+s+s2}{infty\PYZcb{}\PYZdl{}}\PY{l+s+s2}{\PYZdq{}}\PY{p}{)}
+\PY{c+c1}{\PYZsh{} axIPR.set\PYZus{}xlabel(\PYZdq{}\PYZdl{}dt\PYZdl{} (u. a.)\PYZdq{})}
+\PY{c+c1}{\PYZsh{} axIPR.set\PYZus{}xscale(\PYZdq{}log\PYZdq{})}
+\PY{c+c1}{\PYZsh{} axIPR.set\PYZus{}yscale(\PYZdq{}log\PYZdq{})}
+\PY{c+c1}{\PYZsh{} axIPR.set\PYZus{}title(\PYZdq{}IPR\PYZdq{})}
+\PY{k}{for} \PY{n}{idx}\PY{p}{,} \PY{n}{spin} \PY{o+ow}{in} \PY{n+nb}{enumerate}\PY{p}{(}\PY{n}{spinVals}\PY{p}{)}\PY{p}{:}
+    \PY{n}{axFid}\PY{o}{.}\PY{n}{scatter}\PY{p}{(}
+        \PY{n}{datasets}\PY{p}{[}\PY{n}{idx}\PY{p}{]}\PY{p}{[}\PY{l+m+mi}{0}\PY{p}{:}\PY{l+m+mi}{50}\PY{p}{,} \PY{l+m+mi}{0}\PY{p}{]}\PY{p}{,} 
+        \PY{l+m+mi}{1}\PY{o}{\PYZhy{}}\PY{n}{datasets}\PY{p}{[}\PY{n}{idx}\PY{p}{]}\PY{p}{[}\PY{l+m+mi}{0}\PY{p}{:}\PY{l+m+mi}{50}\PY{p}{,} \PY{l+m+mi}{1}\PY{p}{]}\PY{p}{,} 
+        \PY{n}{label}\PY{o}{=}\PY{l+s+sa}{r}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{\PYZdl{}}\PY{l+s+s2}{\PYZbs{}}\PY{l+s+s2}{mathcal}\PY{l+s+si}{\PYZob{}N\PYZcb{}}\PY{l+s+s2}{\PYZdl{}}\PY{l+s+s2}{\PYZdq{}} \PY{o}{+} \PY{l+s+sa}{f}\PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{ = }\PY{l+s+si}{\PYZob{}}\PY{n}{spin}\PY{l+s+si}{\PYZcb{}}\PY{l+s+s2}{\PYZdq{}}
+    \PY{p}{)}
+\PY{c+c1}{\PYZsh{}     axIPR.scatter(}
+\PY{c+c1}{\PYZsh{}         datasets[idx][:, 0], }
+\PY{c+c1}{\PYZsh{}         datasets[idx][:, 2],}
+\PY{c+c1}{\PYZsh{}         label=r\PYZdq{}\PYZdl{}\PYZbs{}mathcal\PYZob{}N\PYZcb{}\PYZdl{}\PYZdq{} + f\PYZdq{} = \PYZob{}spin\PYZcb{}\PYZdq{}}
+\PY{c+c1}{\PYZsh{}     )}
+\PY{c+c1}{\PYZsh{} axIPR.legend()}
+\PY{n}{axFid}\PY{o}{.}\PY{n}{legend}\PY{p}{(}\PY{p}{)}
+\PY{n}{figFloq}\PY{o}{.}\PY{n}{savefig}\PY{p}{(}
+    \PY{l+s+s2}{\PYZdq{}}\PY{l+s+s2}{../images/Benchmark/\PYZus{}others/longTimeFloquetFidelity.pdf}\PY{l+s+s2}{\PYZdq{}}
+\PY{p}{)}
+\PY{n}{plt}\PY{o}{.}\PY{n}{show}\PY{p}{(}\PY{p}{)}
+\end{Verbatim}
+\end{tcolorbox}
+
+    \begin{center}
+    \adjustimage{max size={0.9\linewidth}{0.9\paperheight}}{Benchmarking_files/Benchmarking_63_0.png}
+    \end{center}
+    { \hspace*{\fill} \\}
+    
+    \hypertarget{results-and-discussion}{%
+\paragraph{Results and discussion}\label{results-and-discussion}}
+
+From the \(\mathcal{F}_{\infty}\) plot, it can be seen that there is a
+sharp change of regime for time steps \(dt < 0.2\) approximately. There,
+the asymptotic regime is quite visible, whereas for larger time steps,
+the average fidelity is almost zero, which seems to suggest that there
+is a quite different time evolution below this threshold.
+
+\textbf{Note:} It is important to understand better how to describe the
+dynamics in terms of quantum chaos. Due to the normalization of the
+wavefunction, trajectory divergency saturates. Therefore, measures of
+quantum chaos should be studied carefully and addressed better here.
+
+Also, it is desirable to perform finite size scaling, to determine the
+large system critical time step below which deterministic dynamics
+occur. However, data looks weird, and may need be repeated.
+
+    \hypertarget{annihilation-with-time-evolution}{%
+\subsection{Annihilation with time
+evolution}\label{annihilation-with-time-evolution}}
+
+One possible application of time evolution is the use of the adiabatic
+theorem for computing ground state properties of a given
+(time-independent) Hamiltonian \(\hat{H}_0\). Consider a time-dependent
+\(T\)-periodic Hamiltonian
+
+\[
+\hat{H}_a(t) = \big(1 - \frac{t}{T}\big)\hat{H}_m + \frac{t}{T}\hat{H}_0 
+\]
+
+where \(\hat{H}_m\) is some time-independent Hamiltonian, which is to be
+called \emph{mixer Hamiltonian}. Consider an initial state
+\(|\psi_0\rangle\) such that
+
+\[
+\hat{H}_m|\psi_0\rangle = \epsilon_0 |\psi_0\rangle
+\]
+
+and the energy is the minimum over all the set of eigenstates. The
+adiabatic theorem states that, if the period \(T \rightarrow \infty\),
+evolution of state \(|\psi_0\rangle\) over a period yields a final state
+that is a ground state of the Hamiltonian \(\hat{H}_0\). In the
+following cells, time evolution algorithm is used to find the ground
+state energy of an anisotropic Heisenberg Hamiltonian.
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{2}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{n}{aGraph} \PY{o}{=} \PY{n}{HeisenbergGraph}\PY{p}{(}
+    \PY{n}{spinInteractions}\PY{o}{=}\PY{p}{\PYZob{}}
+        \PY{p}{(}\PY{l+m+mi}{0}\PY{p}{,} \PY{l+m+mi}{1}\PY{p}{)}\PY{p}{:} \PY{p}{[}\PY{l+m+mi}{1}\PY{o}{/}\PY{l+m+mi}{2}\PY{p}{,} \PY{l+m+mi}{1}\PY{p}{,} \PY{l+m+mi}{1}\PY{o}{/}\PY{l+m+mi}{4}\PY{p}{]}\PY{p}{,}
+        \PY{p}{(}\PY{l+m+mi}{1}\PY{p}{,} \PY{l+m+mi}{2}\PY{p}{)}\PY{p}{:} \PY{p}{[}\PY{l+m+mi}{1}\PY{o}{/}\PY{l+m+mi}{2}\PY{p}{,} \PY{l+m+mi}{1}\PY{p}{,} \PY{l+m+mi}{1}\PY{o}{/}\PY{l+m+mi}{4}\PY{p}{]}\PY{p}{,}
+    \PY{p}{\PYZcb{}}\PY{p}{,}
+    \PY{n}{externalField}\PY{o}{=}\PY{p}{\PYZob{}}
+        \PY{l+m+mi}{0}\PY{p}{:} \PY{p}{[}\PY{l+m+mf}{0.0}\PY{p}{,} \PY{l+m+mf}{0.0}\PY{p}{,} \PY{l+m+mf}{1.0}\PY{p}{]}\PY{p}{,}
+        \PY{l+m+mi}{1}\PY{p}{:} \PY{p}{[}\PY{l+m+mf}{0.0}\PY{p}{,} \PY{l+m+mf}{0.0}\PY{p}{,} \PY{l+m+mf}{1.0}\PY{p}{]}\PY{p}{,}
+        \PY{l+m+mi}{2}\PY{p}{:} \PY{p}{[}\PY{l+m+mf}{0.0}\PY{p}{,} \PY{l+m+mf}{0.0}\PY{p}{,} \PY{l+m+mf}{1.0}\PY{p}{]}\PY{p}{,}
+    \PY{p}{\PYZcb{}}\PY{p}{,}
+    \PY{n}{localSimulation}\PY{o}{=}\PY{k+kc}{True}\PY{p}{,}
+    \PY{n}{backendName}\PY{o}{=}\PY{l+s+s1}{\PYZsq{}}\PY{l+s+s1}{qasm\PYZus{}simulator}\PY{l+s+s1}{\PYZsq{}}\PY{p}{,}
+    \PY{n}{noisySimulation}\PY{o}{=}\PY{k+kc}{False}\PY{p}{,}
+    \PY{n}{initializeList}\PY{o}{=}\PY{p}{[}\PY{l+m+mi}{1}\PY{p}{,} \PY{l+m+mi}{2}\PY{p}{]}
+\PY{p}{)}
+\PY{n}{aAnalyzer} \PY{o}{=} \PY{n}{DataAnalyzer}\PY{p}{(}\PY{n}{spinGraph}\PY{o}{=}\PY{n}{aGraph}\PY{p}{)}
+\end{Verbatim}
+\end{tcolorbox}
+
+    \begin{tcolorbox}[breakable, size=fbox, boxrule=1pt, pad at break*=1mm,colback=cellbackground, colframe=cellborder]
+\prompt{In}{incolor}{3}{\boxspacing}
+\begin{Verbatim}[commandchars=\\\{\}]
+\PY{n}{\PYZus{}} \PY{o}{=} \PY{n}{aAnalyzer}\PY{o}{.}\PY{n}{annealingProcessGraph}\PY{p}{(}
+    \PY{n}{maxPeriod}\PY{o}{=}\PY{l+m+mi}{200}\PY{p}{,}
+    \PY{n}{periodStep}\PY{o}{=}\PY{l+m+mi}{10}\PY{p}{,}
+    \PY{n}{STEPS}\PY{o}{=}\PY{l+m+mi}{500}
+\PY{p}{)}
+\end{Verbatim}
+\end{tcolorbox}
+
+    \begin{center}
+    \adjustimage{max size={0.9\linewidth}{0.9\paperheight}}{Benchmarking_files/Benchmarking_67_0.png}
+    \end{center}
+    { \hspace*{\fill} \\}
+    

@@ -28,7 +28,7 @@ That is, the final state is a corresponding eigenstate of $\hat{H}_0$. In partic
     \label{eq:AnnihilationHamiltonian}
 \end{equation}
 
-\noindent is computed. In figure \ref{fig:AnnihilationProcess}, the expected value of $\hat{H}_0$ after evolution for $t=T$ is plotted as a function of $T$. However, as may be seen, the evolution needs to be quite slow for convergence. This prevents practical usage of this tool on current quantum devices as seen in the present work.
+\noindent is computed. In figure \ref{fig:AnnihilationProcess}, the expected value of $\hat{H}_0$ after evolution for $t=T$ is plotted as a function of $T$. However, as may be seen, the evolution needs to be quite slow for convergence. This prevents practical usage of this tool on current quantum devices as seen in the present work. Albeit interesting, more work needs to be done from the area of quantum control to reduce gate execution times further, and improve quantum coherence of current quantum devices, so that applications of time simulation, such as the one briefly introduced here, can be implemented on actual quantum devices.
 
 \begin{figure}
     \centering
@@ -36,4 +36,3 @@ That is, the final state is a corresponding eigenstate of $\hat{H}_0$. In partic
     \caption{Annihilation process for computing ground state energy of Hamiltonian \ref{eq:AnnihilationHamiltonian}. Exact ground state energy is represented by the solid red line. Data was generated using QASM simulator.}
     \label{fig:AnnihilationProcess}
 \end{figure}
-
