@@ -1,3 +1,225 @@
-\lipsum[2-6]
+The simulations were carried out using Qiskit SDK, whose main interface can be found on \cite{Qiskit}. The main structure is a \textit{Heisenberg graph} object that may be instantiated as follows
 
-\lipsum[2-6]
+\begin{minted}{python}
+testGraph = HeisenbergGraph(
+    spinInteractions={
+        (0, 1): [1, 1, 1],
+    },
+    externalField={
+        0: [0.0, 0.0, 0.0],
+        1: [0.0, 0.0, 0.0],
+    },
+    localSimulation=False,
+    backendName='ibmq_jakarta',
+    noisySimulation=False,
+    initialState=1/np.sqrt(2) * np.array([1, 0, 1, 0])
+)
+\end{minted}
+
+The \textit{spinInteractions} parameter describes a graph (in the form of a python dictionary), indexed by tuples that represent the index of the interacting spins; and whose value is an array with the values of the parameters in the two-spin interaction Hamiltonian. The \textit{externalField} parameter corresponds to the single qubit Hamiltonian parameters (in the form of a dictionary), indexed by integers that represent qubit indices; and whose value is an array with the parameters of the particular single-qubit Hamiltonian. The other parameters are somewhat self explanatory. All experiments are carried out using this class' functions. Those include computation of expected values, pdf evolution, readout error mitigation, etc. The source code can be found on \href{https://github.com/DiegoHerrera262/Thesis2020/blob/refactor/PyHeisenberg/PyHeisenberg.py}{this GitHub repository}.
+
+From this parent class, three child classes are derived, that only differ on how the two-qubit interaction is implemented, and the experiments, executed. Those are
+
+\begin{enumerate}
+    \item \textit{HeisenbergGraph}: For basis efficient scheme.
+    \item \textit{DirectSpinGraph}: For direct transpilation scheme.
+    \item \textit{PulseSpinGraph}: For pulse efficient scheme.
+\end{enumerate}
+
+Two spin interaction is implemented as a circuit on a method \textit{edgeCircuit}, which is overloaded on each class. Experiment execution is implemented on a method \textit{execute} that is also overloaded. Those are the only difference between the classes. Other methods are the same, since they relate to auxiliary function for data processing or plotting. All optimizations are set to minimum (\textit{optimization level zero}). In the case of pulse implementations the \textit{RZXCalibrationBuilderNoEcho} pass manager is used to use CNOT calibration for cross resonance (\textit{rzx}) gate implementation as described on the main text. On qubit Hamiltonian evolution is performed the same on all classes, as follows
+
+\begin{minted}{python}
+def vertexCircuit(self, vertex, spinChain):
+    '''
+    Function for building circuit that 
+    performs vertex Hamiltonian evolution
+    '''
+    Hx = vertex['externalField'][0]
+    Hy = vertex['externalField'][1]
+    Hz = vertex['externalField'][2]
+    H = np.sqrt(Hx**2 + Hy**2 + Hz**2)
+    # Parameter values for Qiskit
+    PHI = np.arctan2(Hy, Hx) + 2*np.pi if H > 0 else 0
+    THETA = np.arccos(Hz/H) if H > 0 else 0
+    LAMBDA = np.pi if H > 0 else 0
+    # Align to field main axis
+    qcVertex = QuantumCircuit(spinChain)
+    qcVertex.u(-THETA, -LAMBDA, -PHI, spinChain[vertex.index])
+    qcVertex.rz(vertex['paramExternalField'], spinChain[vertex.index])
+    qcVertex.u(THETA, PHI, LAMBDA, spinChain[vertex.index])
+    return qcVertex
+\end{minted}
+
+\noindent where the \textit{u} gate corresponds to the gates discussed on equation \ref{eq:qiskitGateImplement}.
+
+\subsection{\textit{HeisenbergGraph} implementation}
+
+    \begin{minted}{python}
+    def edgeCircuit(self, edge, spinChain):
+        '''
+        Function for building circuit that
+        performs edge Hamiltonian evolution
+        '''
+        start, end = edge.tuple
+        J = edge['paramExchangeIntegrals']
+        qcEdge = QuantumCircuit(spinChain)
+
+        # See thesis document for more information
+        # on the nature of the implementation
+
+        # Go to computational basis
+        qcEdge.cx(spinChain[start], spinChain[end])
+        qcEdge.h(spinChain[start])
+        # Append x and z phases
+        qcEdge.rz(J[0], spinChain[start])
+        qcEdge.rz(J[2], spinChain[end])
+        # Shuffle and append y phase
+        qcEdge.cx(spinChain[start], spinChain[end])
+        qcEdge.rz(-J[1], spinChain[end])
+        # Return to ordered Bell basis
+        qcEdge.cx(spinChain[start], spinChain[end])
+        qcEdge.h(spinChain[start])
+        qcEdge.cx(spinChain[start], spinChain[end])
+    \end{minted}
+
+    \begin{minted}{python}
+    def execute(self, circuits, backend, shots=2048):
+        '''
+        Function for executing the
+        experiments according to
+        backend
+        '''
+        return execute(circuits, backend, shots=shots, optimization_level=0)
+    \end{minted}
+
+\subsection{\textit{DirectSpinGraph} implementation}
+
+    \begin{minted}{python}
+    def edgeCircuit(self, edge, spinChain):
+        '''
+        Function for building circuit that
+        performs edge Hamiltonian evolution
+        '''
+        start, end = edge.tuple
+        J = edge['paramExchangeIntegrals']
+        qcEdge = QuantumCircuit(spinChain)
+        # Compute J1 phase
+        qcEdge.h([spinChain[start], spinChain[end]])
+        qcEdge.cx(spinChain[start], spinChain[end])
+        qcEdge.rz(J[0], spinChain[end])
+        qcEdge.cx(spinChain[start], spinChain[end])
+        qcEdge.h([spinChain[start], spinChain[end]])
+        # Compute J3 phase
+        qcEdge.sdg([spinChain[start], spinChain[end]])
+        qcEdge.h([spinChain[start], spinChain[end]])
+        qcEdge.cx(spinChain[start], spinChain[end])
+        qcEdge.rz(J[1], spinChain[end])
+        qcEdge.cx(spinChain[start], spinChain[end])
+        qcEdge.h([spinChain[start], spinChain[end]])
+        qcEdge.s([spinChain[start], spinChain[end]])
+        # Compute J3 phase
+        qcEdge.cx(spinChain[start], spinChain[end])
+        qcEdge.rz(J[2], spinChain[end])
+        qcEdge.cx(spinChain[start], spinChain[end])
+        return qcEdge
+    \end{minted}
+
+    \begin{minted}{python}
+    def execute(self, circuits, backend, shots=2048):
+        '''
+        Function for executing the
+        experiments according to
+        backend
+        '''
+        return execute(circuits, backend, shots=shots, optimization_level=0)
+    \end{minted}
+
+\subsection{\textit{PulseSpinGraph} implementation}
+
+    \begin{minted}{python}
+    def edgeCircuit(self, edge, spinChain):
+        '''
+        Function for building circuit that
+        performs edge Hamiltonian evolution
+        '''
+        start, end = edge.tuple
+        try:
+            dt = kwargs['dt']
+            J = 2*dt*np.array(edge['exchangeIntegrals'])
+        except KeyError:
+            J = edge['paramExchangeIntegrals']
+        qcEdge = QuantumCircuit(spinChain)
+        if np.abs(edge['exchangeIntegrals'][0]) > 1e-3:
+            # Compute J0 phase
+            # Rotate start qubit to X
+            qcEdge.h(spinChain[start])
+            # Duplicate pulse to cancel
+            # undesired terms on CR
+            qcEdge.barrier()
+            qcEdge.rzx(J[0]/2, spinChain[start], spinChain[end])
+            qcEdge.x(spinChain[start])
+            qcEdge.rzx(-J[0]/2, spinChain[start], spinChain[end])
+            qcEdge.x(spinChain[start])
+            qcEdge.barrier()
+            # Rotate start qubit to X
+            qcEdge.h(spinChain[start])
+        if np.abs(edge['exchangeIntegrals'][1]) > 1e-3:
+            # Compute J1 phase
+            # Rotate start qubit to X -> Y
+            qcEdge.sdg(spinChain[start])
+            qcEdge.h(spinChain[start])
+            # Rotate end qubit to Y
+            qcEdge.sdg(spinChain[end])
+            # Duplicate pulse to cancel
+            # undesired terms on CR
+            qcEdge.barrier()
+            qcEdge.rzx(J[1]/2, spinChain[start], spinChain[end])
+            qcEdge.x(spinChain[start])
+            qcEdge.rzx(-J[1]/2, spinChain[start], spinChain[end])
+            qcEdge.x(spinChain[start])
+            qcEdge.barrier()
+            # Rotate start qubit to X
+            qcEdge.h(spinChain[start])
+            qcEdge.s(spinChain[start])
+            # Rotate end qubit to Y
+            qcEdge.s(spinChain[end])
+        if np.abs(edge['exchangeIntegrals'][2]) > 1e-3:
+            # Compute J2 phase
+            # Rotate end qubit to Z
+            qcEdge.h(spinChain[end])
+            # Duplicate pulse to cancel
+            # undesired terms on CR
+            qcEdge.barrier()
+            qcEdge.rzx(J[2]/2, spinChain[start], spinChain[end])
+            qcEdge.x(spinChain[start])
+            qcEdge.rzx(-J[2]/2, spinChain[start], spinChain[end])
+            qcEdge.x(spinChain[start])
+            qcEdge.barrier()
+            # Rotate end qubit to Z
+            qcEdge.h(spinChain[end])
+        return qcEdge.to_instruction()
+    \end{minted}
+
+    \begin{minted}{python}
+    def execute(self, circuits, backend, shots=2048):
+        '''
+        Function for executing a
+        pulse schedule representing
+        the algorithm
+        '''
+        if self.localSimulation:
+            return execute(circuits, backend, shots=2048, optimization_level=0)
+        else:
+            transpiledCircuits = transpile(
+                circuits,
+                basis_gates=['x', 'sx', 'rz', 'rzx'],
+                optimization_level=1
+            )
+            pm = PassManager([RZXCalibrationBuilderNoEcho(backend)])
+            passCircuits = pm.run(transpiledCircuits)
+            return execute(
+                passCircuits,
+                backend=backend,
+                shots=shots,
+            )
+    \end{minted}

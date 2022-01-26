@@ -1,0 +1,9 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{k}{def} \PYG{n+nf}{execute}\PYG{p}{(}\PYG{n+nb+bp}{self}\PYG{p}{,} \PYG{n}{circuits}\PYG{p}{,} \PYG{n}{backend}\PYG{p}{,} \PYG{n}{shots}\PYG{o}{=}\PYG{l+m+mi}{2048}\PYG{p}{):}
+    \PYG{l+s+sd}{\PYGZsq{}\PYGZsq{}\PYGZsq{}}
+\PYG{l+s+sd}{    Function for executing the}
+\PYG{l+s+sd}{    experiments according to}
+\PYG{l+s+sd}{    backend}
+\PYG{l+s+sd}{    \PYGZsq{}\PYGZsq{}\PYGZsq{}}
+    \PYG{k}{return} \PYG{n}{execute}\PYG{p}{(}\PYG{n}{circuits}\PYG{p}{,} \PYG{n}{backend}\PYG{p}{,} \PYG{n}{shots}\PYG{o}{=}\PYG{n}{shots}\PYG{p}{,} \PYG{n}{optimization\PYGZus{}level}\PYG{o}{=}\PYG{l+m+mi}{0}\PYG{p}{)}
+\end{Verbatim}

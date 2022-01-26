@@ -1,0 +1,21 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{k}{def} \PYG{n+nf}{vertexCircuit}\PYG{p}{(}\PYG{n+nb+bp}{self}\PYG{p}{,} \PYG{n}{vertex}\PYG{p}{,} \PYG{n}{spinChain}\PYG{p}{):}
+    \PYG{l+s+sd}{\PYGZsq{}\PYGZsq{}\PYGZsq{}}
+\PYG{l+s+sd}{    Function for building circuit that}
+\PYG{l+s+sd}{    performs vertex Hamiltonian evolution}
+\PYG{l+s+sd}{    \PYGZsq{}\PYGZsq{}\PYGZsq{}}
+    \PYG{n}{Hx} \PYG{o}{=} \PYG{n}{vertex}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}externalField\PYGZsq{}}\PYG{p}{][}\PYG{l+m+mi}{0}\PYG{p}{]}
+    \PYG{n}{Hy} \PYG{o}{=} \PYG{n}{vertex}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}externalField\PYGZsq{}}\PYG{p}{][}\PYG{l+m+mi}{1}\PYG{p}{]}
+    \PYG{n}{Hz} \PYG{o}{=} \PYG{n}{vertex}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}externalField\PYGZsq{}}\PYG{p}{][}\PYG{l+m+mi}{2}\PYG{p}{]}
+    \PYG{n}{H} \PYG{o}{=} \PYG{n}{np}\PYG{o}{.}\PYG{n}{sqrt}\PYG{p}{(}\PYG{n}{Hx}\PYG{o}{**}\PYG{l+m+mi}{2} \PYG{o}{+} \PYG{n}{Hy}\PYG{o}{**}\PYG{l+m+mi}{2} \PYG{o}{+} \PYG{n}{Hz}\PYG{o}{**}\PYG{l+m+mi}{2}\PYG{p}{)}
+    \PYG{c+c1}{\PYGZsh{} Parameter values for Qiskit}
+    \PYG{n}{PHI} \PYG{o}{=} \PYG{n}{np}\PYG{o}{.}\PYG{n}{arctan2}\PYG{p}{(}\PYG{n}{Hy}\PYG{p}{,} \PYG{n}{Hx}\PYG{p}{)} \PYG{o}{+} \PYG{l+m+mi}{2}\PYG{o}{*}\PYG{n}{np}\PYG{o}{.}\PYG{n}{pi} \PYG{k}{if} \PYG{n}{H} \PYG{o}{\PYGZgt{}} \PYG{l+m+mi}{0} \PYG{k}{else} \PYG{l+m+mi}{0}
+    \PYG{n}{THETA} \PYG{o}{=} \PYG{n}{np}\PYG{o}{.}\PYG{n}{arccos}\PYG{p}{(}\PYG{n}{Hz}\PYG{o}{/}\PYG{n}{H}\PYG{p}{)} \PYG{k}{if} \PYG{n}{H} \PYG{o}{\PYGZgt{}} \PYG{l+m+mi}{0} \PYG{k}{else} \PYG{l+m+mi}{0}
+    \PYG{n}{LAMBDA} \PYG{o}{=} \PYG{n}{np}\PYG{o}{.}\PYG{n}{pi} \PYG{k}{if} \PYG{n}{H} \PYG{o}{\PYGZgt{}} \PYG{l+m+mi}{0} \PYG{k}{else} \PYG{l+m+mi}{0}
+    \PYG{c+c1}{\PYGZsh{} Align to field main axis}
+    \PYG{n}{qcVertex} \PYG{o}{=} \PYG{n}{QuantumCircuit}\PYG{p}{(}\PYG{n}{spinChain}\PYG{p}{)}
+    \PYG{n}{qcVertex}\PYG{o}{.}\PYG{n}{u}\PYG{p}{(}\PYG{o}{\PYGZhy{}}\PYG{n}{THETA}\PYG{p}{,} \PYG{o}{\PYGZhy{}}\PYG{n}{LAMBDA}\PYG{p}{,} \PYG{o}{\PYGZhy{}}\PYG{n}{PHI}\PYG{p}{,} \PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{vertex}\PYG{o}{.}\PYG{n}{index}\PYG{p}{])}
+    \PYG{n}{qcVertex}\PYG{o}{.}\PYG{n}{rz}\PYG{p}{(}\PYG{n}{vertex}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}paramExternalField\PYGZsq{}}\PYG{p}{],} \PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{vertex}\PYG{o}{.}\PYG{n}{index}\PYG{p}{])}
+    \PYG{n}{qcVertex}\PYG{o}{.}\PYG{n}{u}\PYG{p}{(}\PYG{n}{THETA}\PYG{p}{,} \PYG{n}{PHI}\PYG{p}{,} \PYG{n}{LAMBDA}\PYG{p}{,} \PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{vertex}\PYG{o}{.}\PYG{n}{index}\PYG{p}{])}
+    \PYG{k}{return} \PYG{n}{qcVertex}
+\end{Verbatim}

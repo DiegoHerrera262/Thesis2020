@@ -1,0 +1,63 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{k}{def} \PYG{n+nf}{edgeCircuit}\PYG{p}{(}\PYG{n+nb+bp}{self}\PYG{p}{,} \PYG{n}{edge}\PYG{p}{,} \PYG{n}{spinChain}\PYG{p}{):}
+    \PYG{l+s+sd}{\PYGZsq{}\PYGZsq{}\PYGZsq{}}
+\PYG{l+s+sd}{    Function for building circuit that}
+\PYG{l+s+sd}{    performs edge Hamiltonian evolution}
+\PYG{l+s+sd}{    \PYGZsq{}\PYGZsq{}\PYGZsq{}}
+    \PYG{n}{start}\PYG{p}{,} \PYG{n}{end} \PYG{o}{=} \PYG{n}{edge}\PYG{o}{.}\PYG{n}{tuple}
+    \PYG{k}{try}\PYG{p}{:}
+        \PYG{n}{dt} \PYG{o}{=} \PYG{n}{kwargs}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}dt\PYGZsq{}}\PYG{p}{]}
+        \PYG{n}{J} \PYG{o}{=} \PYG{l+m+mi}{2}\PYG{o}{*}\PYG{n}{dt}\PYG{o}{*}\PYG{n}{np}\PYG{o}{.}\PYG{n}{array}\PYG{p}{(}\PYG{n}{edge}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}exchangeIntegrals\PYGZsq{}}\PYG{p}{])}
+    \PYG{k}{except} \PYG{n+ne}{KeyError}\PYG{p}{:}
+        \PYG{n}{J} \PYG{o}{=} \PYG{n}{edge}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}paramExchangeIntegrals\PYGZsq{}}\PYG{p}{]}
+    \PYG{n}{qcEdge} \PYG{o}{=} \PYG{n}{QuantumCircuit}\PYG{p}{(}\PYG{n}{spinChain}\PYG{p}{)}
+    \PYG{k}{if} \PYG{n}{np}\PYG{o}{.}\PYG{n}{abs}\PYG{p}{(}\PYG{n}{edge}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}exchangeIntegrals\PYGZsq{}}\PYG{p}{][}\PYG{l+m+mi}{0}\PYG{p}{])} \PYG{o}{\PYGZgt{}} \PYG{l+m+mf}{1e\PYGZhy{}3}\PYG{p}{:}
+        \PYG{c+c1}{\PYGZsh{} Compute J0 phase}
+        \PYG{c+c1}{\PYGZsh{} Rotate start qubit to X}
+        \PYG{n}{qcEdge}\PYG{o}{.}\PYG{n}{h}\PYG{p}{(}\PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{start}\PYG{p}{])}
+        \PYG{c+c1}{\PYGZsh{} Duplicate pulse to cancel}
+        \PYG{c+c1}{\PYGZsh{} undesired terms on CR}
+        \PYG{n}{qcEdge}\PYG{o}{.}\PYG{n}{barrier}\PYG{p}{()}
+        \PYG{n}{qcEdge}\PYG{o}{.}\PYG{n}{rzx}\PYG{p}{(}\PYG{n}{J}\PYG{p}{[}\PYG{l+m+mi}{0}\PYG{p}{]}\PYG{o}{/}\PYG{l+m+mi}{2}\PYG{p}{,} \PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{start}\PYG{p}{],} \PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{end}\PYG{p}{])}
+        \PYG{n}{qcEdge}\PYG{o}{.}\PYG{n}{x}\PYG{p}{(}\PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{start}\PYG{p}{])}
+        \PYG{n}{qcEdge}\PYG{o}{.}\PYG{n}{rzx}\PYG{p}{(}\PYG{o}{\PYGZhy{}}\PYG{n}{J}\PYG{p}{[}\PYG{l+m+mi}{0}\PYG{p}{]}\PYG{o}{/}\PYG{l+m+mi}{2}\PYG{p}{,} \PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{start}\PYG{p}{],} \PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{end}\PYG{p}{])}
+        \PYG{n}{qcEdge}\PYG{o}{.}\PYG{n}{x}\PYG{p}{(}\PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{start}\PYG{p}{])}
+        \PYG{n}{qcEdge}\PYG{o}{.}\PYG{n}{barrier}\PYG{p}{()}
+        \PYG{c+c1}{\PYGZsh{} Rotate start qubit to X}
+        \PYG{n}{qcEdge}\PYG{o}{.}\PYG{n}{h}\PYG{p}{(}\PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{start}\PYG{p}{])}
+    \PYG{k}{if} \PYG{n}{np}\PYG{o}{.}\PYG{n}{abs}\PYG{p}{(}\PYG{n}{edge}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}exchangeIntegrals\PYGZsq{}}\PYG{p}{][}\PYG{l+m+mi}{1}\PYG{p}{])} \PYG{o}{\PYGZgt{}} \PYG{l+m+mf}{1e\PYGZhy{}3}\PYG{p}{:}
+        \PYG{c+c1}{\PYGZsh{} Compute J1 phase}
+        \PYG{c+c1}{\PYGZsh{} Rotate start qubit to X \PYGZhy{}\PYGZgt{} Y}
+        \PYG{n}{qcEdge}\PYG{o}{.}\PYG{n}{sdg}\PYG{p}{(}\PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{start}\PYG{p}{])}
+        \PYG{n}{qcEdge}\PYG{o}{.}\PYG{n}{h}\PYG{p}{(}\PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{start}\PYG{p}{])}
+        \PYG{c+c1}{\PYGZsh{} Rotate end qubit to Y}
+        \PYG{n}{qcEdge}\PYG{o}{.}\PYG{n}{sdg}\PYG{p}{(}\PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{end}\PYG{p}{])}
+        \PYG{c+c1}{\PYGZsh{} Duplicate pulse to cancel}
+        \PYG{c+c1}{\PYGZsh{} undesired terms on CR}
+        \PYG{n}{qcEdge}\PYG{o}{.}\PYG{n}{barrier}\PYG{p}{()}
+        \PYG{n}{qcEdge}\PYG{o}{.}\PYG{n}{rzx}\PYG{p}{(}\PYG{n}{J}\PYG{p}{[}\PYG{l+m+mi}{1}\PYG{p}{]}\PYG{o}{/}\PYG{l+m+mi}{2}\PYG{p}{,} \PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{start}\PYG{p}{],} \PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{end}\PYG{p}{])}
+        \PYG{n}{qcEdge}\PYG{o}{.}\PYG{n}{x}\PYG{p}{(}\PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{start}\PYG{p}{])}
+        \PYG{n}{qcEdge}\PYG{o}{.}\PYG{n}{rzx}\PYG{p}{(}\PYG{o}{\PYGZhy{}}\PYG{n}{J}\PYG{p}{[}\PYG{l+m+mi}{1}\PYG{p}{]}\PYG{o}{/}\PYG{l+m+mi}{2}\PYG{p}{,} \PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{start}\PYG{p}{],} \PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{end}\PYG{p}{])}
+        \PYG{n}{qcEdge}\PYG{o}{.}\PYG{n}{x}\PYG{p}{(}\PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{start}\PYG{p}{])}
+        \PYG{n}{qcEdge}\PYG{o}{.}\PYG{n}{barrier}\PYG{p}{()}
+        \PYG{c+c1}{\PYGZsh{} Rotate start qubit to X}
+        \PYG{n}{qcEdge}\PYG{o}{.}\PYG{n}{h}\PYG{p}{(}\PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{start}\PYG{p}{])}
+        \PYG{n}{qcEdge}\PYG{o}{.}\PYG{n}{s}\PYG{p}{(}\PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{start}\PYG{p}{])}
+        \PYG{c+c1}{\PYGZsh{} Rotate end qubit to Y}
+        \PYG{n}{qcEdge}\PYG{o}{.}\PYG{n}{s}\PYG{p}{(}\PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{end}\PYG{p}{])}
+    \PYG{k}{if} \PYG{n}{np}\PYG{o}{.}\PYG{n}{abs}\PYG{p}{(}\PYG{n}{edge}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}exchangeIntegrals\PYGZsq{}}\PYG{p}{][}\PYG{l+m+mi}{2}\PYG{p}{])} \PYG{o}{\PYGZgt{}} \PYG{l+m+mf}{1e\PYGZhy{}3}\PYG{p}{:}
+        \PYG{c+c1}{\PYGZsh{} Compute J2 phase}
+        \PYG{c+c1}{\PYGZsh{} Rotate end qubit to Z}
+        \PYG{n}{qcEdge}\PYG{o}{.}\PYG{n}{h}\PYG{p}{(}\PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{end}\PYG{p}{])}
+        \PYG{c+c1}{\PYGZsh{} Duplicate pulse to cancel}
+        \PYG{c+c1}{\PYGZsh{} undesired terms on CR}
+        \PYG{n}{qcEdge}\PYG{o}{.}\PYG{n}{barrier}\PYG{p}{()}
+        \PYG{n}{qcEdge}\PYG{o}{.}\PYG{n}{rzx}\PYG{p}{(}\PYG{n}{J}\PYG{p}{[}\PYG{l+m+mi}{2}\PYG{p}{]}\PYG{o}{/}\PYG{l+m+mi}{2}\PYG{p}{,} \PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{start}\PYG{p}{],} \PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{end}\PYG{p}{])}
+        \PYG{n}{qcEdge}\PYG{o}{.}\PYG{n}{x}\PYG{p}{(}\PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{start}\PYG{p}{])}
+        \PYG{n}{qcEdge}\PYG{o}{.}\PYG{n}{rzx}\PYG{p}{(}\PYG{o}{\PYGZhy{}}\PYG{n}{J}\PYG{p}{[}\PYG{l+m+mi}{2}\PYG{p}{]}\PYG{o}{/}\PYG{l+m+mi}{2}\PYG{p}{,} \PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{start}\PYG{p}{],} \PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{end}\PYG{p}{])}
+        \PYG{n}{qcEdge}\PYG{o}{.}\PYG{n}{x}\PYG{p}{(}\PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{start}\PYG{p}{])}
+        \PYG{n}{qcEdge}\PYG{o}{.}\PYG{n}{barrier}\PYG{p}{()}
+        \PYG{c+c1}{\PYGZsh{} Rotate end qubit to Z}
+        \PYG{n}{qcEdge}\PYG{o}{.}\PYG{n}{h}\PYG{p}{(}\PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{end}\PYG{p}{])}
+    \PYG{k}{return} \PYG{n}{qcEdge}\PYG{o}{.}\PYG{n}{to\PYGZus{}instruction}\PYG{p}{()}
+\end{Verbatim}

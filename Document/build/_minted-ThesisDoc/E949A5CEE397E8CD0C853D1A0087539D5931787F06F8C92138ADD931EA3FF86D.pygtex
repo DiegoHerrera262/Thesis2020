@@ -1,0 +1,15 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{n}{testGraph} \PYG{o}{=} \PYG{n}{HeisenbergGraph}\PYG{p}{(}
+    \PYG{n}{spinInteractions}\PYG{o}{=}\PYG{p}{\PYGZob{}}
+        \PYG{p}{(}\PYG{l+m+mi}{0}\PYG{p}{,} \PYG{l+m+mi}{1}\PYG{p}{):} \PYG{p}{[}\PYG{l+m+mi}{1}\PYG{p}{,} \PYG{l+m+mi}{1}\PYG{p}{,} \PYG{l+m+mi}{1}\PYG{p}{],}
+    \PYG{p}{\PYGZcb{},}
+    \PYG{n}{externalField}\PYG{o}{=}\PYG{p}{\PYGZob{}}
+        \PYG{l+m+mi}{0}\PYG{p}{:} \PYG{p}{[}\PYG{l+m+mf}{0.0}\PYG{p}{,} \PYG{l+m+mf}{0.0}\PYG{p}{,} \PYG{l+m+mf}{0.0}\PYG{p}{],}
+        \PYG{l+m+mi}{1}\PYG{p}{:} \PYG{p}{[}\PYG{l+m+mf}{0.0}\PYG{p}{,} \PYG{l+m+mf}{0.0}\PYG{p}{,} \PYG{l+m+mf}{0.0}\PYG{p}{],}
+    \PYG{p}{\PYGZcb{},}
+    \PYG{n}{localSimulation}\PYG{o}{=}\PYG{k+kc}{False}\PYG{p}{,}
+    \PYG{n}{backendName}\PYG{o}{=}\PYG{l+s+s1}{\PYGZsq{}ibmq\PYGZus{}jakarta\PYGZsq{}}\PYG{p}{,}
+    \PYG{n}{noisySimulation}\PYG{o}{=}\PYG{k+kc}{False}\PYG{p}{,}
+    \PYG{n}{initialState}\PYG{o}{=}\PYG{l+m+mi}{1}\PYG{o}{/}\PYG{n}{np}\PYG{o}{.}\PYG{n}{sqrt}\PYG{p}{(}\PYG{l+m+mi}{2}\PYG{p}{)} \PYG{o}{*} \PYG{n}{np}\PYG{o}{.}\PYG{n}{array}\PYG{p}{([}\PYG{l+m+mi}{1}\PYG{p}{,} \PYG{l+m+mi}{0}\PYG{p}{,} \PYG{l+m+mi}{1}\PYG{p}{,} \PYG{l+m+mi}{0}\PYG{p}{])}
+\PYG{p}{)}
+\end{Verbatim}

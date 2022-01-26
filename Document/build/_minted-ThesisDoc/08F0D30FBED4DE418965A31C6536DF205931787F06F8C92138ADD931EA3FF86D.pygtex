@@ -1,0 +1,29 @@
+\begin{Verbatim}[commandchars=\\\{\}]
+\PYG{k}{def} \PYG{n+nf}{edgeCircuit}\PYG{p}{(}\PYG{n+nb+bp}{self}\PYG{p}{,} \PYG{n}{edge}\PYG{p}{,} \PYG{n}{spinChain}\PYG{p}{):}
+    \PYG{l+s+sd}{\PYGZsq{}\PYGZsq{}\PYGZsq{}}
+\PYG{l+s+sd}{    Function for building circuit that}
+\PYG{l+s+sd}{    performs edge Hamiltonian evolution}
+\PYG{l+s+sd}{    \PYGZsq{}\PYGZsq{}\PYGZsq{}}
+    \PYG{n}{start}\PYG{p}{,} \PYG{n}{end} \PYG{o}{=} \PYG{n}{edge}\PYG{o}{.}\PYG{n}{tuple}
+    \PYG{n}{J} \PYG{o}{=} \PYG{n}{edge}\PYG{p}{[}\PYG{l+s+s1}{\PYGZsq{}paramExchangeIntegrals\PYGZsq{}}\PYG{p}{]}
+    \PYG{n}{qcEdge} \PYG{o}{=} \PYG{n}{QuantumCircuit}\PYG{p}{(}\PYG{n}{spinChain}\PYG{p}{)}
+    \PYG{c+c1}{\PYGZsh{} Compute J1 phase}
+    \PYG{n}{qcEdge}\PYG{o}{.}\PYG{n}{h}\PYG{p}{([}\PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{start}\PYG{p}{],} \PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{end}\PYG{p}{]])}
+    \PYG{n}{qcEdge}\PYG{o}{.}\PYG{n}{cx}\PYG{p}{(}\PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{start}\PYG{p}{],} \PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{end}\PYG{p}{])}
+    \PYG{n}{qcEdge}\PYG{o}{.}\PYG{n}{rz}\PYG{p}{(}\PYG{n}{J}\PYG{p}{[}\PYG{l+m+mi}{0}\PYG{p}{],} \PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{end}\PYG{p}{])}
+    \PYG{n}{qcEdge}\PYG{o}{.}\PYG{n}{cx}\PYG{p}{(}\PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{start}\PYG{p}{],} \PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{end}\PYG{p}{])}
+    \PYG{n}{qcEdge}\PYG{o}{.}\PYG{n}{h}\PYG{p}{([}\PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{start}\PYG{p}{],} \PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{end}\PYG{p}{]])}
+    \PYG{c+c1}{\PYGZsh{} Compute J3 phase}
+    \PYG{n}{qcEdge}\PYG{o}{.}\PYG{n}{sdg}\PYG{p}{([}\PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{start}\PYG{p}{],} \PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{end}\PYG{p}{]])}
+    \PYG{n}{qcEdge}\PYG{o}{.}\PYG{n}{h}\PYG{p}{([}\PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{start}\PYG{p}{],} \PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{end}\PYG{p}{]])}
+    \PYG{n}{qcEdge}\PYG{o}{.}\PYG{n}{cx}\PYG{p}{(}\PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{start}\PYG{p}{],} \PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{end}\PYG{p}{])}
+    \PYG{n}{qcEdge}\PYG{o}{.}\PYG{n}{rz}\PYG{p}{(}\PYG{n}{J}\PYG{p}{[}\PYG{l+m+mi}{1}\PYG{p}{],} \PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{end}\PYG{p}{])}
+    \PYG{n}{qcEdge}\PYG{o}{.}\PYG{n}{cx}\PYG{p}{(}\PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{start}\PYG{p}{],} \PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{end}\PYG{p}{])}
+    \PYG{n}{qcEdge}\PYG{o}{.}\PYG{n}{h}\PYG{p}{([}\PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{start}\PYG{p}{],} \PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{end}\PYG{p}{]])}
+    \PYG{n}{qcEdge}\PYG{o}{.}\PYG{n}{s}\PYG{p}{([}\PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{start}\PYG{p}{],} \PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{end}\PYG{p}{]])}
+    \PYG{c+c1}{\PYGZsh{} Compute J3 phase}
+    \PYG{n}{qcEdge}\PYG{o}{.}\PYG{n}{cx}\PYG{p}{(}\PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{start}\PYG{p}{],} \PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{end}\PYG{p}{])}
+    \PYG{n}{qcEdge}\PYG{o}{.}\PYG{n}{rz}\PYG{p}{(}\PYG{n}{J}\PYG{p}{[}\PYG{l+m+mi}{2}\PYG{p}{],} \PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{end}\PYG{p}{])}
+    \PYG{n}{qcEdge}\PYG{o}{.}\PYG{n}{cx}\PYG{p}{(}\PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{start}\PYG{p}{],} \PYG{n}{spinChain}\PYG{p}{[}\PYG{n}{end}\PYG{p}{])}
+    \PYG{k}{return} \PYG{n}{qcEdge}
+\end{Verbatim}
