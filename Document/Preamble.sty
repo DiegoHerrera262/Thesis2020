@@ -37,7 +37,7 @@
 \captionsetup[subfigure]{position=top,singlelinecheck=off,justification=raggedright}
 
 \usepackage[breakable]{tcolorbox}
-    \usepackage{parskip} % Stop auto-indenting (to mimic markdown behaviour)
+    %\usepackage{parskip} % Stop auto-indenting (to mimic markdown behaviour)
     
     \usepackage{iftex}
     \ifPDFTeX
@@ -49,15 +49,15 @@
 
     % Basic figure setup, for now with no caption control since it's done
     % automatically by Pandoc (which extracts ![](path) syntax from Markdown).
-    \usepackage{graphicx}
+    %\usepackage{graphicx}
     % Maintain compatibility with old templates. Remove in nbconvert 6.0
-    \let\Oldincludegraphics\includegraphics
+    %\let\Oldincludegraphics\includegraphics
     % Ensure that by default, figures have no caption (until we provide a
     % proper Figure object with a Caption API and a way to capture that
     % in the conversion process - todo).
-    \usepackage{caption}
-    \DeclareCaptionFormat{nocaption}{}
-    \captionsetup{format=nocaption,aboveskip=0pt,belowskip=0pt}
+    %\usepackage{caption}
+    %\DeclareCaptionFormat{nocaption}{}
+    %\captionsetup{format=nocaption,aboveskip=0pt,belowskip=0pt}
 
     \usepackage{float}
     \floatplacement{figure}{H} % forces figures to be placed at the correct location
@@ -73,7 +73,7 @@
     }
     \usepackage{upquote} % Upright quotes for verbatim code
     \usepackage{eurosym} % defines \euro
-    \usepackage[mathletters]{ucs} % Extended unicode (utf-8) support
+    %\usepackage[mathletters]{ucs} % Extended unicode (utf-8) support
     \usepackage{fancyvrb} % verbatim replacement that allows latex
     \usepackage{grffile} % extends the file name processing of package graphics 
                          % to support a larger range
@@ -91,7 +91,7 @@
     }
     \makeatother
     \usepackage[Export]{adjustbox} % Used to constrain images to a maximum size
-    \adjustboxset{max size={0.9\linewidth}{0.9\paperheight}}
+    %\adjustboxset{max size={\linewidth}{0.9\paperheight}}
 
     % The hyperref package gives us a pdf with properly built
     % internal navigation ('pdf bookmarks' for the table of contents,
