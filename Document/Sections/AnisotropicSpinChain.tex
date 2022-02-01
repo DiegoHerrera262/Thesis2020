@@ -1,4 +1,4 @@
-This chapter introduces time simulation algorithms for Hamiltonian \ref{eq:HeisenbergHamiltonian}. First a trotterization scheme is introduced, and its advantages are discussed for simulating certain types of graphs or lattices. Relations between discretization step, evolution time and evolution error are computed and discussed in order to establish disadvantages of execution on current (noisy) quantum devices. Then, three possible implementation strategies are introduced: 1) a direct transpilation of includes proposed by Las Heras et. al. \cite{HubbardSimulLasHeras}, 2) a basis-efficient transpilation relying on commutation properties of local Hamiltonians \footnote{The work was performed at early stages independently of that on \cite{BellUniversalCartan}. However, the insights are identical and thus the author is compelled to refer to this previous work. It is clear, however, that the mentioned reference considers the problem of universal two qubit gates which, albeit related to the specific problem of the present dissertation, is a quite different approach. This dissertation uses the results derived to solve a specific time evolution problem with potential application to specific areas of solid state physics and physical chemistry.}, and 3) a pulse-efficient transpilation based on cross-resonance interaction. Finally, the three algorithms are tested using a three-qubit Hamiltonian. Single-qubit Pauli expected value evolution and probability density evolution as qualitative indicators, whereas probability density fidelity and state fidelity are used as quantitative indicators.
+This chapter introduces time simulation algorithms for Hamiltonian \ref{eq:HeisenbergHamiltonian}. First a trotterization scheme is introduced, and its advantages are discussed for simulating certain types of graphs or lattices. Relations between discretization step, evolution time and evolution error are computed and discussed in order to establish disadvantages of execution on current (noisy) quantum devices. Then, three possible implementation strategies are introduced: 1) a direct transpilation of circuits proposed by Las Heras et. al. \cite{HubbardSimulLasHeras}, 2) a basis-efficient transpilation relying on commutation properties of local Hamiltonians \footnote{The work was performed at early stages independently of that on \cite{BellUniversalCartan}. However, the insights are identical and thus the author is compelled to refer to this previous work. It is clear, however, that the mentioned reference considers the problem of universal two qubit gates which, albeit related to the specific problem of the present dissertation, is a quite different approach. This dissertation uses the results derived to solve a specific time evolution problem with potential application to specific areas of solid state physics and physical chemistry.}, and 3) a pulse-efficient transpilation based on cross-resonance interaction. Finally, the three algorithms are tested using a three-qubit Hamiltonian. Time evolution of probability density, and of single-qubit Pauli operators' expected values, are computed. Whereas probability density fidelity and state fidelity are used as quantitative indicators.
 
 \section{Trotterization And Time Evolution}
 \label{sec:MainTrotterScheme}
@@ -31,34 +31,34 @@ This chapter introduces time simulation algorithms for Hamiltonian \ref{eq:Heise
     \label{eq:HamiltonianTrotterization}
   \end{equation}
 
-  In general, interactions associated to disjoint edges commute, and thus can be simulated simultaneously. Hence, an advantage of this approach to time evolution is that by partitioning the graph on sets of mutually disjoint sets, several terms can be implemented in parallel on actual quantum devices. This approach is implemented in the present work, and discussed further on the appendix. This parallelism is illustrated for a spin chain in figure \ref{fig:spinChainCircuit}. It can be noticed that the circuit depth of the trotter step of three or more spins with chain topology is independent of the number of spins. As a result, time complexity only increases with the desired time discretization, which correlates with the error in the time simulation approximation. 
+   \noindent Interactions associated to disjoint edges commute, and thus can be simulated simultaneously. Hence, an advantage of this approach to time evolution is that by partitioning the graph on mutually disjoint sets, several terms can be implemented in parallel on actual quantum devices. This approach is implemented in the present work. This parallelism is illustrated for a spin chain in figure \ref{fig:spinChainCircuit}. It can be noticed that the circuit depth of the trotter step of three or more spins with chain topology is independent of the number of spins. As a result, time complexity only increases with the desired time discretization, which correlates with the error in the time simulation approximation. 
   
-  Another interesting feature, as shown in figure \ref{fig:spinChainCircuit}, is that it is possible to perform third order time evolution using the first iteration of Suzuki-Trotter scheme with roughly the sme time complexity as the second order trotterization. This, clearly, in the case where no external local fields are present in the model Hamiltonian, and the graph corresponds to a chain. To illustrate the point more precisely, consider the Hamiltonian
+  Another interesting feature, as shown in figure \ref{fig:spinChainCircuit}, is that it is possible to perform third order time evolution using the first iteration of Suzuki-Trotter scheme with roughly the same time complexity as the second order trotterization. To illustrate this point more precisely, consider the Hamiltonian
 
   \begin{equation}
-    \hat{H} = \sum_{i=0}^{N-2} \hat{H}_{i,i+1},
+    \hat{H} = \sum_{i=0}^{\mathcal{N}-2} \hat{H}_{i,i+1},
     \label{eq:ChainHamiltonian}
   \end{equation}
 
-  \noindent where $\hat{H}_{i,j}$ is defined as on equation \ref{eq:HamiltonianDecomposition}. It is quite straightforward to see the that the second order evolution corresponds to the approximation
+  \noindent where $\hat{H}_{i,j}$ is defined as on equation \ref{eq:HamiltonianDecomposition}. It is straightforward to see that the second order evolution corresponds to the approximation
 
   \begin{equation}
     \mathrm{e}^{-\mathrm{i}\hat{H}\Delta t} \approx \prod_{i \text{ even}} \mathrm{e}^{-\mathrm{i}\hat{H}_{i,i+1}t} \prod_{i \text{ odd}} \mathrm{e}^{-\mathrm{i}\hat{H}_{i,i+1}t} + \mathcal{O}(\Delta t^2).
     \label{eq:HamiltonianTrotterization}
   \end{equation}
 
-  For this particular system, denote
+  \noindent For this particular system, denote
 
   \begin{gather}
-    \hat{A}(\Delta t) = \prod_{i \text{ even}} \mathrm{e}^{-\mathrm{i}\hat{H}_{i,i+1}t} \\
-    \hat{B}(\Delta t) = \prod_{i \text{ odd}} \mathrm{e}^{-\mathrm{i}\hat{H}_{i,i+1}t}
+    \hat{A}(\Delta t) = \prod_{i \text{ even}} \mathrm{e}^{-\mathrm{i}\hat{H}_{i,i+1}t}, \\
+    \hat{B}(\Delta t) = \prod_{i \text{ odd}} \mathrm{e}^{-\mathrm{i}\hat{H}_{i,i+1}t},
     \label{eq:ChainOpsTrotter}
   \end{gather}
 
   \noindent such that
 
   \begin{equation}
-    \mathrm{e}^{-\mathrm{i}\hat{H}\Delta t} \approx \hat{A}(\Delta t) \hat{B}(\Delta t) + \mathcal{O}(\Delta t^2)
+    \mathrm{e}^{-\mathrm{i}\hat{H}\Delta t} \approx \hat{A}(\Delta t) \hat{B}(\Delta t) + \mathcal{O}(\Delta t^2).
     \label{eq:HamiltonianTrotterization}
   \end{equation}
 
@@ -84,17 +84,17 @@ This chapter introduces time simulation algorithms for Hamiltonian \ref{eq:Heise
   
   \include{includes/spinChainCircuit}
 
-  \subsection{Limitations of The Scheme for Time Evolution}
+  \subsection{Limitations of the Scheme for Time Evolution}
   \label{subsec:TrotterDynamics}
 
-    There are some intrinsic limitations to quantum time simulation using Trotter schemes. To exemplify this, consider an isotropic $N$-spin chain Hamiltonian, with only two-spin interaction given by
+    There are some intrinsic limitations to quantum time simulation using Trotter schemes. To exemplify this, consider an isotropic $\mathcal{N}$-spin chain Hamiltonian, with only two-spin interaction given by
 
     \begin{equation}
       \hat{H}_{ij} = \frac{1}{2} \hat{X}_i \hat{X}_j + \hat{Y}_i \hat{Y}_j + \frac{1}{4} \hat{Z}_i \hat{Z}_j.
       \label{eq:FloquetHamiltonian}
     \end{equation}
 
-    Consider an initial state $\ket{\psi_0} = \ket{11} \otimes \ket{0}^{\otimes N-2}$. Evolution over a time $t$ would yield an output (target) state
+    Consider an initial state $\ket{\psi_0} = \ket{11} \otimes \ket{0}^{\otimes \mathcal{N}-2}$. Evolution over a time $t$ would yield an output (target) state
 
     \begin{equation}
       \ket{\psi_t} = \mathrm{e}^{-\mathrm{i}\hat{H}t} \ket{\psi_0}
@@ -114,19 +114,19 @@ This chapter introduces time simulation algorithms for Hamiltonian \ref{eq:Heise
       \mathcal{F}_\infty(\Delta t) = \lim_{M \rightarrow \infty} \frac{1}{M} \sum_{m = 1}^{M} |\braket{\psi_{M\Delta t}}{\psi_{M\Delta t}(\Delta t)}|^2.
     \end{equation}
 
-    In figure \ref{fig:FloquetDynamics}, a plot of long time average state infidelity $1-\mathcal{F}_\infty$ can be seen, for different system sizes. It can be seen that there are two clearly separated regimes. For large integration time step $\Delta t$, the average fidelity is almost zero, which means that the evolution does not converge in general. However, below certain threshold $\Delta t_c$, the average fidelity increases deterministically, following a power law. The results suggest that there may be a limit of large systems (i.e., a possible thermodynamic limit). This results have been observed on previous work by \cite{FloquetTrotter}. In that work, it is claimed that the low fidelity regime experience a quantum chaotic dynamics, while the deterministic fidelity regime experiences quantum localization of the system's state. Evidence is provided for the transverse field Ising model. However, due to time constraints, those claims are not demonstrated in this work for the example interaction \ref{eq:FloquetHamiltonian}.
+    In figure \ref{fig:FloquetDynamics}, a plot of long time average state infidelity $1-\mathcal{F}_\infty$ can be seen, for different system sizes ($\mathcal{N} = 2,4,6,8$). It can be seen that there are two clearly separated regimes. For large integration time step $\Delta t$, the average fidelity is almost zero, which means that the evolution does not converge in general. However, below certain threshold $\Delta t_c$, the average fidelity increases deterministically, following a power law. The results suggest that there may be a limit of large systems (i.e., a possible thermodynamic limit). This results have been observed on previous work by \cite{FloquetTrotter}. In that work, it is claimed that the low fidelity regime experience a quantum chaotic dynamics, while the deterministic fidelity regime experiences quantum localization of the system's state. Evidence is provided for the transverse field Ising model. However, due to time constraints, those claims are not demonstrated in this work for the example interaction \ref{eq:FloquetHamiltonian}.
 
     \begin{figure}
       \centering
-      \includegraphics[scale=0.6]{longTimeFloquetFidelity.pdf}
-      \caption{Long time state infidelity as a function of integration time step $\Delta t$.}
+      \includegraphics[scale=0.8]{longTimeFloquetFidelity.pdf}
+      \caption{Long time state infidelity as a function of integration time step $\Delta t$. Different sets of data are taken for system sizes $\mathcal{N} = 2,4,6,8$. Units are normalized to $\hbar = 1$. This normalization is denoted $(u. a.)$.}
       \label{fig:FloquetDynamics}
     \end{figure}
 
 \section{Circuit implementations}
 \label{sec:MainCircuits}
   
-  On chapter \ref{chap:qc}, some networks for simulating time evolution of the two-qubit Hamiltonian were introduced (see fig. \ref{fig:salathe-includes}). In this section, three possible transpiled includes are introduced. Those implement the single qubit and two qubit operators on equation \ref{eq:HamiltonianDecomposition}. The single qubit operators are implemented in the same way on all three alternatives. Each circuit differs from the others on the implementation of the two spin operators. The first alternative is a direct basis transpilation, based on the controlled phase gate. The second alternative is one that takes advantage of the commutation properties of the local two spin Hamiltonian. This alternative was derived mostly independently from \cite{BellUniversalCartan} at early stages of the present work. However,a thorough discussion of the insights required to derive this circuit is included. The last option is a cross resonance based implementation as discussed on chapter \ref{chap:qc}.
+  On chapter \ref{chap:qc}, some networks for simulating time evolution of the two-qubit Hamiltonian were introduced (see fig. \ref{fig:salathe-includes}). In this section, three possible transpiled circuits are introduced. Those implement the single qubit and two qubit operators on equation \ref{eq:HamiltonianDecomposition}. The single qubit operators are implemented in the same way on all three alternatives. Each circuit differs from the others on the implementation of the two spin operators. The first alternative is a direct basis transpilation, based on the controlled phase gate. The second alternative is one that takes advantage of the commutation properties of the local two spin Hamiltonian. This alternative was derived mostly independently from \cite{BellUniversalCartan} at early stages of the present work. However, a thorough discussion of the insights required to derive this circuit is included. The last option is a cross resonance based implementation, as discussed on chapter \ref{chap:qc}.
 
   \subsection{Simulation of field interaction}
   \label{subsec:fieldInteractionCircuit}
@@ -211,7 +211,7 @@ This chapter introduces time simulation algorithms for Hamiltonian \ref{eq:Heise
         \label{eq:CommutationRelations}
       \end{equation}
 
-      From basic quantum mechanics, there exists a common basis in which time evolution under hamiltonian \ref{eq:SpinSpin} implies appending global phases via single qubit rotations around $\hat{z}$ axis, and less two-qubit operations. This basis is straightforward to find by noticing that the \textit{total spin} operator
+      From basic quantum mechanics, there exists a basis that diagonalizes Hamiltonian \ref{eq:SpinSpin}. By an appropriate rotation, evolution can be performed using mostly $\hat{z}$ axis rotations, and few two-qubit operations. This basis is straightforward to find by noticing that the \textit{total spin} operator
 
       \begin{equation}
         \hat{S}^2 = 6 + 2\Big(\hat{X}_i\hat{X}_j + \hat{Y}_i\hat{Z}_j + \hat{Z}_j\Big) 
@@ -242,7 +242,7 @@ This chapter introduces time simulation algorithms for Hamiltonian \ref{eq:Heise
         \label{eq:SpinSpinEnergies}
       \end{gather}
 
-      To each term $J_{ij}^{(X)}$, $J_{ij}^{(Y)}$, $J_{ij}^{(Z)}$, it is possible to assign a phase $\phi_{xx}$, $\phi_{yy}$, $\phi_{zz}$. Those are defined as follows
+      Define phases
 
       \begin{gather}
         \phi_{xx} = 2 J_{ij}^{(X)} \Delta t, \\
@@ -311,7 +311,7 @@ This chapter introduces time simulation algorithms for Hamiltonian \ref{eq:Heise
         \gamma = J_{zz} \Delta t,
       \end{gather}
 
-      \noindent yield a unitary that exactly performs time evolution under the two-spin interaction Hamiltonian. The single qubit rotations used on the network representation \ref{fig:PulseEffcientCartanCircuit} profit the relations between Pauli operators stated on equations \ref{eq:Z2X} and \ref{eq:Z2Y}. This algorithm has a slightly different nature than those presented previously. The former two use a particular basis to implement a quantum algorithm that can run on any universal device, regardless of the underlying architecture. The one discussed here, on the other hand, is specifically calibrated for IBM Quantum devices using Qiskit SDK and the pulse scaling technique implemented on \cite{RXZPulseEfficient}.
+      \noindent yield a unitary that exactly performs time evolution under the two-spin interaction Hamiltonian. The single qubit rotations used on the network representation \ref{fig:PulseEffcientCartanCircuit} profit from the relations between Pauli operators stated on equations \ref{eq:Z2X} and \ref{eq:Z2Y}. This algorithm has a slightly different nature than those presented previously. The former two use a particular basis to implement a quantum algorithm that can run on any universal device, regardless of the underlying architecture. The one discussed here, on the other hand, is specifically calibrated for IBM Quantum devices using Qiskit SDK and the pulse scaling technique implemented on \cite{RXZPulseEfficient}.
 
 \section{Comparison and Benchmark: Methodology}
 \label{sec:Methodology}
@@ -331,16 +331,16 @@ This chapter introduces time simulation algorithms for Hamiltonian \ref{eq:Heise
     Consider the set of of Pauli tensor product operators defined on a space of $N$ qubits. Each of this operators can be mapped to the set of strings whose characters indicate the Pauli operator that acts on the corresponding qubit. For instance,
 
     \begin{equation}
-      \hat{XXI} = \hat{I} \otimes \hat{X} \otimes{X},
+      \hat{I} \otimes \hat{X} \otimes \hat{X},
     \end{equation}
 
-    \noindent indicating that the operator acts on a 3-qubit space, and applies and identity gate on the third qubit, while applying an $X$ gate on the first two. It is a well known fact that the set of Pauli tensor product operators constitute a basis for the space of operators defined on an $N$-qubit system's Hilbert space \cite{Nielsen, Strini}. Hence, any operator in that space has the expansion
+    \noindent denotes a Pauli string operator that acts on a 3-qubit space, and applies and identity gate on the third qubit, while applying an $X$ gate on the first two. It is a well known fact that the set of Pauli tensor product operators constitute a basis for the space of operators defined on an $N$-qubit system's Hilbert space \cite{Nielsen, Strini}. Hence, any operator in that space has the expansion
     
     \begin{equation}
       \hat{O} = \sum_{P} c_P \hat{P}
     \end{equation}
 
-    \noindent where $P$ is a Pauli tensor product operator. This fact yields a direct approach towards measuring expected value of operators. If the expected value of Pauli tensors can be measured, then linearity yields the expected value of any $N$-qubit operator. Now, by default, experiments performed on IBM's quantum devices produce the expected value of the Pauli tensor $\otimes^{N} \hat{Z}$. As a result, by applying local rotations to the qubits according to equations \ref{eq:Z2X} and \ref{eq:Z2Y}, it is possible to measure any Pauli tensor that also includes $\hat{X}$ and $\hat{Y}$ operators. It might be the case that the measured Pauli tensor only acts on a subspace of the register. This is irrelevant, though, since it is possible to trace out the measured subsystem, thus making any action on the complementary system irrelevant \cite{Nielsen}. Hence, measuring all the register at once during each experiment, and applying local rotations, is a valid methodology for recovering any $N$-qubit expected value.
+    \noindent where $P$ is a Pauli tensor product operator. This fact yields a direct approach towards measuring expected value of operators. If the expected value of Pauli tensors can be measured, then linearity yields the expected value of any $N$-qubit operator. Now, by default, experiments performed on IBM's quantum devices produce the expected value of the Pauli tensor $\otimes^{N} \hat{Z}$. As a result, by applying local rotations to the qubits according to equations \ref{eq:Z2X} and \ref{eq:Z2Y}, it is possible to measure any Pauli tensor that also includes $\hat{X}$ and $\hat{Y}$ operators. It might be the case that the measured Pauli tensor only acts on a subspace of the register. This is irrelevant, though, since it is possible to trace out the measured subsystem, thus making any action on the complementary system irrelevant \cite{Nielsen}. Hence, measuring all the qubits of the register at once, on each experiment, and applying local rotations, is a valid methodology for recovering any pdf.
 
     Measuring the probability density is quite straightforward using Qiskit SDK. As mentioned before, the results of the execution of most quantum algorithms produce a single outcome of measuring the register on the computational basis, which can be mapped to a binary string. Approximate reconstruction of the pdf can be carried out by repeating the experiment several times and building an histogram. This is done by Qiskit methods. Once the pdf is reconstructed, the expected value of the operator $\otimes^{N} \hat{Z}$ can be reconstructed by examining the parity of the outcome string, i.e., by the formula
     
@@ -421,36 +421,60 @@ This chapter introduces time simulation algorithms for Hamiltonian \ref{eq:Heise
       \label{tab:jakartaParams}
     \end{table}
   
+    \begin{table}[!htbp]
+      \begin{center}
+        \begin{tabular}{| c | c |}
+          \hline 
+          $0 \rightarrow 1$ & 234.7 ns \\
+          \hline
+          $1 \rightarrow 2$ & 288.4 ns \\
+          \hline
+          $1 \rightarrow 3$ & 384.0 ns \\
+          \hline
+          $3 \rightarrow 5$ & 341.3 ns \\
+          \hline
+          $4 \rightarrow 5$ & 405.3 ns \\
+          \hline
+          $5 \rightarrow 6$ & 312.9 ns \\
+          \hline
+        \end{tabular}
+      \end{center}
+      \caption{Execution times of CNOT gates on \textit{ibmq jakarta}. The column on the left denotes control-target pairs, and the right, the execution time in nanoseconds. Times were acquired using Qiskit API, and is reported from the backend calibration data.}
+      \label{tab:jakartaCnotTimes}
+    \end{table}
+
   \subsection{Control case: QASM Simulation Results}
   \label{subsec:QASMResults}
 
     To establish a control case for evaluating results of quantum evolution on real devices, the benchmark system is simulated over a time $t = 1$ using an integration step $dt = 1/8$. In a more quantitative test, the probability density fidelity is computed for times $t = 1, 2, 3$, with up to $8$ integration steps. Units of time are normalized to $\hbar = 1$, so that energy has units of inverse time. These results represent the outcome of executing the direct evolution scheme introduced on section \ref{sec:MainCircuits}, on a fault tolerant device. In figures \ref{fig:QASMpdf} and \ref{fig:QASMpaulis}, the results of evolution with direct diagonalization of the Hamiltonian are presented as dotted lines.
 
-    Probability density of measuring a 3-bit string is evolved over time. The convention is that the string is represented by its associated number in decimal system. Expected values of single qubit Pauli operators $\hat{X}_i, \hat{Y}_i, \hat{Z}_i$ are measured for each of the qubits. The first qubit observables correspond to color red data, the second qubit's, to blue data, and the third qubit's, to black data. This convention holds on all graphics of this type. Probaility density fidelity es computed for several number of integration steps $N$ (up to eight), and each point correspond to the average of five sets of 2048 experiment repetitions.
+    Probability density of measuring a 3-bit string is evolved over time. The convention is that the string is represented by its associated number in decimal system. Expected values of single qubit Pauli operators $\hat{X}_i, \hat{Y}_i, \hat{Z}_i$ are measured for each of the qubits. The first qubit observables correspond to color red data, the second qubit's, to blue data, and the third qubit's, to black data. This convention holds on all graphics of this type. Probability density fidelity is computed for several number of integration steps $N$ (up to eight), and each point correspond to the average of five sets of 2048 experimental repetitions.
 
     A small number of integration steps is used since the finite coherence times of the qubits in the device limit the depth of the circuit that can be executed on real devices. If the gate execution times approach the coherence times, the state coherence is irreversibly lost, and thus the final state does not resemble at all the target final state. As may be seen on figure \ref{fig:QASMfidelity}, there is a sort of transient stage during which the Trotter approximation does not converge. As seen before, there exists a critical integration time step $\Delta t$, below which the state fidelity has a predictable approximation error. It may be also noted that high fidelities can be achieved by using a relatively small number of integration steps. Furthermore, observables resemble quite well the theoretical values. This indicates that as long as the integration time step $\Delta t = t / N$ is below the convergence threshold, the trotter error can be controlled.
 
     \begin{figure}
+      \thisfloatpagestyle{empty}
       \centering
       \begin{subfigure}[b]{1.0\textwidth}
         \centering
-        \includegraphics[scale=0.5]{QASMData/qasm_control_pdf_evol.pdf}
+        \includegraphics[scale=0.65]{QASMData/qasm_control_pdf_evol.pdf}
         \caption{Time evolution of probability density (pdf) of the benchmark system initialized on the state $\ket{\psi_0} = \ket{110}$, for a time $t=1$. The numbers in the convention are those whose binary representation corresponds to $\ket{k}$.}
         \label{fig:QASMpdf}
       \end{subfigure}
+      \hfill
       \begin{subfigure}[b]{1.0\textwidth}
         \centering
-        \includegraphics[scale=0.5]{QASMData/qasm_control_pauli_exps.pdf}
+        \includegraphics[scale=0.65, trim={0 1.8cm 0 1.8cm}, clip]{QASMData/qasm_control_pauli_exps.pdf}
         \caption{Time evolution of single qubit Pauli operators of the benchmark system initialized on the state $\ket{110}$, for a time $t=1$. The first qubit observables correspond to color red data, the second qubit's, to blue data, and the third qubit's, to black data}
         \label{fig:QASMpaulis}
       \end{subfigure}
       \begin{subfigure}[b]{1.0\textwidth}
         \centering
-        \includegraphics[scale=0.5]{QASMData/qasm_control_pdf_fidelity.pdf}
-        \caption{Probability density fidelity for several number of integration steps and $t = 1, 2, 3$. Each point corresponds to the average of five sets of experiments. Notice that the transient behavior mentioned lasts up to about $N = 4$.}
+        \includegraphics[scale=0.65]{QASMData/qasm_control_pdf_fidelity.pdf}
+        \caption{Probability density fidelity as a function of the number of integration steps, $N$, and simulation times $t = 1, 2, 3$. Each point corresponds to the average of five sets of experiments. Notice that the transient behavior mentioned lasts up to about $N = 4$.}
         \label{fig:QASMfidelity}
       \end{subfigure}
-      \caption{QASM Simulation results.}
+      \caption{QASM Simulation results. Time units are normalized to $\hbar=1$ and $J_{ij}^{(X)} = J_{ij}^{(Y)} = J_{ij}^{(Z)} = 1$}. This is denoted by (u. a.).
       \label{fig:QASMResults}
     \end{figure}
 
@@ -459,15 +483,15 @@ This chapter introduces time simulation algorithms for Hamiltonian \ref{eq:Heise
 
     Now that the main metrics, and the way they are measured using \textit{ibmq jakarta}, results of simulation using the schemes proposed on section \ref{sec:MainCircuits} are presented. Results are compared to fault-tolerant simulation outcome in figure \ref{fig:QASMResults}.
 
-    Expected values of single qubit observables is measured following conventions established on section \ref{subsec:QASMResults}. From figure \ref{fig:PauliExpectedValues}, it can be seen that the scheme that produces the largest resemblance to the ideal values (dotted lines) is the pulse efficient implementation, followed by the basis efficient and the direct transpilation. Qualitatively, the difference in performance is overwhelming. While the base efficient and direct transpilation approaches struggle to converge for four steps, the pulse efficient scheme is able to converge surprisingly well for the entire set of eight steps. Since the calibration of entangling gates is the same for all cases (except for a parameter scaling on pulse efficient experiments) it can be inferred that the use of shorter entangling pulses, which improves the usage of the finite coherence times of the system, is the most determinant factor when simulating this kind of Hamiltonians.
+    Expected values of single qubit observables are measured following conventions established on section \ref{subsec:QASMResults}. From figure \ref{fig:PauliExpectedValues}, it can be seen that the scheme that produces the largest resemblance to the ideal values (dotted lines) is the pulse efficient implementation, followed by the basis efficient and the direct transpilation. Qualitatively, the difference in performance is overwhelming. While the base efficient and direct transpilation approaches struggle to converge for four steps, the pulse efficient scheme is able to converge surprisingly well for the entire set of eight steps. Since the calibration of entangling gates is the same for all cases (except for a parameter scaling on pulse efficient experiments) it can be inferred that the use of shorter entangling pulses, which improves the usage of the finite coherence times of the system, is the most determinant factor when simulating this kind of Hamiltonians.
 
     Those features can be seen more clearly on figure \ref{fig:PdfExpectedValues}. From the ideal results on figure \ref{fig:QASMResults}, it can be seen that the probability density only presents oscillations for states $\ket{3}$, $\ket{6}$, and $\ket{5}$. Figures \ref{fig:PdfDirectTransp} and \ref{fig:PdfBasis} suggest that the state coherence is lost very fast (qubits depolarize fairly quickly), and the probability density fidelity decays very rapidly as the circuit depth of simulation increases, using both direct and basis efficient schemes. On the other hand, pulse efficient schemes seem to better maintain state coherence since the execution time of each trotter step is shorter. As a result, the state fidelity is larger.
 
-    On figure \ref{fig:PdfExpectedFidelity}, this observations are made more quantitative. After the transient stage in which the Trotter approximation does not converge in general, it can be seen that the probability density fidelity decays consistently for direct transpilation and basis efficient schemes, as the number of integration steps increase. On the other hand, pulse efficient schemes have an increasing fidelity with the number of integration steps. While the first two schemes produce fidelities near 30\% - 40\%, direct pulse control yields fidelities near 70\% in some cases, having actual execution times about 40\% shorter. There is a caveat, though. As the integration time step increases, the benefits of pulse schemes is reduced, since the actual execution time increases proportionally (see figure \ref{fig:PulseDurationVdt}). This can be seen on figure \ref{fig:PdfPulseFidelity}. As the target simulation time increases, the fidelity remains below 50\%. Since the circuit depth does not change with respect to shorter times, it can be concluded that this reduction in the fidelity is due to the larger execution time of the experiments (see figure \ref{fig:PulseDurationVdt}). In consequence, simulating anisotropic Heisenberg Hamiltonians on quantum computers imply optimizing the tradeoff between short Trotter steps with pulse control, and a large number of repetitions required to simulate large times. As may be inferred from figure \ref{fig:FloquetDynamics}, it must be procured that the integration time step $\Delta t$ is below the threshold for predictable Trotter error control, though.
+    On figure \ref{fig:PdfExpectedFidelity}, these observations are made more quantitative. After the transient stage in which the Trotter approximation does not converge in general, it can be seen that the probability density fidelity decays consistently for direct transpilation and basis efficient schemes, as the number of integration steps increase. On the other hand, pulse efficient schemes have an increasing fidelity with the number of integration steps. While the first two schemes produce fidelities near 30\% - 40\%, direct pulse control yields fidelities near 70\% in some cases, having actual execution times about 40\% shorter. There is a caveat, though. As the integration time step increases, the benefits of pulse schemes is reduced, since the actual execution time increases proportionally (see figure \ref{fig:PulseDurationVdt}). This can be seen on figure \ref{fig:PdfPulseFidelity}. As the target simulation time increases, the fidelity remains below 50\%. Since the circuit depth does not change with respect to shorter times, it can be concluded that this reduction in the fidelity is due to the larger execution time of the experiments (see figure \ref{fig:PulseDurationVdt}). In consequence, simulating anisotropic Heisenberg Hamiltonians on quantum computers imply optimizing the tradeoff between short Trotter steps with pulse control, and a large number of repetitions required to simulate large times. As may be inferred from figure \ref{fig:FloquetDynamics}, it must be procured that the integration time step $\Delta t$ is below the threshold for predictable Trotter error control, though.
 
     \begin{figure}
       \centering
-      \includegraphics[scale=0.6]{schedTimeDurationPlot.pdf}
+      \includegraphics[scale=0.72]{schedTimeDurationPlot.pdf}
       \caption{Execution time (in relative units) of pulse efficient and basis efficient Trotter steps on IBM Quantum devices as a function of integration time step $\Delta t$.}
       \label{fig:PulseDurationVdt}
     \end{figure}
@@ -476,43 +500,44 @@ This chapter introduces time simulation algorithms for Hamiltonian \ref{eq:Heise
       \centering
       \begin{subfigure}[b]{1.0 \textwidth}
         \centering
-        \includegraphics[scale=0.5]{DirectTranspilationData/direct_pauli_exps.pdf}
+        \includegraphics[scale=0.8, trim={0 1.8cm 0 1.8cm}, clip]{DirectTranspilationData/direct_pauli_exps.pdf}
         \caption{Direct transpilation expected values}
         \label{fig:PauliDirectTransp}
       \end{subfigure}
       \begin{subfigure}[b]{1.0 \textwidth}
         \centering
-        \includegraphics[scale=0.5]{BasisEfficientData/basis_efficient_pauli_exps.pdf}
+        \includegraphics[scale=0.8, trim={0 1.8cm 0 1.8cm}, clip]{BasisEfficientData/basis_efficient_pauli_exps.pdf}
         \caption{Basis efficient expected values}
         \label{fig:PauliBasis}
       \end{subfigure}
       \begin{subfigure}[b]{1.0 \textwidth}
         \centering
-        \includegraphics[scale=0.5]{PulseEfficientData/pulse_efficient_pauli_exps.pdf}
+        \includegraphics[scale=0.8, trim={0 1.8cm 0 1.8cm}, clip]{PulseEfficientData/pulse_efficient_pauli_exps.pdf}
         \caption{Basis efficient expected values}
         \label{fig:PauliPulse}
       \end{subfigure}
-      \caption{Time evolution of single qubit expected values on \textit{ibmq jakarta}.}
+      \caption{Time evolution of single qubit expected values on \textit{ibmq jakarta}. Time units are normalized to $\hbar = 1$. This is denoted bu (u. a.) in the figures.}
       \label{fig:PauliExpectedValues}
     \end{figure}
 
     \begin{figure}
       \centering
-      \begin{subfigure}[b]{1.0 \textwidth}
+      \begin{subfigure}[b]{0.5 \textwidth}
         \centering
-        \includegraphics[scale=0.5]{DirectTranspilationData/direct_pdf_evol.pdf}
+        \includegraphics[scale=0.8, trim={2cm 0 2cm 0}, clip]{DirectTranspilationData/direct_pdf_evol.pdf}
         \caption{Direct transpilation pdf.}
         \label{fig:PdfDirectTransp}
-      \end{subfigure}
-      \begin{subfigure}[b]{1.0 \textwidth}
+      \end{subfigure}%
+      \hfill
+      \begin{subfigure}[b]{0.5 \textwidth}
         \centering
-        \includegraphics[scale=0.5]{BasisEfficientData/basis_efficient_pdf_evol.pdf}
+        \includegraphics[scale=0.8, trim={2cm 0 2cm 0}, clip]{BasisEfficientData/basis_efficient_pdf_evol.pdf}
         \caption{Basis efficient pdf.}
         \label{fig:PdfBasis}
       \end{subfigure}
       \begin{subfigure}[b]{1.0 \textwidth}
         \centering
-        \includegraphics[scale=0.5]{PulseEfficientData/pulse_efficient_pdf_evol.pdf}
+        \includegraphics[scale=0.8, trim={1cm 0 1cm 0}, clip]{PulseEfficientData/pulse_efficient_pdf_evol.pdf}
         \caption{Basis efficient pdf.}
         \label{fig:PdfPulse}
       \end{subfigure}

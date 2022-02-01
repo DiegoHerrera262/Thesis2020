@@ -33,20 +33,20 @@ Theory}\label{general-quantum-time-simulation-theory}}
 
 In this project, a second order Trotter scheme is proposed to estimate
 evolution of a spin system. Consider a Hamiltonian that can be written
-as the sum of \emph{local Hamiltonians} (acting on a small subsystem at
+as the sum of \emph{local Hamiltonians} $\hat{H}_i$ (acting on $l$ small subsystem at
 a time).
 
 \[
-\hat{H} = \sum_{i=1}^{l} \hat{H}_i
+\hat{H} = \sum_{i=1}^{l} \hat{H}_i.
 \]
 
 By direct computation, it is possible to show that
 
 \[
-\mathrm{e}^{-\mathrm{i}t\hat{H}} = \prod_{i=1}^{l} \mathrm{e}^{-\mathrm{i}t\hat{H}_i} + \mathcal{O}(t^2)
+\mathrm{e}^{-\mathrm{i}t\hat{H}} = \prod_{i=1}^{l} \mathrm{e}^{-\mathrm{i}t\hat{H}_i} + \mathcal{O}(t^2).
 \]
 
-Now, if evolution is carried out over a small enough period of time,
+\noindent Now, if evolution is carried out over a small enough period of time,
 then the difference between the right hand side and the left hand side
 is small. This leads to an integration scheme that relies on the
 implementation of local evolution operators, that is capable of simulate
@@ -69,7 +69,7 @@ steps (as measured by the number of exponentials required to implement a
 \(k\)-th order Suzuki-Trotter scheme) is bounded by a power law
 
 \[
-N \leq A_k \frac{t^{1+1/2k}}{\epsilon^{1/2k}}
+N \leq A_k \frac{t^{1+1/2k}}{\epsilon^{1/2k}}.
 \]
 
 It is interesting, as they point out, that there is an optimal order for
@@ -133,16 +133,16 @@ using the networks proposed in the main document. This Hamiltonian
 corresponds to
 
 \[
-\hat{H} = J(\hat{X}_1\hat{X}_2 + \hat{Y}_1\hat{Y}_2 + \hat{Z}_1\hat{Z}_2)
+\hat{H} = J(\hat{X}_1\hat{X}_2 + \hat{Y}_1\hat{Y}_2 + \hat{Z}_1\hat{Z}_2).
 \]
 
-Following the group's work, the initial state
+Following the Salathé and others' work, the initial state
 
 \[
-|\psi_0\rangle = |+\rangle\otimes|0\rangle
+|\psi_0\rangle = |+\rangle\otimes|0\rangle,
 \]
 
-Is evolved for a time \(t=3 \pi /4\), when \(J = 1\). Time series of the
+\noindent is evolved for a time \(t=3 \pi /4\), when \(J = 1\). Time series of the
 expected values of single-qubit Pauli operators are generated and
 compared to results obtained by direct diagonalization of the
 Hamiltonian. The time interval is partitioned on \(12\) equally spaced
@@ -326,14 +326,14 @@ al.}\label{reproduction-of-results-of-las-heras-et.-al.-and-salathuxe9-et.-al.}}
 In this section, the two-spin transverse field Ising model,
 
 \[
-\hat{H} = \frac{V}{2}(\hat{X}_1\hat{X}_2 + \hat{Y}_1\hat{Y}_2 + \hat{Z}_1\hat{Z}_2) + \frac{U}{4}(\hat{Z}_1 + \hat{Z}_2)
+\hat{H} = \frac{V}{2}(\hat{X}_1\hat{X}_2 + \hat{Y}_1\hat{Y}_2 + \hat{Z}_1\hat{Z}_2) + \frac{U}{4}(\hat{Z}_1 + \hat{Z}_2),
 \]
 
-with \(V = U = 1\), is simulated over a time \(\tau = 5\). The initial
+\noindent with \(V = U = 1\), is simulated over a time \(\tau = 5\). The initial
 state is set to
 
 \[
-|\psi_0\rangle = |+\rangle\otimes|0\rangle
+|\psi_0\rangle = |+\rangle\otimes|0\rangle.
 \]
 
 Simulations are carried out using \texttt{ibmq\_quito}, and error
@@ -576,7 +576,7 @@ interactions are performed on hardware via \textbf{Cross-Resonance
 gates}
 
 \[
-\hat{R}_{zx}(\phi) = \mathrm{e}^{-\mathrm{i}\phi\hat{Z}\otimes\hat{X}}
+\hat{R}_{zx}(\phi) = \mathrm{e}^{-\mathrm{i}\phi\hat{Z}\otimes\hat{X}}.
 \]
 
 \begin{quote}
@@ -914,17 +914,17 @@ The Trotterization scheme proposed in this project produces a unitary
 \(\hat{U}_N(t)\), that approximates the exact evolution unitary
 
 \[
-\hat{U}(t) = \mathrm{e}^{-\mathrm{i}\hat{H}t}
+\hat{U}(t) = \mathrm{e}^{-\mathrm{i}\hat{H}t}.
 \]
 
     \hypertarget{studying-a-sample}{%
-\subsubsection{Studying a sample}\label{studying-a-sample}}
+\subsubsection{Studying a sample}\label{studying-a-sample}}.
 
 In this section a 5 spin system is used to evaluate the evolution error
 as a function of both \(t\) and \(N\). Here
 
 \[
-\epsilon = ||\hat{U}_N(t) - \hat{U}(t)||
+\epsilon = ||\hat{U}_N(t) - \hat{U}(t)||.
 \]
 
 Where the distance is simply the Frobenius norm. The results are
@@ -977,7 +977,7 @@ can be seen for different times and number of steps. The data suggests
 that
 
 \[
-\epsilon \approx A \frac{t^{\frac{6}{5}}}{N}
+\epsilon \approx A \frac{t^{\frac{6}{5}}}{N}.
 \]
 
 In this asymptotic regime. This shows that although Berry et.
@@ -1084,17 +1084,17 @@ erratic dynamics. In this section, this is characterized by two metrics:
 ration}, defined as follows
 
 \[
-\mathcal{F}_{\infty} = \lim_{n \rightarrow \infty} \sum_{i = 1}^N |\langle\psi_0|\hat{U}(t)^\dagger\hat{U}_N(t)|\psi_0\rangle|^2
+\mathcal{F}_{\infty} = \lim_{n \rightarrow \infty} \sum_{i = 1}^N |\langle\psi_0|\hat{U}(t)^\dagger\hat{U}_N(t)|\psi_0\rangle|^2,
 \]
 
 \[
-\text{IPR} = \sum_{n} |\langle\phi_n|\psi_0\rangle|^4
+\text{IPR} = \sum_{n} |\langle\phi_n|\psi_0\rangle|^4,
 \]
 
-Where \(|\psi_0\rangle\) is the initial state of the system, and
+\noindent where \(|\psi_0\rangle\) is the initial state of the system, and
 
 \[
-\hat{U}_N(t)|\phi_n\rangle = \mathrm{e}^{-\mathrm{i}E_n t}|\phi_n\rangle
+\hat{U}_N(t)|\phi_n\rangle = \mathrm{e}^{-\mathrm{i}E_n t}|\phi_n\rangle.
 \]
 
 These quantities are studied as a function of the \emph{integration
@@ -1196,15 +1196,15 @@ theorem for computing ground state properties of a given
 \(T\)-periodic Hamiltonian
 
 \[
-\hat{H}_a(t) = \big(1 - \frac{t}{T}\big)\hat{H}_m + \frac{t}{T}\hat{H}_0 
+\hat{H}_a(t) = \big(1 - \frac{t}{T}\big)\hat{H}_m + \frac{t}{T}\hat{H}_0,
 \]
 
-where \(\hat{H}_m\) is some time-independent Hamiltonian, which is to be
+\noindent where \(\hat{H}_m\) is some time-independent Hamiltonian, which is to be
 called \emph{mixer Hamiltonian}. Consider an initial state
 \(|\psi_0\rangle\) such that
 
 \[
-\hat{H}_m|\psi_0\rangle = \epsilon_0 |\psi_0\rangle
+\hat{H}_m|\psi_0\rangle = \epsilon_0 |\psi_0\rangle,
 \]
 
 and the energy is the minimum over all the set of eigenstates. The
